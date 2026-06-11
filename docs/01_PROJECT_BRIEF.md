@@ -1,8 +1,8 @@
-# FloatDash — Project Brief
+# ZWheel — Project Brief
 **A personal Android + Wear OS companion for stock (Future Motion) Onewheels.**
 Version 1.0 — June 2026. Supersedes the OWCE NextGen MAUI plan entirely.
 
-*(Rename freely — "FloatDash" is a working title.)*
+*(The project was officially renamed from the FloatDash working title to ZWheel.)*
 
 ---
 

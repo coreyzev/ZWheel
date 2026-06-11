@@ -1,4 +1,4 @@
-# FloatDash — Architecture
+# ZWheel — Architecture
 Version 1.0. Read 01_PROJECT_BRIEF.md first. The 12 rules in 03_AGENTS.md are binding.
 
 ## 1. Stack (locked)
@@ -22,7 +22,7 @@ Version 1.0. Read 01_PROJECT_BRIEF.md first. The 12 rules in 03_AGENTS.md are bi
 ## 2. Module layout
 
 ```
-floatdash/
+zwheel/
 ├── core/            Pure Kotlin. ZERO Android imports. KMP-convertible by design.
 │   ├── protocol/    BLE UUIDs, byte parsers, handshake strategies (logic only)
 │   ├── model/       BoardState, RideSession, RideDataPoint, WatchPayload, BoardType...
@@ -128,7 +128,7 @@ This is the component that fixes "app gets killed after 2 minutes."
    recently), released when idle-connected. Never a screen wakelock from the service.
 5. **Battery-optimization onboarding (first run + Settings entry):**
    - Request `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` exemption with honest copy.
-   - Detect manufacturer; for Samsung show specific steps: Settings → Apps → FloatDash
+   - Detect manufacturer; for Samsung show specific steps: Settings → Apps → ZWheel
      → Battery → **Unrestricted**; and Device Care → Battery → Background usage limits →
      ensure app is not in "Sleeping/Deep sleeping apps", add to "Never sleeping apps".
      (Mirror dontkillmyapp.com/samsung; keep copy in one
@@ -147,7 +147,7 @@ This is the component that fixes "app gets killed after 2 minutes."
 
 - Phone pushes `WatchPayload(speedCorrected, topSpeed, batteryPct, estRangeRemaining,
   speedUnit, isRiding, connectionState)` at 1 Hz via `DataClient` (latest-value
-  semantics; key `/floatdash/state`). `MessageClient` for one-shot events:
+  semantics; key `/zwheel/state`). `MessageClient` for one-shot events:
   rideStarted/rideStopped/connectionLost.
 - Watch app: single Compose screen — giant speed numeral; battery %, range, top speed
   in a bottom row; connection state glyph. Tap cycles primary metric.

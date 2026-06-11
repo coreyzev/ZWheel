@@ -1,8 +1,8 @@
-# FloatDash — Corey's Runbook
+# ZWheel — Corey's Runbook
 Your exact steps, in order. Everything not listed here is the agent's job.
 
 ## 0. One-time setup (≈ 1 hour)
-1. Create a fresh GitHub repo (e.g. `floatdash`). Public, GPLv3, empty.
+1. Create a fresh GitHub repo (e.g. `zwheel`). Public, GPLv3, empty.
 2. Drop the five docs from this package into `/docs`, and `03_AGENTS.md` ALSO at repo
    root as `AGENTS.md` (agents look for it there).
 3. Install on your Mac/PC: Android Studio (latest stable), JDK 17, Android SDK +
@@ -41,7 +41,7 @@ Your exact steps, in order. Everything not listed here is the agent's job.
 
 ## 2. Hardware truths to remember
 - BLE never works in emulators. Anything BLE = your hands, physical board.
-- Don't run the official FM app anymore (it's the firmware-update vector). FloatDash
+- Don't run the official FM app anymore (it's the firmware-update vector). ZWheel
   cannot update firmware by design — that's enforced by a unit test on the UUID
   allowlist.
 - When you switch to a Pixel later this year: re-run the M3 torture tests once.

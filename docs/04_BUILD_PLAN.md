@@ -1,4 +1,4 @@
-# FloatDash — Build Plan
+# ZWheel — Build Plan
 Phases are sequential; each ends in a gate. Gates marked 🧍 need Corey + hardware.
 Estimates assume one coding agent working in focused sessions; treat as relative sizes.
 

@@ -64,4 +64,11 @@ Place this file at repo root. Read it at the start of EVERY session, along with
   Onewheel2Garmin. Corey's board: XR HW 4029, fw Gemini-era. Dev phone: Samsung S25
   Ultra (aggressive battery mgmt — the bulletproof service in 02_ARCHITECTURE §6 exists
   because of it). Watch: Galaxy Watch 7 Classic (Wear OS 5).
+- 2026-06-11: Corey officially renamed the project from the FloatDash working title to
+  ZWheel. Phase 0 scaffold uses `com.zwheel` package/application IDs and `/zwheel/state`
+  for the planned Wear Data Layer key.
+- 2026-06-11: Phase 0 scaffold completed locally with Gradle modules `core`, `app`,
+  and `wear`, CI workflow, README/NOTICE, ADR-001..005 drafts, core model/port/calc
+  contracts, Onewheel UUID map, parser test harness, and M0 checklist. Local Gradle
+  sync/build intentionally not run at Corey's request; CI remains the build gate.
 - (append discoveries here…)

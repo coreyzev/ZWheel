@@ -13,92 +13,53 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.zwheel.app.ble.ConnectionState
-import com.zwheel.app.ble.KableBleTransport
 import com.zwheel.core.ports.ScanResult
-import com.zwheel.core.protocol.GattCharacteristicId
-import com.zwheel.core.protocol.OwUuids
-import com.zwheel.core.protocol.handshake.GeminiStrategy
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.take
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
-
-private const val SCAN_DURATION_MS = 30_000L
-private const val DEVICE_STALE_MS = 5_000L
-private const val DEVICE_PRUNE_INTERVAL_MS = 1_000L
 
 @Composable
-fun BleDebugScreen(modifier: Modifier = Modifier) {
-    val scope = rememberCoroutineScope()
+fun BleDebugScreen(
+    modifier: Modifier = Modifier,
+    viewModel: BleDebugViewModel = viewModel(),
+) {
     val context = LocalContext.current
-    val transport = remember { KableBleTransport() }
-    val devices = remember { mutableStateListOf<ScanResult>() }
-    val deviceLastSeen = remember { mutableStateMapOf<String, Long>() }
-    val logLines = remember { mutableStateListOf("Idle") }
-    val selectedDevice = remember { mutableStateOf<ScanResult?>(null) }
-    val scanJob = remember { mutableStateOf<Job?>(null) }
-    val dumpJobs = remember { mutableStateListOf<Job>() }
-    val permissionDenied = remember { mutableStateOf<String?>(null) }
-    val permissionsGranted = remember { mutableStateOf(false) }
-    val permanentlyDenied = remember { mutableStateOf(false) }
-    val permissionRequestAttempted = remember { mutableStateOf(false) }
-    val connectionState by transport.connectionState.collectAsState()
-
+    val devices by viewModel.devices.collectAsStateWithLifecycle()
+    val selectedDevice by viewModel.selectedDevice.collectAsStateWithLifecycle()
+    val logLines by viewModel.logLines.collectAsStateWithLifecycle()
+    val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
+    val permissionsGranted by viewModel.permissionsGranted.collectAsStateWithLifecycle()
+    val permanentlyDenied by viewModel.permanentlyDenied.collectAsStateWithLifecycle()
     val requiredPermissions = remember { bleScanPermissions() }
-    fun refreshPermissionState(updatePermanentDenial: Boolean) {
-        permissionsGranted.value = hasAllRequiredPermissions(context, requiredPermissions)
-        permissionDenied.value = if (permissionsGranted.value) null else buildPermissionDeniedMessage()
-        if (updatePermanentDenial) {
-            permanentlyDenied.value = hasPermanentlyDeniedPermission(
-                context = context,
-                permissions = requiredPermissions,
-                requestAttempted = permissionRequestAttempted.value,
-            )
-        }
+
+    SideEffect {
+        viewModel.onPermissionsResult(
+            granted = hasAllRequiredPermissions(context, requiredPermissions),
+            permanentlyDenied = false,
+        )
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
     ) { grantResults ->
-        permissionRequestAttempted.value = true
         val granted = requiredPermissions.all { permission ->
             grantResults[permission] == true || hasPermission(context, permission)
         }
-        permissionsGranted.value = granted
-        permissionDenied.value = if (granted) null else buildPermissionDeniedMessage()
-        permanentlyDenied.value = hasPermanentlyDeniedPermission(
-            context = context,
-            permissions = requiredPermissions,
-            requestAttempted = permissionRequestAttempted.value,
+        viewModel.onPermissionsResult(
+            granted = granted,
+            permanentlyDenied = hasPermanentlyDeniedPermission(
+                context = context,
+                permissions = requiredPermissions,
+                requestAttempted = true,
+            ),
         )
-    }
-
-    LaunchedEffect(Unit) {
-        refreshPermissionState(updatePermanentDenial = false)
-    }
-
-    LaunchedEffect(connectionState) {
-        when (connectionState) {
-            ConnectionState.Scanning -> logLines.append("Scanning...")
-            ConnectionState.Disconnected -> logLines.append("Disconnected")
-            ConnectionState.Connected,
-            ConnectionState.Idle -> Unit
-        }
     }
 
     Column(
@@ -108,38 +69,28 @@ fun BleDebugScreen(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text("BLE DEBUG", fontWeight = FontWeight.Black)
-        permissionDenied.value?.let { message ->
-            Text(message)
+        if (!permissionsGranted) {
+            Text(buildPermissionDeniedMessage())
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (permissionsGranted.value) {
+            if (permissionsGranted) {
                 Button(
                     enabled = connectionState != ConnectionState.Scanning &&
                         connectionState != ConnectionState.Connected,
-                    onClick = {
-                        refreshPermissionState(updatePermanentDenial = false)
-                        if (permissionsGranted.value) {
-                            startScan(
-                                scope = scope,
-                                transport = transport,
-                                devices = devices,
-                                deviceLastSeen = deviceLastSeen,
-                                selectedDevice = selectedDevice,
-                                scanJob = scanJob,
-                                logLines = logLines,
-                            )
-                        }
-                    },
+                    onClick = viewModel::onScanClicked,
                 ) {
                     Text(if (connectionState == ConnectionState.Scanning) "Scanning..." else "Scan")
                 }
             } else {
                 Button(
-                    onClick = { permissionLauncher.launch(requiredPermissions.toTypedArray()) },
+                    onClick = {
+                        viewModel.onPermissionsAttempted()
+                        permissionLauncher.launch(requiredPermissions.toTypedArray())
+                    },
                 ) {
                     Text("Grant permissions")
                 }
-                if (permanentlyDenied.value) {
+                if (permanentlyDenied) {
                     Button(
                         onClick = { context.openAppSettings() },
                     ) {
@@ -151,45 +102,21 @@ fun BleDebugScreen(modifier: Modifier = Modifier) {
                 CircularProgressIndicator(modifier = Modifier.size(24.dp))
             }
             Button(
-                enabled = selectedDevice.value != null &&
+                enabled = selectedDevice != null &&
                     connectionState != ConnectionState.Connected,
-                onClick = {
-                    val device = selectedDevice.value ?: return@Button
-                    scanJob.value?.cancel()
-                    logLines.append("Connecting ${device.label()}")
-                    scope.launch {
-                        runCatching {
-                            transport.connect(device.deviceId)
-                            logLines.append("Sending Gemini unlock")
-                            val result = GeminiStrategy().unlock(transport)
-                            logLines.append("Unlock ${result.strategyName}: ${result.unlocked}")
-                            if (result.unlocked) {
-                                logLines.append("Connected")
-                                startDumpJobs(scope, transport, dumpJobs, logLines)
-                            }
-                        }.onFailure { error -> logLines.append("Connect/unlock failed: ${error.message}") }
-                    }
-                },
+                onClick = { selectedDevice?.deviceId?.let(viewModel::onConnectClicked) },
             ) {
                 Text("Connect + Unlock")
             }
             Button(
                 enabled = connectionState == ConnectionState.Connected,
-                onClick = {
-                    scanJob.value?.cancel()
-                    dumpJobs.forEach(Job::cancel)
-                    dumpJobs.clear()
-                    scope.launch {
-                        runCatching { transport.disconnect() }
-                            .onFailure { error -> logLines.append("Disconnect failed: ${error.message}") }
-                    }
-                },
+                onClick = viewModel::onDisconnectClicked,
             ) {
                 Text("Disconnect")
             }
         }
         if (devices.isNotEmpty()) {
-            Text("Selected: ${selectedDevice.value?.label().orEmpty()}")
+            Text("Selected: ${selectedDevice?.label().orEmpty()}")
         }
         HorizontalDivider()
         logLines.takeLast(12).forEach { line ->
@@ -197,104 +124,9 @@ fun BleDebugScreen(modifier: Modifier = Modifier) {
         }
     }
 }
-private fun startScan(
-    scope: CoroutineScope,
-    transport: KableBleTransport,
-    devices: MutableList<ScanResult>,
-    deviceLastSeen: MutableMap<String, Long>,
-    selectedDevice: androidx.compose.runtime.MutableState<ScanResult?>,
-    scanJob: androidx.compose.runtime.MutableState<Job?>,
-    logLines: MutableList<String>,
-) {
-    scanJob.value?.cancel()
-    devices.clear()
-    deviceLastSeen.clear()
-    selectedDevice.value = null
-    logLines.append("Scanning 30s: service UUID first, ow name fallback after 10s")
-    scanJob.value = scope.launch {
-        runCatching {
-            withTimeoutOrNull(SCAN_DURATION_MS) {
-                val cleanupJob = launch {
-                    while (true) {
-                        delay(DEVICE_PRUNE_INTERVAL_MS)
-                        pruneStaleDevices(devices, deviceLastSeen, selectedDevice)
-                    }
-                }
-                try {
-                    transport.scan().collect { result ->
-                        deviceLastSeen[result.deviceId] = System.currentTimeMillis()
-                        val index = devices.indexOfFirst { it.deviceId == result.deviceId }
-                        if (index == -1) {
-                            devices += result
-                            logLines.append("Found ${result.label()}")
-                        } else {
-                            devices[index] = result
-                        }
-                        selectedDevice.value = selectedDevice.value ?: result
-                    }
-                } finally {
-                    cleanupJob.cancel()
-                }
-            } ?: logLines.append("Scan stopped after 30s")
-        }.onFailure { error -> logLines.append("Scan failed: ${error.message}") }
-    }
-}
-private fun pruneStaleDevices(
-    devices: MutableList<ScanResult>,
-    deviceLastSeen: MutableMap<String, Long>,
-    selectedDevice: androidx.compose.runtime.MutableState<ScanResult?>,
-) {
-    val cutoff = System.currentTimeMillis() - DEVICE_STALE_MS
-    val staleDeviceIds = deviceLastSeen
-        .filterValues { lastSeen -> lastSeen < cutoff }
-        .keys
-        .toSet()
-    if (staleDeviceIds.isEmpty()) return
-
-    devices.removeAll { result -> result.deviceId in staleDeviceIds }
-    staleDeviceIds.forEach(deviceLastSeen::remove)
-    if (selectedDevice.value?.deviceId in staleDeviceIds) {
-        selectedDevice.value = devices.firstOrNull()
-    }
-}
-private fun startDumpJobs(
-    scope: CoroutineScope,
-    transport: KableBleTransport,
-    jobs: MutableList<Job>,
-    logLines: MutableList<String>,
-) {
-    jobs.forEach(Job::cancel)
-    jobs.clear()
-    dumpCharacteristics.forEach { characteristic ->
-        jobs += scope.launch {
-            transport.notifications(characteristic)
-                .take(20)
-                .collect { value -> logLines.append("${characteristic.shortName()} ${value.toHexString()}") }
-        }
-    }
-}
-private val dumpCharacteristics = listOf(
-    OwUuids.BATTERY_PERCENT,
-    OwUuids.RPM,
-    OwUuids.PACK_VOLTAGE,
-    OwUuids.AMPS,
-    OwUuids.TEMPERATURE,
-    OwUuids.RIDE_MODE,
-)
-
-private fun MutableList<String>.append(line: String) {
-    add(line)
-    if (size > 80) removeAt(0)
-}
 
 private fun ScanResult.label(): String =
     listOfNotNull(displayName, deviceId, rssi?.let { "$it dBm" }).joinToString("  ")
-
-private fun GattCharacteristicId.shortName(): String =
-    uuid.toString().substring(startIndex = 4, endIndex = 8)
-
-private fun ByteArray.toHexString(): String =
-    joinToString(":") { byte -> byte.toUByte().toString(radix = 16).padStart(2, '0') }
 
 private fun buildPermissionDeniedMessage(): String =
     "Bluetooth scan permissions are required before scanning so ZWheel can find the board and keep the ride connection alive."

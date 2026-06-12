@@ -103,4 +103,8 @@ Place this file at repo root. Read it at the start of EVERY session, along with
   emit every advertisement it receives — dedup and staleness logic belong in the UI/call
   site, not the transport. The seenDeviceIds filter was removed from scan(); the debug
   screen owns dedup via deviceLastSeen. Apply this to any future scan flow work.
+- Standing rule: Never pass MutableState<T>, MutableList, MutableMap, or Job references
+  into non-@Composable functions. State belongs in a ViewModel exposed as StateFlow;
+  Composables collect it. If a helper function needs to mutate state, it belongs in the
+  ViewModel, not in a free function taking MutableState params.
 - (append discoveries here…)

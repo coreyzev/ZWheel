@@ -109,4 +109,9 @@ Place this file at repo root. Read it at the start of EVERY session, along with
   ViewModel, not in a free function taking MutableState params.
 - 2026-06-12: Rule reminder — one concern per PR. PR #4 combined log noise fix +
   ViewModel refactor. Keep these separate going forward.
+- 2026-06-12: M1 debug BLE fixture workflow added: app-level BLE events export as
+  redacted JSONL using schema `m1-ble-debug-v1` for AI/human review. Upload is debug-only;
+  `INTERNET` permission is scoped to `app/src/debug`, and release remains offline.
+  Receiver tooling lives under `tools/ble_debug_receiver/` and expects HTTPS via a
+  tunnel/reverse proxy if used off-device.
 - (append discoveries here…)

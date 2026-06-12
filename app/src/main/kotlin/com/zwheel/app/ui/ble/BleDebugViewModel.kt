@@ -6,30 +6,25 @@ import androidx.lifecycle.viewModelScope
 import com.zwheel.app.ble.ConnectionState
 import com.zwheel.app.ble.KableBleTransport
 import com.zwheel.core.ports.ScanResult
-import com.zwheel.core.protocol.GattCharacteristicId
-import com.zwheel.core.protocol.OwUuids
+import com.zwheel.core.protocol.debug.BleDebugRecorder
 import com.zwheel.core.protocol.handshake.GeminiStrategy
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 private const val SCAN_DURATION_MS = 30_000L
 private const val DEVICE_STALE_MS = 5_000L
 private const val DEVICE_PRUNE_INTERVAL_MS = 1_000L
-private const val TELEMETRY_PROBE_TIMEOUT_MS = 2_000L
 
 class BleDebugViewModel : ViewModel() {
     private val transport = KableBleTransport()
+    private val recorder = BleDebugRecorder()
     private val deviceLastSeen = mutableMapOf<String, Long>()
     private var scanJob: Job? = null
     private val dumpJobs = mutableListOf<Job>()
@@ -40,8 +35,17 @@ class BleDebugViewModel : ViewModel() {
     private val _selectedDevice = MutableStateFlow<ScanResult?>(null)
     val selectedDevice: StateFlow<ScanResult?> = _selectedDevice.asStateFlow()
 
+    private val sessionLogger = BleDebugSessionLogger(
+        io = transport,
+        recorder = recorder,
+        selectedDeviceId = { _selectedDevice.value?.deviceId },
+    )
+
     private val _logLines = MutableStateFlow(listOf("Idle"))
     val logLines: StateFlow<List<String>> = _logLines.asStateFlow()
+
+    private val _exportStatus = MutableStateFlow("No export yet")
+    val exportStatus: StateFlow<String> = _exportStatus.asStateFlow()
 
     val connectionState: StateFlow<ConnectionState> = transport.connectionState
 
@@ -58,7 +62,10 @@ class BleDebugViewModel : ViewModel() {
             connectionState.collect { state ->
                 when (state) {
                     ConnectionState.Scanning -> appendLog("Scanning...")
-                    ConnectionState.Disconnected -> appendLog("Disconnected")
+                    ConnectionState.Disconnected -> {
+                        recorder.record(type = "disconnect", status = "transport disconnected")
+                        appendLog("Disconnected")
+                    }
                     ConnectionState.Connected,
                     ConnectionState.Idle -> Unit
                 }
@@ -79,23 +86,47 @@ class BleDebugViewModel : ViewModel() {
     fun onConnectClicked(deviceId: String) {
         val device = _devices.value.firstOrNull { it.deviceId == deviceId } ?: return
         scanJob?.cancel()
+        recorder.record(
+            type = "selected_device",
+            deviceId = device.deviceId,
+            displayName = device.displayName,
+            rssi = device.rssi,
+        )
+        recorder.record(
+            type = "connect_start",
+            deviceId = device.deviceId,
+            displayName = device.displayName,
+            rssi = device.rssi,
+        )
         appendLog("Connecting ${device.label()}")
         viewModelScope.launch {
             try {
                 transport.connect(device.deviceId)
+                recorder.record(type = "gatt_ready", deviceId = device.deviceId, status = "connected")
                 appendLog("GATT ready")
-                logBoardMetadata()
+                appendLog(sessionLogger.boardMetadataLine())
+                recorder.record(type = "gemini_wait", deviceId = device.deviceId, status = "uart notification 5s")
                 appendLog("Gemini wait UART 5s")
                 val result = GeminiStrategy().unlock(transport)
+                recorder.record(
+                    type = "gemini_result",
+                    deviceId = device.deviceId,
+                    status = "${result.strategyName}:${result.unlocked}",
+                )
                 appendLog("Unlock ${result.strategyName}: ${result.unlocked}")
                 if (result.unlocked) {
                     appendLog("Connected")
                     startDumpJobs()
                 }
             } catch (error: Throwable) {
+                recorder.record(
+                    type = "connect_failure",
+                    deviceId = device.deviceId,
+                    status = error.shortMessage(),
+                )
                 appendLog("Connect/unlock failed: ${error.shortMessage()}")
                 if (error is TimeoutCancellationException) {
-                    appendLog(probeTelemetry())
+                    appendLog(sessionLogger.probeTelemetryLine())
                     appendLog("OWCE trigger likely needed")
                 }
             }
@@ -106,6 +137,7 @@ class BleDebugViewModel : ViewModel() {
         scanJob?.cancel()
         dumpJobs.forEach(Job::cancel)
         dumpJobs.clear()
+        recorder.record(type = "disconnect_requested", deviceId = _selectedDevice.value?.deviceId)
         viewModelScope.launch {
             runCatching { transport.disconnect() }
                 .onFailure { error -> appendLog("Disconnect failed: ${error.message}") }
@@ -125,11 +157,19 @@ class BleDebugViewModel : ViewModel() {
         _permanentlyDenied.value = !granted && permissionsAttempted && permanentlyDenied
     }
 
+    fun exportJsonLines(): String = recorder.toJsonLines()
+
+    fun onExportStatus(status: String) {
+        _exportStatus.value = status
+        appendLog(status)
+    }
+
     private fun startScan() {
         scanJob?.cancel()
         _devices.value = emptyList()
         deviceLastSeen.clear()
         _selectedDevice.value = null
+        recorder.record(type = "scan_start", status = "service UUID first, ow name fallback after 10s")
         appendLog("Scanning 30s: service UUID first, ow name fallback after 10s")
         scanJob = viewModelScope.launch {
             runCatching {
@@ -145,9 +185,13 @@ class BleDebugViewModel : ViewModel() {
                     } finally {
                         cleanupJob.cancel()
                     }
-                } ?: appendLog("Scan stopped after 30s")
+                } ?: run {
+                    recorder.record(type = "scan_stop", status = "timeout 30s")
+                    appendLog("Scan stopped after 30s")
+                }
             }.onFailure { error ->
                 if (error !is CancellationException) {
+                    recorder.record(type = "scan_failure", status = error.shortMessage())
                     appendLog("Scan failed: ${error.shortMessage()}")
                 }
             }
@@ -155,6 +199,12 @@ class BleDebugViewModel : ViewModel() {
     }
 
     private fun onScanResult(result: ScanResult) {
+        recorder.record(
+            type = "scan_discovery",
+            deviceId = result.deviceId,
+            displayName = result.displayName,
+            rssi = result.rssi,
+        )
         val key = result.deviceKey()
         deviceLastSeen[key] = System.currentTimeMillis()
         val currentDevices = _devices.value
@@ -191,47 +241,7 @@ class BleDebugViewModel : ViewModel() {
     private fun startDumpJobs() {
         dumpJobs.forEach(Job::cancel)
         dumpJobs.clear()
-        dumpCharacteristics.forEach { characteristic ->
-            dumpJobs += viewModelScope.launch {
-                transport.notifications(characteristic)
-                    .take(20)
-                    .collect { value -> appendLog("${characteristic.shortName()} ${value.toHexString()}") }
-            }
-        }
-    }
-
-    private suspend fun logBoardMetadata() {
-        val hardware = readHex(OwUuids.HARDWARE_REVISION)
-        val firmware = readHex(OwUuids.FIRMWARE_REVISION)
-        val rideMode = readHex(OwUuids.RIDE_MODE)
-        appendLog(
-            "Meta hw=${hardware.displayValue()} fw=${firmware.displayValue()} ride=${rideMode.displayValue()}",
-        )
-    }
-
-    private suspend fun readHex(characteristicId: GattCharacteristicId): String? =
-        runCatching { transport.read(characteristicId).toCompactDisplay() }
-            .onFailure { error -> Log.d(TAG, "Read ${characteristicId.shortName()} failed", error) }
-            .getOrNull()
-
-    private suspend fun probeTelemetry(): String {
-        val results = telemetryProbeCharacteristics.map { probe ->
-            viewModelScope.async {
-                val value = runCatching {
-                    withTimeoutOrNull(TELEMETRY_PROBE_TIMEOUT_MS) {
-                        transport.notifications(probe.characteristicId).first()
-                    }
-                }.onFailure { error ->
-                    Log.d(TAG, "Probe ${probe.name} failed", error)
-                }.getOrNull()
-                probe.name to value?.toCompactDisplay()
-            }
-        }.awaitAll()
-
-        return results.joinToString(
-            separator = " ",
-            prefix = "Probe ",
-        ) { (name, value) -> "$name=${value ?: "--"}" }
+        dumpJobs += sessionLogger.startDumpJobs(viewModelScope, ::appendLog)
     }
 
     private fun appendLog(line: String) {
@@ -251,50 +261,3 @@ class BleDebugViewModel : ViewModel() {
         const val MAX_LOG_LINES = 80
     }
 }
-
-private val dumpCharacteristics = listOf(
-    OwUuids.BATTERY_PERCENT,
-    OwUuids.RPM,
-    OwUuids.PACK_VOLTAGE,
-    OwUuids.AMPS,
-    OwUuids.TEMPERATURE,
-    OwUuids.RIDE_MODE,
-)
-
-private val telemetryProbeCharacteristics = listOf(
-    ProbeCharacteristic("bat", OwUuids.BATTERY_PERCENT),
-    ProbeCharacteristic("rpm", OwUuids.RPM),
-    ProbeCharacteristic("v", OwUuids.PACK_VOLTAGE),
-    ProbeCharacteristic("a", OwUuids.AMPS),
-    ProbeCharacteristic("tmp", OwUuids.TEMPERATURE),
-    ProbeCharacteristic("mode", OwUuids.RIDE_MODE),
-)
-
-private data class ProbeCharacteristic(
-    val name: String,
-    val characteristicId: GattCharacteristicId,
-)
-
-private fun ScanResult.deviceKey(): String = deviceId.lowercase()
-
-private fun ScanResult.label(): String =
-    listOfNotNull(displayName, deviceId, rssi?.let { "$it dBm" }).joinToString("  ")
-
-private fun GattCharacteristicId.shortName(): String =
-    uuid.toString().substring(startIndex = 4, endIndex = 8)
-
-private fun ByteArray.toHexString(): String =
-    joinToString(":") { byte -> byte.toUByte().toString(radix = 16).padStart(2, '0') }
-
-private fun ByteArray.toCompactDisplay(): String =
-    if (size == 2) {
-        val value = get(0).toInt().and(0xff) or (get(1).toInt().and(0xff) shl 8)
-        "$value/${toHexString()}"
-    } else {
-        toHexString()
-    }
-
-private fun String?.displayValue(): String = this ?: "--"
-
-private fun Throwable.shortMessage(): String =
-    message ?: this::class.simpleName ?: "unknown"

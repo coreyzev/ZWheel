@@ -32,6 +32,45 @@ kotlin {
     jvmToolchain(17)
 }
 
+val verifyNetworkPermissionScoping by tasks.registering {
+    group = "verification"
+    description = "Fails if runtime network permission is not scoped to debug builds."
+
+    val mainManifest = layout.projectDirectory.file("src/main/AndroidManifest.xml")
+    val debugManifest = layout.projectDirectory.file("src/debug/AndroidManifest.xml")
+    val releaseManifest = layout.projectDirectory.file("src/release/AndroidManifest.xml")
+
+    inputs.files(mainManifest, debugManifest)
+    inputs.files(
+        provider {
+            if (releaseManifest.asFile.exists()) {
+                listOf(releaseManifest.asFile)
+            } else {
+                emptyList()
+            }
+        },
+    )
+
+    doLast {
+        val internetPermission = "android.permission.INTERNET"
+        check(!mainManifest.asFile.readText().contains(internetPermission)) {
+            "INTERNET permission must not be declared in app/src/main."
+        }
+        check(debugManifest.asFile.readText().contains(internetPermission)) {
+            "Debug manifest must declare INTERNET for BLE fixture upload."
+        }
+        if (releaseManifest.asFile.exists()) {
+            check(!releaseManifest.asFile.readText().contains(internetPermission)) {
+                "INTERNET permission must not be declared in app/src/release."
+            }
+        }
+    }
+}
+
+tasks.check {
+    dependsOn(verifyNetworkPermissionScoping)
+}
+
 dependencies {
     implementation(project(":core"))
 

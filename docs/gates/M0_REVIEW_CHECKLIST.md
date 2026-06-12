@@ -43,7 +43,8 @@ Hardware required: No
 - [ ] Hilt is wired in phone and wear application/activity shells.
 - [ ] Phone app has an empty OWCE-style Compose dashboard shell.
 - [ ] Wear app has an empty black-background speed screen shell.
-- [ ] Neither manifest declares `android.permission.INTERNET`.
+- [ ] Main/release manifests do not declare `android.permission.INTERNET`; debug-only
+      fixture tooling may declare it under `app/src/debug`.
 
 ## Docs And ADRs
 

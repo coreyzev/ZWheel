@@ -101,6 +101,10 @@ class BleDebugViewModel : ViewModel() {
         permissionsAttempted = true
     }
 
+    fun onInitialPermissionCheck(granted: Boolean) {
+        _permissionsGranted.value = granted
+    }
+
     fun onPermissionsResult(granted: Boolean, permanentlyDenied: Boolean = false) {
         _permissionsGranted.value = granted
         _permanentlyDenied.value = !granted && permissionsAttempted && permanentlyDenied

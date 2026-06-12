@@ -107,4 +107,6 @@ Place this file at repo root. Read it at the start of EVERY session, along with
   into non-@Composable functions. State belongs in a ViewModel exposed as StateFlow;
   Composables collect it. If a helper function needs to mutate state, it belongs in the
   ViewModel, not in a free function taking MutableState params.
+- 2026-06-12: Rule reminder — one concern per PR. PR #4 combined log noise fix +
+  ViewModel refactor. Keep these separate going forward.
 - (append discoveries here…)

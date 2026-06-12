@@ -17,19 +17,27 @@ import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.withTimeout
 
 @OptIn(ObsoleteKableApi::class)
 class KableBleTransport : BleTransport, GattIo {
     private val advertisements = mutableMapOf<String, Advertisement>()
+    private val _connectionState = MutableStateFlow(ConnectionState.Idle)
     private var peripheral: com.juul.kable.Peripheral? = null
+
+    val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
 
     override suspend fun scan(): Flow<ScanResult> {
         val primaryHadResults = AtomicBoolean(false)
@@ -52,6 +60,12 @@ class KableBleTransport : BleTransport, GattIo {
 
         val seenDeviceIds = mutableSetOf<String>()
         return merge(primary, fallback)
+            .onStart { _connectionState.value = ConnectionState.Scanning }
+            .onCompletion {
+                if (_connectionState.value == ConnectionState.Scanning) {
+                    _connectionState.value = ConnectionState.Idle
+                }
+            }
             .filter { result -> seenDeviceIds.add(result.deviceId) }
     }
 
@@ -76,9 +90,10 @@ class KableBleTransport : BleTransport, GattIo {
         } else {
             Peripheral(deviceId.toIdentifier())
         }
-        currentPeripheral().connect()
         try {
+            currentPeripheral().connect()
             verifyOnewheelService()
+            _connectionState.value = ConnectionState.Connected
         } catch (error: Throwable) {
             disconnect()
             throw error
@@ -88,6 +103,7 @@ class KableBleTransport : BleTransport, GattIo {
     override suspend fun disconnect() {
         peripheral?.disconnect()
         peripheral = null
+        _connectionState.value = ConnectionState.Disconnected
     }
 
     override suspend fun read(characteristicId: GattCharacteristicId): ByteArray =

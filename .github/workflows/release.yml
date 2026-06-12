@@ -9,13 +9,11 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Check out
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Set up JDK
         uses: actions/setup-java@v4
@@ -35,10 +33,31 @@ jobs:
           gradle-version: "8.10.2"
 
       - name: Build signed debug APK
-        run: gradle clean :app:assembleDebug
+        run: gradle clean check :app:assembleDebug :wear:assembleDebug
 
       - name: Prepare release asset
         run: cp app/build/outputs/apk/debug/app-debug.apk zwheel-debug.apk
+
+      - name: Upload release asset
+        uses: actions/upload-artifact@v4
+        with:
+          name: zwheel-debug
+          path: zwheel-debug.apk
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download release asset
+        uses: actions/download-artifact@v4
+        with:
+          name: zwheel-debug
+          path: .
 
       - name: Move latest tag
         run: |

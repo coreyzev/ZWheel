@@ -13,10 +13,16 @@ import com.zwheel.core.ports.GattIo
 import com.zwheel.core.ports.ScanResult
 import com.zwheel.core.protocol.GattCharacteristicId
 import com.zwheel.core.protocol.OwUuids
+import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.withTimeout
 
@@ -26,23 +32,41 @@ class KableBleTransport : BleTransport, GattIo {
     private var peripheral: com.juul.kable.Peripheral? = null
 
     override suspend fun scan(): Flow<ScanResult> {
-        val scanner = Scanner {
-            scanSettings = ScanSettings.Builder()
-                .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
-                .build()
-            preConflate = true
-        }
+        val primaryHadResults = AtomicBoolean(false)
+        val primary = scanner(serviceUuid = OwUuids.ONEWHEEL_SERVICE)
+            .advertisements
+            .onEach { primaryHadResults.set(true) }
+            .map { advertisement -> advertisement.toScanResult() }
 
-        return scanner.advertisements
-            .filter { advertisement -> advertisement.onewheelName() != null }
-            .onEach { advertisement -> advertisements[advertisement.identifier.toString()] = advertisement }
-            .map { advertisement ->
-                ScanResult(
-                    deviceId = advertisement.identifier.toString(),
-                    displayName = advertisement.onewheelName(),
-                    rssi = advertisement.rssi.takeUnless { it == Int.MIN_VALUE },
+        val fallback = flow {
+            delay(NAME_FALLBACK_DELAY_MS)
+            if (!primaryHadResults.get()) {
+                emitAll(
+                    scanner(serviceUuid = null)
+                        .advertisements
+                        .filter { advertisement -> advertisement.onewheelName() != null }
+                        .map { advertisement -> advertisement.toScanResult(displayName = advertisement.onewheelName()) },
                 )
             }
+        }
+
+        val seenDeviceIds = mutableSetOf<String>()
+        return merge(primary, fallback)
+            .filter { result -> seenDeviceIds.add(result.deviceId) }
+    }
+
+    private fun scanner(serviceUuid: UUID?): Scanner<Advertisement> = Scanner {
+        if (serviceUuid != null) {
+            filters {
+                match {
+                    services = listOf(serviceUuid)
+                }
+            }
+        }
+        scanSettings = ScanSettings.Builder()
+            .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+            .build()
+        preConflate = true
     }
 
     override suspend fun connect(deviceId: String) {
@@ -53,7 +77,12 @@ class KableBleTransport : BleTransport, GattIo {
             Peripheral(deviceId.toIdentifier())
         }
         currentPeripheral().connect()
-        verifyOnewheelService()
+        try {
+            verifyOnewheelService()
+        } catch (error: Throwable) {
+            disconnect()
+            throw error
+        }
     }
 
     override suspend fun disconnect() {
@@ -93,8 +122,18 @@ class KableBleTransport : BleTransport, GattIo {
         listOfNotNull(name, peripheralName)
             .firstOrNull { deviceName -> deviceName.startsWith(ONEWHEEL_NAME_PREFIX, ignoreCase = true) }
 
+    private fun Advertisement.toScanResult(displayName: String? = name ?: peripheralName): ScanResult {
+        advertisements[identifier.toString()] = this
+        return ScanResult(
+            deviceId = identifier.toString(),
+            displayName = displayName,
+            rssi = rssi.takeUnless { it == Int.MIN_VALUE },
+        )
+    }
+
     private companion object {
         const val ONEWHEEL_NAME_PREFIX = "ow"
+        const val NAME_FALLBACK_DELAY_MS = 10_000L
         const val SERVICE_DISCOVERY_TIMEOUT_MS = 10_000L
     }
 }

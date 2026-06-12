@@ -160,7 +160,7 @@ private fun startScan(
     scanJob.value?.cancel()
     devices.clear()
     selectedDevice.value = null
-    logLines.append("Scanning 30s for BLE names starting with ow")
+    logLines.append("Scanning 30s: service UUID first, ow name fallback after 10s")
     scanJob.value = scope.launch {
         runCatching {
             withTimeoutOrNull(SCAN_DURATION_MS) {

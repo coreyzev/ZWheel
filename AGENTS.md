@@ -63,7 +63,7 @@ Place this file at repo root. Read it at the start of EVERY session, along with
 ## 6. Memory (append-only; agent maintains)
 - 2026-06: Project initialized from Fable design package. Reference protocol sources:
   ponewheel issue #86 (Gemini unlock), UWP-Onewheel docs, OWCE legacy OWBoard.cs,
-  Onewheel2Garmin. Corey's board: XR HW 4029, fw Gemini-era. Dev phone: Samsung S25
+  Onewheel2Garmin. Corey's board: XR HW 4209 (0x1071), fw Gemini-era. Dev phone: Samsung S25
   Ultra (aggressive battery mgmt — the bulletproof service in 02_ARCHITECTURE §6 exists
   because of it). Watch: Galaxy Watch 7 Classic (Wear OS 5).
 - 2026-06-11: Corey officially renamed the project from the FloatDash working title to
@@ -84,7 +84,9 @@ Place this file at repo root. Read it at the start of EVERY session, along with
   the repo's Kotlin 2.0.21 / AGP 8.7.3 toolchain. Full `clean check :app:assembleDebug
   :wear:assembleDebug` passed locally after the Kable transport, Gemini handshake,
   debug BLE screen, and Samsung battery advice screen were added.
-- M1 open question: confirm RPM characteristic is e659f30b on Corey's 4029 XR from
+- 2026-06-12: FIRMWARE_REVISION (e659f311) added to writable allowlist for Gemini trigger
+  only — read-then-write-same-value. Corey sign-off given. See ADR-004.
+- M1 open question: confirm RPM characteristic is e659f30b on Corey's 4209 XR from
   the board capture fixture. Tighten OwUuids RPM doc comment to cite the specific
   pOnewheel source file/commit once confirmed.
 - M1 open question: confirm whether LIGHTS_FRONT (e659f30d) and LIGHTS_BACK (e659f30e)

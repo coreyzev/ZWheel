@@ -100,9 +100,16 @@ object OwUuids {
     /** Gemini UART write/unlock characteristic described in pOnewheel issue #86 and UWP-Onewheel docs. */
     val UART_WRITE = GattCharacteristicId(UUID.fromString("e659f3ff-ea98-11e3-ac10-0800200c9a66"))
 
+    /**
+     * Writable ONLY for Gemini handshake trigger: read the value then write it back unchanged
+     * to signal the board to emit the challenge. This is NOT a firmware write path — the board
+     * ignores the value and uses the write event as a trigger only.
+     * Evidence: OWCE OWBoard.cs L861-876.
+     */
     val writableAllowlist: Set<GattCharacteristicId> = setOf(
         UART_WRITE,
         RIDE_MODE,
         LIGHTS,
+        FIRMWARE_REVISION,
     )
 }

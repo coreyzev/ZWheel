@@ -23,9 +23,37 @@ All UUIDs live in `core/protocol/OwUuids.kt`.
 - UART read/challenge notification: `e659f3fe-ea98-11e3-ac10-0800200c9a66`
 - UART write/unlock response: `e659f3ff-ea98-11e3-ac10-0800200c9a66`
 
-Only `UART_WRITE` is writable for the unlock path. Firmware revision is used as metadata
-and, if the Phase 1 evidence confirms it, as the challenge trigger. It must not become a
-general-purpose write path.
+Both `UART_WRITE` and `FIRMWARE_REVISION` are writable for the unlock path. All other
+UUIDs are read-only. `FIRMWARE_REVISION` must not become a general-purpose write path;
+its use is restricted to the trigger write described below.
+
+## Firmware Revision Trigger Mechanism
+
+The Gemini board does not begin the challenge-response flow automatically on connection.
+It must be told to emit a challenge. The trigger is a write to `FIRMWARE_REVISION`
+(`e659f311`) with the value that was just read from that same characteristic.
+
+**Why a write to FIRMWARE_REVISION?**
+The board interprets the write event as a signal to push the 20-byte `CRX` challenge on
+`UART_READ`. It does not act on the written value — writing the same bytes back is
+sufficient and is explicitly what OWCE does. This is a BLE event trigger, not a firmware
+flash or OTA path. The board has no mechanism to update its firmware over this path; the
+characteristic carries the firmware version integer and nothing more.
+
+**Evidence:** `OnewheelCommunityEdition/OWCE_App` `OWBoard.cs` lines 861-876:
+```csharp
+await _owble.SubscribeValue(OWBoard.SerialReadUUID, true);
+// Data does not send until this is triggered.
+byte[] firmwareRevision = GetBytesForBoardFromUInt16((UInt16)FirmwareRevision, FirmwareRevisionUUID);
+var didWrite = await _owble.WriteValue(OWBoard.FirmwareRevisionUUID, firmwareRevision, true);
+var byteArray = await _handshakeTaskCompletionSource.Task;
+```
+
+**Why `FIRMWARE_REVISION` is on the writable allowlist:**
+Corey explicitly signed off on 2026-06-12 after reviewing the OWCE evidence. The allowlist
+entry is guarded by a doc comment and an assertion in `OwUuidsTest` that names this ADR.
+Any future agent or reviewer who sees `FIRMWARE_REVISION` as writable should consult this
+section before removing it.
 
 ## Byte Flow
 
@@ -34,13 +62,14 @@ hardware test:
 
 1. Connect and discover the Onewheel service.
 2. Subscribe to `UART_READ` notifications before triggering the challenge.
-3. Trigger the Gemini challenge using the public-reference-described firmware-revision
-   interaction.
-4. Receive challenge bytes from `UART_READ`.
-5. Validate payload length and framing. Unknown length or framing fails closed.
-6. Compute response bytes using the public Gemini MD5 challenge-response transform.
-7. Write the response bytes to `UART_WRITE`.
-8. Treat unlock as successful only after telemetry characteristics begin producing
+3. Read `FIRMWARE_REVISION` (`e659f311`).
+4. Write that exact value back to `FIRMWARE_REVISION` — this write event tells the board
+   to emit its challenge. The board ignores the written value.
+5. Receive the 20-byte `CRX` challenge bytes from `UART_READ`.
+6. Validate payload length and framing. Unknown length or framing fails closed.
+7. Compute response bytes using the public Gemini MD5 challenge-response transform.
+8. Write the response bytes to `UART_WRITE`.
+9. Treat unlock as successful only after telemetry characteristics begin producing
    expected values or a documented success signal is observed.
 
 ## Transform Contract

@@ -2,6 +2,7 @@ package com.zwheel.app.ui.ble
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.os.Build
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -50,11 +51,7 @@ fun BleDebugScreen(modifier: Modifier = Modifier) {
     val pendingScan = remember { mutableStateOf(false) }
 
     val requiredPermissions = remember {
-        listOf(
-            Manifest.permission.BLUETOOTH_SCAN,
-            Manifest.permission.BLUETOOTH_CONNECT,
-            Manifest.permission.ACCESS_FINE_LOCATION,
-        )
+        bleScanPermissions()
     }
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
@@ -225,4 +222,14 @@ private fun hasAllRequiredPermissions(
 ): Boolean = permissions.all { hasPermission(context, it) }
 
 private fun buildPermissionDeniedMessage(): String =
-    "Bluetooth scan, connect, and location permissions are required before scanning so ZWheel can find the board and keep the ride connection alive on Android 12+ and earlier devices."
+    "Bluetooth scan permissions are required before scanning so ZWheel can find the board and keep the ride connection alive."
+
+private fun bleScanPermissions(): List<String> =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        listOf(
+            Manifest.permission.BLUETOOTH_SCAN,
+            Manifest.permission.BLUETOOTH_CONNECT,
+        )
+    } else {
+        listOf(Manifest.permission.ACCESS_FINE_LOCATION)
+    }

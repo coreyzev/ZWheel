@@ -1,0 +1,3 @@
+{"schemaVersion":"m1-ble-debug-v1","sessionId":"sample-session","offsetMs":0,"type":"scan_start","status":"service UUID first, ow name fallback after 10s"}
+{"schemaVersion":"m1-ble-debug-v1","sessionId":"sample-session","offsetMs":85,"type":"scan_discovery","deviceHash":"0123456789abcdef01234567","displayName":"ow123456","rssi":-61}
+{"schemaVersion":"m1-ble-debug-v1","sessionId":"sample-session","offsetMs":3420,"type":"gatt_ready","deviceHash":"0123456789abcdef01234567","status":"connected"}

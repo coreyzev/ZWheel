@@ -215,6 +215,6 @@ private fun RideModeCard(state: DashboardUiState) {
 @Composable
 private fun ZWheelAppScreenPreview() {
     ZWheelTheme {
-        ZWheelDashboard(state = mockDashboardStateFlow().value)
+        ZWheelDashboard(state = mockDashboardState())
     }
 }

@@ -90,7 +90,11 @@ object OwUuids {
     /** Custom board name characteristic documented by OWCE/pOnewheel community maps. */
     val CUSTOM_NAME = GattCharacteristicId(UUID.fromString("e659f3fd-ea98-11e3-ac10-0800200c9a66"))
 
-    /** Gemini UART read characteristic described in pOnewheel issue #86 and UWP-Onewheel docs. */
+    /**
+     * Gemini UART read characteristic described in pOnewheel issue #86 and UWP-Onewheel docs.
+     * Notify-only — the board pushes the challenge as a notification; never call read() on this
+     * characteristic (it has no READ property and will throw at the transport layer).
+     */
     val UART_READ = GattCharacteristicId(UUID.fromString("e659f3fe-ea98-11e3-ac10-0800200c9a66"))
 
     /** Gemini UART write/unlock characteristic described in pOnewheel issue #86 and UWP-Onewheel docs. */

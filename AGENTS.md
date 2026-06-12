@@ -78,4 +78,15 @@ Place this file at repo root. Read it at the start of EVERY session, along with
 - 2026-06-12: Phase 0 calc boundary corrected: `SpeedCalculator`, `TopSpeedTracker`,
   and `RangeEstimator` are interface stubs only. Concrete speed/range/top-speed
   implementations are intentionally deferred to Phase 2.
+- 2026-06-12: Phase 1 BLE spike selected Kable `0.35.0` for Android compatibility with
+  the repo's Kotlin 2.0.21 / AGP 8.7.3 toolchain. Full `clean check :app:assembleDebug
+  :wear:assembleDebug` passed locally after the Kable transport, Gemini handshake,
+  debug BLE screen, and Samsung battery advice screen were added.
+- M1 open question: confirm RPM characteristic is e659f30b on Corey's 4029 XR from
+  the board capture fixture. Tighten OwUuids RPM doc comment to cite the specific
+  pOnewheel source file/commit once confirmed.
+- M1 open question: confirm whether LIGHTS_FRONT (e659f30d) and LIGHTS_BACK (e659f30e)
+  require writes for independent front/back control, or whether LIGHTS (e659f30c) alone
+  is sufficient. If they need to be writable, add them to writableAllowlist AND update
+  OwUuidsTest in the same commit.
 - (append discoveries here…)

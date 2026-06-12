@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.zwheel.app.ui.ble.BleDebugScreen
 
 @Composable
 fun ZWheelAppScreen() {
@@ -45,6 +46,7 @@ private fun ZWheelDashboard(state: DashboardUiState) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        BleDebugScreen()
         Header(state)
         SpeedCard(state)
         BatteryPackCard(state)

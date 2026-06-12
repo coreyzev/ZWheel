@@ -5,11 +5,10 @@ import com.zwheel.core.model.RideSession
 import com.zwheel.core.protocol.GattCharacteristicId
 import com.zwheel.core.protocol.HandshakeResult
 import com.zwheel.core.protocol.KeepAliveAction
-import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 
 interface BleTransport {
-    suspend fun scan(serviceUuid: UUID): Flow<ScanResult>
+    suspend fun scan(): Flow<ScanResult>
     suspend fun connect(deviceId: String)
     suspend fun disconnect()
     suspend fun read(characteristicId: GattCharacteristicId): ByteArray

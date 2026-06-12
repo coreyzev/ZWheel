@@ -13,23 +13,20 @@ import com.zwheel.core.ports.GattIo
 import com.zwheel.core.ports.ScanResult
 import com.zwheel.core.protocol.GattCharacteristicId
 import com.zwheel.core.protocol.OwUuids
-import java.util.UUID
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.withTimeout
 
 @OptIn(ObsoleteKableApi::class)
 class KableBleTransport : BleTransport, GattIo {
     private val advertisements = mutableMapOf<String, Advertisement>()
     private var peripheral: com.juul.kable.Peripheral? = null
 
-    override suspend fun scan(serviceUuid: UUID): Flow<ScanResult> {
+    override suspend fun scan(): Flow<ScanResult> {
         val scanner = Scanner {
-            filters {
-                match {
-                    services = listOf(serviceUuid)
-                }
-            }
             scanSettings = ScanSettings.Builder()
                 .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
                 .build()
@@ -37,11 +34,12 @@ class KableBleTransport : BleTransport, GattIo {
         }
 
         return scanner.advertisements
+            .filter { advertisement -> advertisement.onewheelName() != null }
             .onEach { advertisement -> advertisements[advertisement.identifier.toString()] = advertisement }
             .map { advertisement ->
                 ScanResult(
                     deviceId = advertisement.identifier.toString(),
-                    displayName = advertisement.name ?: advertisement.peripheralName,
+                    displayName = advertisement.onewheelName(),
                     rssi = advertisement.rssi.takeUnless { it == Int.MIN_VALUE },
                 )
             }
@@ -55,6 +53,7 @@ class KableBleTransport : BleTransport, GattIo {
             Peripheral(deviceId.toIdentifier())
         }
         currentPeripheral().connect()
+        verifyOnewheelService()
     }
 
     override suspend fun disconnect() {
@@ -78,6 +77,24 @@ class KableBleTransport : BleTransport, GattIo {
     private fun currentPeripheral(): com.juul.kable.Peripheral =
         checkNotNull(peripheral) { "No active BLE peripheral" }
 
+    private suspend fun verifyOnewheelService() {
+        val services = withTimeout(SERVICE_DISCOVERY_TIMEOUT_MS) {
+            currentPeripheral().services.first { discoveredServices -> !discoveredServices.isNullOrEmpty() }
+        }
+        require(services?.any { service -> service.serviceUuid == OwUuids.ONEWHEEL_SERVICE } == true) {
+            "Connected device does not expose the Onewheel service ${OwUuids.ONEWHEEL_SERVICE}"
+        }
+    }
+
     private fun GattCharacteristicId.toKableCharacteristic() =
         characteristicOf(OwUuids.ONEWHEEL_SERVICE.toString(), uuid.toString())
+
+    private fun Advertisement.onewheelName(): String? =
+        listOfNotNull(name, peripheralName)
+            .firstOrNull { deviceName -> deviceName.startsWith(ONEWHEEL_NAME_PREFIX, ignoreCase = true) }
+
+    private companion object {
+        const val ONEWHEEL_NAME_PREFIX = "ow"
+        const val SERVICE_DISCOVERY_TIMEOUT_MS = 10_000L
+    }
 }

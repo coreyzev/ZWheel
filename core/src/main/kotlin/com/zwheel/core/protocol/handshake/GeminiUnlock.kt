@@ -26,7 +26,15 @@ class NoneStrategy : HandshakeStrategy {
 
 class GeminiStrategy : HandshakeStrategy {
     override suspend fun unlock(io: GattIo): HandshakeResult {
-        val challenge = withTimeout(CHALLENGE_TIMEOUT_MS) { io.notifications(OwUuids.UART_READ).first() }
+        // Subscribe before triggering so no notification is missed. Evidence: OWCE OWBoard.cs L861-876.
+        val challengeFlow = io.notifications(OwUuids.UART_READ)
+
+        // Read firmware revision and write it back unchanged; the board uses this write event
+        // as a trigger to emit the Gemini challenge on UART_READ. The value itself is ignored.
+        val firmwareRevision = io.read(OwUuids.FIRMWARE_REVISION)
+        io.write(OwUuids.FIRMWARE_REVISION, firmwareRevision)
+
+        val challenge = withTimeout(CHALLENGE_TIMEOUT_MS) { challengeFlow.first() }
         val response = GeminiChallengeResponse.calculate(challenge)
         io.write(OwUuids.UART_WRITE, response)
         return HandshakeResult(

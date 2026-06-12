@@ -58,7 +58,6 @@ class KableBleTransport : BleTransport, GattIo {
             }
         }
 
-        val seenDeviceIds = mutableSetOf<String>()
         return merge(primary, fallback)
             .onStart { _connectionState.value = ConnectionState.Scanning }
             .onCompletion {
@@ -66,7 +65,6 @@ class KableBleTransport : BleTransport, GattIo {
                     _connectionState.value = ConnectionState.Idle
                 }
             }
-            .filter { result -> seenDeviceIds.add(result.deviceId) }
     }
 
     private fun scanner(serviceUuid: UUID?): Scanner<Advertisement> = Scanner {

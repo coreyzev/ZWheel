@@ -42,6 +42,8 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.hilt.android)
+    implementation(libs.kable.core.android)
+    implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.core)
     ksp(libs.hilt.compiler)
 }

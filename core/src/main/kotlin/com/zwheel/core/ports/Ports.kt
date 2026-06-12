@@ -20,6 +20,7 @@ interface BleTransport {
 interface GattIo {
     suspend fun read(characteristicId: GattCharacteristicId): ByteArray
     suspend fun write(characteristicId: GattCharacteristicId, value: ByteArray)
+    fun notifications(characteristicId: GattCharacteristicId): Flow<ByteArray>
 }
 
 interface HandshakeStrategy {

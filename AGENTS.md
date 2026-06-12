@@ -75,4 +75,7 @@ Place this file at repo root. Read it at the start of EVERY session, along with
   missing AndroidX project properties, Java/KSP target mismatch, and Android 12+
   coarse+fine location lint requirements. A later restricted sandbox prevented rerunning
   Gradle because local socket creation for Gradle daemon IPC was denied.
+- 2026-06-12: Phase 0 calc boundary corrected: `SpeedCalculator`, `TopSpeedTracker`,
+  and `RangeEstimator` are interface stubs only. Concrete speed/range/top-speed
+  implementations are intentionally deferred to Phase 2.
 - (append discoveries here…)

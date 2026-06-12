@@ -1,8 +1,7 @@
 package com.zwheel.app.ui.ble
 
-import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,17 +12,17 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import com.zwheel.app.ble.ConnectionState
 import com.zwheel.app.ble.KableBleTransport
 import com.zwheel.core.ports.ScanResult
 import com.zwheel.core.protocol.GattCharacteristicId
@@ -48,32 +47,50 @@ fun BleDebugScreen(modifier: Modifier = Modifier) {
     val scanJob = remember { mutableStateOf<Job?>(null) }
     val dumpJobs = remember { mutableStateListOf<Job>() }
     val permissionDenied = remember { mutableStateOf<String?>(null) }
-    val pendingScan = remember { mutableStateOf(false) }
+    val permissionsGranted = remember { mutableStateOf(false) }
+    val permanentlyDenied = remember { mutableStateOf(false) }
+    val permissionRequestAttempted = remember { mutableStateOf(false) }
+    val connectionState by transport.connectionState.collectAsState()
 
-    val requiredPermissions = remember {
-        bleScanPermissions()
+    val requiredPermissions = remember { bleScanPermissions() }
+    fun refreshPermissionState(updatePermanentDenial: Boolean) {
+        permissionsGranted.value = hasAllRequiredPermissions(context, requiredPermissions)
+        permissionDenied.value = if (permissionsGranted.value) null else buildPermissionDeniedMessage()
+        if (updatePermanentDenial) {
+            permanentlyDenied.value = hasPermanentlyDeniedPermission(
+                context = context,
+                permissions = requiredPermissions,
+                requestAttempted = permissionRequestAttempted.value,
+            )
+        }
     }
+
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
     ) { grantResults ->
+        permissionRequestAttempted.value = true
         val granted = requiredPermissions.all { permission ->
             grantResults[permission] == true || hasPermission(context, permission)
         }
-        if (granted) {
-            permissionDenied.value = null
-            if (pendingScan.value) {
-                pendingScan.value = false
-                startScan(scope, transport, devices, selectedDevice, scanJob, logLines)
-            }
-        } else {
-            pendingScan.value = false
-            permissionDenied.value = buildPermissionDeniedMessage()
-        }
+        permissionsGranted.value = granted
+        permissionDenied.value = if (granted) null else buildPermissionDeniedMessage()
+        permanentlyDenied.value = hasPermanentlyDeniedPermission(
+            context = context,
+            permissions = requiredPermissions,
+            requestAttempted = permissionRequestAttempted.value,
+        )
     }
 
     LaunchedEffect(Unit) {
-        if (!hasAllRequiredPermissions(context, requiredPermissions)) {
-            permissionDenied.value = buildPermissionDeniedMessage()
+        refreshPermissionState(updatePermanentDenial = false)
+    }
+
+    LaunchedEffect(connectionState) {
+        when (connectionState) {
+            ConnectionState.Scanning -> logLines.append("Scanning...")
+            ConnectionState.Connected -> logLines.append("Connected")
+            ConnectionState.Disconnected -> logLines.append("Disconnected")
+            ConnectionState.Idle -> Unit
         }
     }
 
@@ -88,22 +105,37 @@ fun BleDebugScreen(modifier: Modifier = Modifier) {
             Text(message)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(
-                onClick = {
-                    if (hasAllRequiredPermissions(context, requiredPermissions)) {
-                        permissionDenied.value = null
-                        startScan(scope, transport, devices, selectedDevice, scanJob, logLines)
-                    } else {
-                        pendingScan.value = true
-                        permissionDenied.value = buildPermissionDeniedMessage()
-                        permissionLauncher.launch(requiredPermissions.toTypedArray())
+            if (permissionsGranted.value) {
+                Button(
+                    enabled = connectionState != ConnectionState.Scanning &&
+                        connectionState != ConnectionState.Connected,
+                    onClick = {
+                        refreshPermissionState(updatePermanentDenial = false)
+                        if (permissionsGranted.value) {
+                            startScan(scope, transport, devices, selectedDevice, scanJob, logLines)
+                        }
+                    },
+                ) {
+                    Text("Scan")
+                }
+            } else {
+                Button(
+                    onClick = { permissionLauncher.launch(requiredPermissions.toTypedArray()) },
+                ) {
+                    Text("Grant permissions")
+                }
+                if (permanentlyDenied.value) {
+                    Button(
+                        onClick = { context.openAppSettings() },
+                    ) {
+                        Text("Open settings")
                     }
-                },
-            ) {
-                Text("Scan")
+                }
             }
             Button(
-                enabled = selectedDevice.value != null,
+                enabled = selectedDevice.value != null &&
+                    connectionState != ConnectionState.Scanning &&
+                    connectionState != ConnectionState.Connected,
                 onClick = {
                     val device = selectedDevice.value ?: return@Button
                     scanJob.value?.cancel()
@@ -111,7 +143,7 @@ fun BleDebugScreen(modifier: Modifier = Modifier) {
                     scope.launch {
                         runCatching {
                             transport.connect(device.deviceId)
-                            logLines.append("Connected, sending Gemini unlock")
+                            logLines.append("Sending Gemini unlock")
                             val result = GeminiStrategy().unlock(transport)
                             logLines.append("Unlock ${result.strategyName}: ${result.unlocked}")
                             startDumpJobs(scope, transport, dumpJobs, logLines)
@@ -122,13 +154,13 @@ fun BleDebugScreen(modifier: Modifier = Modifier) {
                 Text("Connect + Unlock")
             }
             Button(
+                enabled = connectionState == ConnectionState.Connected,
                 onClick = {
                     scanJob.value?.cancel()
                     dumpJobs.forEach(Job::cancel)
                     dumpJobs.clear()
                     scope.launch {
                         runCatching { transport.disconnect() }
-                            .onSuccess { logLines.append("Disconnected") }
                             .onFailure { error -> logLines.append("Disconnect failed: ${error.message}") }
                     }
                 },
@@ -213,23 +245,5 @@ private fun GattCharacteristicId.shortName(): String =
 private fun ByteArray.toHexString(): String =
     joinToString(":") { byte -> byte.toUByte().toString(radix = 16).padStart(2, '0') }
 
-private fun hasPermission(context: android.content.Context, permission: String): Boolean =
-    ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
-
-private fun hasAllRequiredPermissions(
-    context: android.content.Context,
-    permissions: List<String>,
-): Boolean = permissions.all { hasPermission(context, it) }
-
 private fun buildPermissionDeniedMessage(): String =
     "Bluetooth scan permissions are required before scanning so ZWheel can find the board and keep the ride connection alive."
-
-private fun bleScanPermissions(): List<String> =
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        listOf(
-            Manifest.permission.BLUETOOTH_SCAN,
-            Manifest.permission.BLUETOOTH_CONNECT,
-        )
-    } else {
-        listOf(Manifest.permission.ACCESS_FINE_LOCATION)
-    }

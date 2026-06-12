@@ -8,6 +8,10 @@ import com.zwheel.core.protocol.OwUuids
 import java.security.MessageDigest
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeout
+
+private const val CHALLENGE_TIMEOUT_MS = 5_000L
 
 class NoneStrategy : HandshakeStrategy {
     override suspend fun unlock(io: GattIo): HandshakeResult =
@@ -22,7 +26,7 @@ class NoneStrategy : HandshakeStrategy {
 
 class GeminiStrategy : HandshakeStrategy {
     override suspend fun unlock(io: GattIo): HandshakeResult {
-        val challenge = io.read(OwUuids.UART_READ)
+        val challenge = withTimeout(CHALLENGE_TIMEOUT_MS) { io.notifications(OwUuids.UART_READ).first() }
         val response = GeminiChallengeResponse.calculate(challenge)
         io.write(OwUuids.UART_WRITE, response)
         return HandshakeResult(

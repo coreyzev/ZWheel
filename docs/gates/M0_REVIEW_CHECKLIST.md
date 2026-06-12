@@ -21,7 +21,7 @@ Hardware required: No
 - [ ] `BleTransport` is a raw wire only: scan/connect/disconnect/read/write/notifications as raw bytes, with no `BoardState` dependency.
 - [ ] `BoardStateService` is the separate parsed state surface exposing `StateFlow<BoardState>`.
 - [ ] Core models/enums cover board identity, connection state, ride mode, board state, ride sessions, ride points, watch payload, speed units, and temperature units.
-- [ ] Speed, range, and top-speed calculation contracts exist in `:core`.
+- [ ] Speed, range, and top-speed calculation contracts exist in `:core` as interface stubs only; implementations are deferred to Phase 2.
 
 ## BLE Safety
 

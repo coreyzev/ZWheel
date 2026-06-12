@@ -36,6 +36,11 @@ capture time. The format is designed for human review and AI-agent parsing.
 - `gatt_ready`: GATT connection is ready for app-level reads/subscriptions.
 - `metadata_read`: hardware, firmware, or ride-mode read result.
 - `gemini_wait`: app is waiting for Gemini UART challenge.
+- `gemini_trigger_write`: Gemini firmware-revision trigger write, with `status` set to
+  `before` immediately before `io.write(FIRMWARE_REVISION, ...)` and `after` after a
+  successful write.
+- `gemini_raw_notification`: raw `UART_READ` notification observed during Gemini
+  handshake, including short packets rejected before challenge parsing.
 - `gemini_result`: Gemini strategy returned an unlock result.
 - `connect_failure`: connect, metadata read, or unlock attempt failed.
 - `telemetry_probe`: one probe characteristic notification result after Gemini timeout.

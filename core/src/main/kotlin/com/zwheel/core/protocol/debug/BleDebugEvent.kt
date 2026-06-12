@@ -1,6 +1,7 @@
 package com.zwheel.core.protocol.debug
 
 import java.security.MessageDigest
+import java.util.Collections
 import java.util.UUID
 
 data class BleDebugEvent(
@@ -22,7 +23,7 @@ class BleDebugRecorder(
     private val sessionId: String = UUID.randomUUID().toString(),
     private val startEpochMs: Long = System.currentTimeMillis(),
 ) {
-    private val events = mutableListOf<BleDebugEvent>()
+    private val events = Collections.synchronizedList(mutableListOf<BleDebugEvent>())
 
     fun record(
         type: String,
@@ -50,9 +51,13 @@ class BleDebugRecorder(
         )
     }
 
-    fun toJsonLines(): String = events.joinToString(separator = "\n") { it.toJson() }
+    fun toJsonLines(): String = synchronized(events) {
+        events.joinToString(separator = "\n") { it.toJson() }
+    }
 
-    fun snapshot(): List<BleDebugEvent> = events.toList()
+    fun snapshot(): List<BleDebugEvent> = synchronized(events) {
+        events.toList()
+    }
 
     private fun hashDeviceId(deviceId: String): String {
         val digest = MessageDigest.getInstance("SHA-256")

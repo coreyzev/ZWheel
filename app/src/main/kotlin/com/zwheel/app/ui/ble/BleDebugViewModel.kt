@@ -107,7 +107,10 @@ class BleDebugViewModel : ViewModel() {
                 appendLog(sessionLogger.boardMetadataLine())
                 recorder.record(type = "gemini_wait", deviceId = device.deviceId, status = "uart notification 5s")
                 appendLog("Gemini wait UART 5s")
-                val result = GeminiStrategy().unlock(transport)
+                val result = GeminiStrategy(
+                    debugRecorder = recorder,
+                    debugDeviceId = { _selectedDevice.value?.deviceId },
+                ).unlock(transport)
                 recorder.record(
                     type = "gemini_result",
                     deviceId = device.deviceId,

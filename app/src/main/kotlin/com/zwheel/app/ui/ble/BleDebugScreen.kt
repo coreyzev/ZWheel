@@ -32,6 +32,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+
+private const val SCAN_DURATION_MS = 30_000L
 
 @Composable
 fun BleDebugScreen(modifier: Modifier = Modifier) {
@@ -156,16 +159,19 @@ private fun startScan(
 ) {
     scanJob.value?.cancel()
     devices.clear()
-    logLines.append("Scanning for Onewheel service")
+    selectedDevice.value = null
+    logLines.append("Scanning 30s: service UUID first, ow name fallback after 10s")
     scanJob.value = scope.launch {
         runCatching {
-            transport.scan(OwUuids.ONEWHEEL_SERVICE).collect { result ->
-                if (devices.none { it.deviceId == result.deviceId }) {
-                    devices += result
+            withTimeoutOrNull(SCAN_DURATION_MS) {
+                transport.scan().collect { result ->
+                    if (devices.none { it.deviceId == result.deviceId }) {
+                        devices += result
+                    }
+                    selectedDevice.value = selectedDevice.value ?: result
+                    logLines.append("Found ${result.label()}")
                 }
-                selectedDevice.value = selectedDevice.value ?: result
-                logLines.append("Found ${result.label()}")
-            }
+            } ?: logLines.append("Scan stopped after 30s")
         }.onFailure { error -> logLines.append("Scan failed: ${error.message}") }
     }
 }

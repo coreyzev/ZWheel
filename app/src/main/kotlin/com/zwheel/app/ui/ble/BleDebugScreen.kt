@@ -7,7 +7,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -15,6 +17,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -30,11 +33,14 @@ import com.zwheel.core.protocol.OwUuids
 import com.zwheel.core.protocol.handshake.GeminiStrategy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 private const val SCAN_DURATION_MS = 30_000L
+private const val DEVICE_STALE_MS = 5_000L
+private const val DEVICE_PRUNE_INTERVAL_MS = 1_000L
 
 @Composable
 fun BleDebugScreen(modifier: Modifier = Modifier) {
@@ -42,6 +48,7 @@ fun BleDebugScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val transport = remember { KableBleTransport() }
     val devices = remember { mutableStateListOf<ScanResult>() }
+    val deviceLastSeen = remember { mutableStateMapOf<String, Long>() }
     val logLines = remember { mutableStateListOf("Idle") }
     val selectedDevice = remember { mutableStateOf<ScanResult?>(null) }
     val scanJob = remember { mutableStateOf<Job?>(null) }
@@ -112,11 +119,19 @@ fun BleDebugScreen(modifier: Modifier = Modifier) {
                     onClick = {
                         refreshPermissionState(updatePermanentDenial = false)
                         if (permissionsGranted.value) {
-                            startScan(scope, transport, devices, selectedDevice, scanJob, logLines)
+                            startScan(
+                                scope = scope,
+                                transport = transport,
+                                devices = devices,
+                                deviceLastSeen = deviceLastSeen,
+                                selectedDevice = selectedDevice,
+                                scanJob = scanJob,
+                                logLines = logLines,
+                            )
                         }
                     },
                 ) {
-                    Text("Scan")
+                    Text(if (connectionState == ConnectionState.Scanning) "Scanning..." else "Scan")
                 }
             } else {
                 Button(
@@ -132,9 +147,11 @@ fun BleDebugScreen(modifier: Modifier = Modifier) {
                     }
                 }
             }
+            if (connectionState == ConnectionState.Scanning) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+            }
             Button(
                 enabled = selectedDevice.value != null &&
-                    connectionState != ConnectionState.Scanning &&
                     connectionState != ConnectionState.Connected,
                 onClick = {
                     val device = selectedDevice.value ?: return@Button
@@ -182,26 +199,61 @@ private fun startScan(
     scope: CoroutineScope,
     transport: KableBleTransport,
     devices: MutableList<ScanResult>,
+    deviceLastSeen: MutableMap<String, Long>,
     selectedDevice: androidx.compose.runtime.MutableState<ScanResult?>,
     scanJob: androidx.compose.runtime.MutableState<Job?>,
     logLines: MutableList<String>,
 ) {
     scanJob.value?.cancel()
     devices.clear()
+    deviceLastSeen.clear()
     selectedDevice.value = null
     logLines.append("Scanning 30s: service UUID first, ow name fallback after 10s")
     scanJob.value = scope.launch {
         runCatching {
             withTimeoutOrNull(SCAN_DURATION_MS) {
-                transport.scan().collect { result ->
-                    if (devices.none { it.deviceId == result.deviceId }) {
-                        devices += result
+                val cleanupJob = launch {
+                    while (true) {
+                        delay(DEVICE_PRUNE_INTERVAL_MS)
+                        pruneStaleDevices(devices, deviceLastSeen, selectedDevice)
                     }
-                    selectedDevice.value = selectedDevice.value ?: result
-                    logLines.append("Found ${result.label()}")
+                }
+                try {
+                    transport.scan().collect { result ->
+                        deviceLastSeen[result.deviceId] = System.currentTimeMillis()
+                        val index = devices.indexOfFirst { it.deviceId == result.deviceId }
+                        if (index == -1) {
+                            devices += result
+                        } else {
+                            devices[index] = result
+                        }
+                        selectedDevice.value = selectedDevice.value ?: result
+                        logLines.append("Found ${result.label()}")
+                    }
+                } finally {
+                    cleanupJob.cancel()
                 }
             } ?: logLines.append("Scan stopped after 30s")
         }.onFailure { error -> logLines.append("Scan failed: ${error.message}") }
+    }
+}
+
+private fun pruneStaleDevices(
+    devices: MutableList<ScanResult>,
+    deviceLastSeen: MutableMap<String, Long>,
+    selectedDevice: androidx.compose.runtime.MutableState<ScanResult?>,
+) {
+    val cutoff = System.currentTimeMillis() - DEVICE_STALE_MS
+    val staleDeviceIds = deviceLastSeen
+        .filterValues { lastSeen -> lastSeen < cutoff }
+        .keys
+        .toSet()
+    if (staleDeviceIds.isEmpty()) return
+
+    devices.removeAll { result -> result.deviceId in staleDeviceIds }
+    staleDeviceIds.forEach(deviceLastSeen::remove)
+    if (selectedDevice.value?.deviceId in staleDeviceIds) {
+        selectedDevice.value = devices.firstOrNull()
     }
 }
 

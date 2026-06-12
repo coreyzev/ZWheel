@@ -95,8 +95,8 @@ fun BleDebugScreen(modifier: Modifier = Modifier) {
     LaunchedEffect(connectionState) {
         when (connectionState) {
             ConnectionState.Scanning -> logLines.append("Scanning...")
-            ConnectionState.Connected -> logLines.append("Connected")
             ConnectionState.Disconnected -> logLines.append("Disconnected")
+            ConnectionState.Connected,
             ConnectionState.Idle -> Unit
         }
     }
@@ -163,7 +163,10 @@ fun BleDebugScreen(modifier: Modifier = Modifier) {
                             logLines.append("Sending Gemini unlock")
                             val result = GeminiStrategy().unlock(transport)
                             logLines.append("Unlock ${result.strategyName}: ${result.unlocked}")
-                            startDumpJobs(scope, transport, dumpJobs, logLines)
+                            if (result.unlocked) {
+                                logLines.append("Connected")
+                                startDumpJobs(scope, transport, dumpJobs, logLines)
+                            }
                         }.onFailure { error -> logLines.append("Connect/unlock failed: ${error.message}") }
                     }
                 },
@@ -194,7 +197,6 @@ fun BleDebugScreen(modifier: Modifier = Modifier) {
         }
     }
 }
-
 private fun startScan(
     scope: CoroutineScope,
     transport: KableBleTransport,
@@ -224,11 +226,11 @@ private fun startScan(
                         val index = devices.indexOfFirst { it.deviceId == result.deviceId }
                         if (index == -1) {
                             devices += result
+                            logLines.append("Found ${result.label()}")
                         } else {
                             devices[index] = result
                         }
                         selectedDevice.value = selectedDevice.value ?: result
-                        logLines.append("Found ${result.label()}")
                     }
                 } finally {
                     cleanupJob.cancel()
@@ -237,7 +239,6 @@ private fun startScan(
         }.onFailure { error -> logLines.append("Scan failed: ${error.message}") }
     }
 }
-
 private fun pruneStaleDevices(
     devices: MutableList<ScanResult>,
     deviceLastSeen: MutableMap<String, Long>,
@@ -256,7 +257,6 @@ private fun pruneStaleDevices(
         selectedDevice.value = devices.firstOrNull()
     }
 }
-
 private fun startDumpJobs(
     scope: CoroutineScope,
     transport: KableBleTransport,
@@ -273,7 +273,6 @@ private fun startDumpJobs(
         }
     }
 }
-
 private val dumpCharacteristics = listOf(
     OwUuids.BATTERY_PERCENT,
     OwUuids.RPM,

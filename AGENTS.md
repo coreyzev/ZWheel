@@ -71,4 +71,8 @@ Place this file at repo root. Read it at the start of EVERY session, along with
   and `wear`, CI workflow, README/NOTICE, ADR-001..005 drafts, core model/port/calc
   contracts, Onewheel UUID map, parser test harness, and M0 checklist. Local Gradle
   sync/build intentionally not run at Corey's request; CI remains the build gate.
+- 2026-06-11: Gradle wrapper/bootstrap fixups added after first local build pass found
+  missing AndroidX project properties, Java/KSP target mismatch, and Android 12+
+  coarse+fine location lint requirements. A later restricted sandbox prevented rerunning
+  Gradle because local socket creation for Gradle daemon IPC was denied.
 - (append discoveries here…)

@@ -1,61 +1,66 @@
 # M1 BLE Capture Runbook
 
-This is the Phase 1 hardware-gate capture procedure for Corey's XR. Use it to
-turn one real board session into small, redacted fixtures that future parser and
-telemetry tests can rely on.
+This is the Phase 1 hardware-gate capture procedure for Corey's XR. The normal capture
+path is now the debug screen's redacted JSONL export, either shared from the phone or
+uploaded to the paired debug receiver. HCI snoop is not needed for the standard M1 gate.
 
-HCI snoop capture is not the normal debugging workflow. It should be rare: use it
-when ZWheel needs low-level BLE evidence that the app cannot already show, such as
-confirming characteristic UUIDs/properties, handshake bytes, missing notifications,
-or Android/Kable behavior. For everyday debugging, prefer the app's debug screen
-logs and, later, an in-app redacted BLE log export.
+The exported JSONL is designed for human review and AI-agent parsing. Schema details are
+in `docs/M1_BLE_DEBUG_JSONL_SCHEMA.md`.
 
 ## Goals
 
 The M1 capture should answer these questions:
 
 - Does Gemini unlock hold for at least 10 minutes?
-- Do the six debug-screen characteristics stream continuously?
+- Do the debug-screen characteristics stream continuously after unlock?
 - Does `e659f30b-ea98-11e3-ac10-0800200c9a66` behave like RPM on Corey's 4029 XR?
 - Does the lights control need only `LIGHTS`, or do `LIGHTS_FRONT` and
   `LIGHTS_BACK` need separate write access?
 
 ## Privacy Rules
 
-Do not commit the full raw `btsnoop_hci.log` or a complete bugreport. Those files
-can include phone identifiers, board identifiers, and unrelated nearby BLE devices.
+The app-level export redacts stable BLE device identifiers by default. Before committing
+any fixture, still review it and confirm it contains no raw BLE IDs, phone identifiers,
+GPS, account, or unrelated network metadata.
 
-Commit only a reduced fixture containing:
+Commit only reviewed JSONL fixtures under:
 
-- timestamp offset from the start of the useful capture window;
-- Onewheel characteristic UUID;
-- friendly characteristic name, if known;
-- raw value bytes as hex;
-- short notes needed to interpret the sample.
+```text
+core/src/test/resources/fixtures/m1/
+```
 
-Redact or omit:
+Do not commit raw bugreports, HCI snoop logs, screenshots with personal data, or receiver
+runtime secrets.
 
-- phone MAC/device identifiers;
-- board MAC, unless it is needed for a one-time local diagnosis;
-- unrelated BLE devices;
-- full HCI packets not needed for parser fixtures.
+## Start the Receiver
 
-## Enable Android HCI Snoop Logging
+Run the receiver from the repo root on a computer reachable from the phone:
 
-Android's platform documentation covers the official logging path:
-[Verify and debug Bluetooth on Android](https://source.android.com/docs/core/connect/bluetooth/verifying_debugging).
+```bash
+export ZWHEEL_PAIRING_PASSWORD='choose-a-one-time-password'
+export ZWHEEL_UPLOAD_DIR=/tmp/zwheel-ble-uploads
+python3 tools/ble_debug_receiver/server.py
+```
 
-On the phone:
+Defaults:
 
-1. Enable Developer Options.
-2. In Developer Options, enable `Bluetooth HCI snoop log`.
-3. Restart Bluetooth for logging to take effect.
-4. Force-stop the official Future Motion app so it cannot compete for the board.
-5. Keep the phone within roughly 2 meters of the board.
+- host: `127.0.0.1`
+- port: `8765`
+- upload folder: `/tmp/zwheel-ble-uploads`
+- max upload size: `1048576` bytes
 
-## Install and Run the M1 Session
+For a phone to reach it, expose the receiver through HTTPS using a trusted tunnel or
+reverse proxy. Do not expose the plain HTTP server directly on the public internet.
 
-From this repo:
+The phone needs the base URL only, for example:
+
+```text
+https://your-temporary-tunnel.example
+```
+
+## Pair the Phone Once
+
+Install a debug APK. The upload UI and `INTERNET` permission exist only in debug builds.
 
 ```bash
 adb install -r app/build/outputs/apk/debug/app-debug.apk
@@ -65,18 +70,30 @@ On the phone:
 
 1. Open ZWheel.
 2. Open the BLE debug screen.
-3. Grant BLE permissions.
-4. Tap Scan.
-5. Select the XR.
-6. Tap Connect + Unlock.
-7. Let the connection run for at least 10 minutes.
-8. Confirm whether the debug log continues showing values for:
-   - battery percent;
-   - RPM;
-   - pack voltage;
-   - amps;
-   - temperature;
-   - ride mode.
+3. Tap `Pair upload`.
+4. Enter the HTTPS receiver URL.
+5. Enter `ZWHEEL_PAIRING_PASSWORD`.
+6. Tap `Pair`.
+7. Confirm the status line says it paired with the receiver host.
+
+Pairing sends the one-time password to `POST /pair`. The receiver returns an upload token,
+and the debug app stores that token locally for later `Upload log` taps. No upload token
+or pairing password is committed to the repo.
+
+## Run the M1 Board Session
+
+On the phone:
+
+1. Force-stop the official Future Motion app so it cannot compete for the board.
+2. Keep the phone within roughly 2 meters of the board.
+3. Open ZWheel's BLE debug screen.
+4. Grant BLE permissions if prompted.
+5. Tap `Scan`.
+6. Select the XR.
+7. Tap `Connect + Unlock`.
+8. Let the connection run for at least 10 minutes.
+9. Watch the debug log for battery percent, RPM, pack voltage, amps, temperature, and
+   ride mode notifications.
 
 During the run, write down:
 
@@ -86,74 +103,64 @@ During the run, write down:
 - whether RPM changes when the wheel is spun very slightly and safely;
 - what happened when lights were toggled, if tested.
 
-## Pull the Bugreport
+## Export the Log
 
-Immediately after the run:
+Preferred path:
+
+1. Tap `Upload log`.
+2. Confirm the status line shows `Uploaded <id>`.
+3. On the receiver machine, list the upload folder:
 
 ```bash
-adb bugreport /tmp/zwheel-m1-bugreport.zip
-mkdir -p /tmp/zwheel-m1
-unzip /tmp/zwheel-m1-bugreport.zip -d /tmp/zwheel-m1
-find /tmp/zwheel-m1 -iname '*btsnoop*' -o -iname '*hci*'
+ls -lh /tmp/zwheel-ble-uploads
 ```
 
-Open the found `btsnoop`/HCI file in Wireshark. Wireshark's Bluetooth ATT tools
-and filter references are useful when narrowing the capture:
+Fallback path if upload is not reachable:
 
-- [Bluetooth ATT Server Attributes](https://www.wireshark.org/docs/wsug_html_chunked/ChWirelessBluetoothATTServerAttributes.html)
-- [Bluetooth Attribute Protocol display filters](https://www.wireshark.org/docs/dfref/b/btatt.html)
+1. Tap `Share log`.
+2. Share the `.jsonl` file through a local path that preserves the file unchanged.
+3. Send the file to the reviewing agent.
 
-Useful display filter:
+Each JSONL row should have `schemaVersion=m1-ble-debug-v1` and a `type` such as
+`scan_discovery`, `gatt_ready`, `metadata_read`, `gemini_result`,
+`telemetry_probe`, or `notification`.
 
-```text
-btatt
+## Review and Commit a Fixture
+
+Inspect the uploaded/shared JSONL before committing:
+
+```bash
+head -n 20 /tmp/zwheel-ble-uploads/<uploaded-file>.jsonl
+rg '([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}' /tmp/zwheel-ble-uploads/<uploaded-file>.jsonl
 ```
 
-If the capture is noisy, narrow to the Onewheel connection and the Onewheel service
-UUID:
+The `rg` command should find no raw MAC-address-like values.
 
-```text
-e659f300-ea98-11e3-ac10-0800200c9a66
-```
-
-## Create the Reduced Fixture
-
-Create a fixture file:
+Copy the reviewed file into the fixture directory with a descriptive name:
 
 ```bash
 mkdir -p core/src/test/resources/fixtures/m1
-$EDITOR core/src/test/resources/fixtures/m1/xr-4029-characteristic-dump.jsonl
+cp /tmp/zwheel-ble-uploads/<uploaded-file>.jsonl \
+  core/src/test/resources/fixtures/m1/xr4029-gemini-session.jsonl
 ```
 
-Use JSON Lines so future tests can read one sample at a time:
-
-```json
-{"ts_ms":0,"uuid":"e659f31c-ea98-11e3-ac10-0800200c9a66","name":"battery_percent","value_hex":"5f","note":"example only"}
-{"ts_ms":1000,"uuid":"e659f30b-ea98-11e3-ac10-0800200c9a66","name":"rpm","value_hex":"0000","note":"example only"}
-{"ts_ms":1000,"uuid":"e659f312-ea98-11e3-ac10-0800200c9a66","name":"pack_voltage","value_hex":"0f9a","note":"example only"}
-```
-
-Guidelines:
-
-- keep at least several samples for each streaming characteristic;
-- include a sample before and after a small safe wheel movement if validating RPM;
-- include a short note when a value corresponds to a deliberate action, such as a
-  light toggle;
-- use lowercase hex with no separators in `value_hex`;
-- keep timestamps as offsets, not wall-clock time.
-
-## Commit the Fixture
-
-Do not commit `/tmp/zwheel-m1-bugreport.zip` or `btsnoop_hci.log`.
-
-Commit only the reduced fixture and any short notes:
+Commit only the reviewed fixture and any short notes:
 
 ```bash
 git checkout -b fixture/m1-xr4029-capture
-git add core/src/test/resources/fixtures/m1/xr-4029-characteristic-dump.jsonl
-git commit -m "test(core): add m1 xr characteristic capture fixture"
+git add core/src/test/resources/fixtures/m1/xr4029-gemini-session.jsonl
+git commit -m "test(core): add m1 xr ble capture fixture"
 git push -u origin fixture/m1-xr4029-capture
 ```
 
-After the fixture lands, update `AGENTS.md` with the resolved M1 facts and use the
-fixture to drive parser tests, `BoardStateService`, and ADR-006.
+After the fixture lands, update `AGENTS.md` with resolved M1 facts and use the fixture
+to drive parser tests, `BoardStateService`, and ADR-006.
+
+## HCI Snoop Fallback
+
+Use Android HCI snoop only if the app-level JSONL is insufficient, for example when
+debugging Android/Kable behavior below the app's GATT API or confirming characteristic
+properties that never surface through the debug screen.
+
+If HCI snoop is used, do not commit the raw `btsnoop_hci.log` or bugreport. Reduce it to
+the same reviewed fixture shape described above, and keep the raw capture out of git.

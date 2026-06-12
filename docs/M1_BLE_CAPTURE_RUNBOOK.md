@@ -1,8 +1,8 @@
 # M1 BLE Capture Runbook
 
 This is the Phase 1 hardware-gate capture procedure for Corey's XR. The normal capture
-path is now the debug screen's redacted JSONL export, either shared from the phone or
-uploaded to the paired debug receiver. HCI snoop is not needed for the standard M1 gate.
+path is now the debug screen's redacted JSONL export to the fixed paired receiver at
+`http://116.203.200.55:8765`. HCI snoop is not needed for the standard M1 gate.
 
 The exported JSONL is designed for human review and AI-agent parsing. Schema details are
 in `docs/M1_BLE_DEBUG_JSONL_SCHEMA.md`.
@@ -34,7 +34,7 @@ runtime secrets.
 
 ## Start the Receiver
 
-Run the receiver from the repo root on a computer reachable from the phone:
+Run the receiver from the repo root on `116.203.200.55`:
 
 ```bash
 export ZWHEEL_PAIRING_PASSWORD='choose-a-one-time-password'
@@ -42,21 +42,20 @@ export ZWHEEL_UPLOAD_DIR=/tmp/zwheel-ble-uploads
 python3 tools/ble_debug_receiver/server.py
 ```
 
-Defaults:
+Defaults for this workflow:
 
-- host: `127.0.0.1`
+- host: `0.0.0.0`
 - port: `8765`
 - upload folder: `/tmp/zwheel-ble-uploads`
+- token file: `/tmp/zwheel-ble-uploads/.upload_tokens`
 - max upload size: `1048576` bytes
 
-For a phone to reach it, expose the receiver through HTTPS using a trusted tunnel or
-reverse proxy. Do not expose the plain HTTP server directly on the public internet.
+If running as a long-lived service, set the same environment variables in the service
+unit. The debug app is already hardcoded to the server IP, so the phone does not need a
+server URL.
 
-The phone needs the base URL only, for example:
-
-```text
-https://your-temporary-tunnel.example
-```
+The pairing password is still required. Keep it private and rotate it after test
+sessions if needed.
 
 ## Pair the Phone Once
 
@@ -71,14 +70,16 @@ On the phone:
 1. Open ZWheel.
 2. Open the BLE debug screen.
 3. Tap `Pair upload`.
-4. Enter the HTTPS receiver URL.
+4. Confirm the dialog shows `http://116.203.200.55:8765`.
 5. Enter `ZWHEEL_PAIRING_PASSWORD`.
 6. Tap `Pair`.
-7. Confirm the status line says it paired with the receiver host.
+7. Confirm the status line says `Paired with 116.203.200.55`.
 
 Pairing sends the one-time password to `POST /pair`. The receiver returns an upload token,
 and the debug app stores that token locally for later `Upload log` taps. No upload token
-or pairing password is committed to the repo.
+or pairing password is committed to the repo. Receiver-side tokens are persisted in
+`/tmp/zwheel-ble-uploads/.upload_tokens`, so restarting the receiver should not force
+the phone to pair again.
 
 ## Run the M1 Board Session
 

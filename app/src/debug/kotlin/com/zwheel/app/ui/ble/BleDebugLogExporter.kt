@@ -26,20 +26,21 @@ class BleDebugLogExporter(
         "Share sheet opened: ${file.name}"
     }
 
-    suspend fun pair(serverUrl: String, pairingPassword: String): String = withContext(Dispatchers.IO) {
+    val receiverLabel: String = DEFAULT_RECEIVER_URL
+
+    suspend fun pair(pairingPassword: String): String = withContext(Dispatchers.IO) {
         val body = "{\"pairingPassword\":\"${pairingPassword.jsonEscaped()}\"}"
         val response = post(
-            url = "${serverUrl.trimEnd('/')}/pair",
+            url = "$DEFAULT_RECEIVER_URL/pair",
             contentType = "application/json",
             body = body.encodeToByteArray(),
         )
         val token = response.body.extractJsonString("uploadToken")
-        val normalizedUrl = serverUrl.trimEnd('/')
         prefs().edit()
-            .putString(KEY_SERVER_URL, normalizedUrl)
+            .putString(KEY_SERVER_URL, DEFAULT_RECEIVER_URL)
             .putString(KEY_UPLOAD_TOKEN, token)
             .apply()
-        "Paired with ${normalizedUrl.hostLabel()}"
+        "Paired with ${DEFAULT_RECEIVER_URL.hostLabel()}"
     }
 
     suspend fun upload(jsonLines: String): String = withContext(Dispatchers.IO) {
@@ -104,6 +105,7 @@ class BleDebugLogExporter(
         const val KEY_UPLOAD_TOKEN = "upload_token"
         const val CONNECT_TIMEOUT_MS = 10_000
         const val READ_TIMEOUT_MS = 20_000
+        const val DEFAULT_RECEIVER_URL = "http://116.203.200.55:8765"
     }
 }
 

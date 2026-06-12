@@ -168,11 +168,12 @@ fun BleDebugScreen(
 
     if (showPairDialog) {
         PairUploadDialog(
+            receiverLabel = exporter.receiverLabel,
             onDismiss = { showPairDialog = false },
-            onPair = { serverUrl, password ->
+            onPair = { password ->
                 showPairDialog = false
                 scope.launch {
-                    runCatching { exporter.pair(serverUrl, password) }
+                    runCatching { exporter.pair(password) }
                         .onSuccess(viewModel::onExportStatus)
                         .onFailure { error -> viewModel.onExportStatus("Pair failed: ${error.message}") }
                 }
@@ -183,10 +184,10 @@ fun BleDebugScreen(
 
 @Composable
 private fun PairUploadDialog(
+    receiverLabel: String,
     onDismiss: () -> Unit,
-    onPair: (String, String) -> Unit,
+    onPair: (String) -> Unit,
 ) {
-    var serverUrl by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
     AlertDialog(
@@ -194,12 +195,7 @@ private fun PairUploadDialog(
         title = { Text("Pair upload") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = serverUrl,
-                    onValueChange = { serverUrl = it },
-                    label = { Text("Server URL") },
-                    singleLine = true,
-                )
+                Text(receiverLabel)
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
@@ -210,8 +206,8 @@ private fun PairUploadDialog(
         },
         confirmButton = {
             TextButton(
-                enabled = serverUrl.isNotBlank() && password.isNotBlank(),
-                onClick = { onPair(serverUrl, password) },
+                enabled = password.isNotBlank(),
+                onClick = { onPair(password) },
             ) {
                 Text("Pair")
             }

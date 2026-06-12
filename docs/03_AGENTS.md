@@ -69,4 +69,7 @@ Place this file at repo root. Read it at the start of EVERY session, along with
   `INTERNET` permission is scoped to `app/src/debug`, and release remains offline.
   Receiver tooling lives under `tools/ble_debug_receiver/` and expects HTTPS via a
   tunnel/reverse proxy if used off-device.
+- 2026-06-12: Corey chose fixed debug receiver IP `116.203.200.55` for M1 log uploads.
+  Debug app upload pairing is password-only and targets `http://116.203.200.55:8765`;
+  cleartext is allowed only in the debug network security config for that IP.
 - (append discoveries here…)

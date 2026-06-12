@@ -73,6 +73,20 @@ class ReceiverTest(unittest.TestCase):
         self.assertEqual(b'{"schemaVersion":"m1-ble-debug-v1"}\n', written[0].read_bytes())
         self.assertIn("uploadId", body)
 
+    def test_upload_token_survives_state_reload(self):
+        token_file = Path(self.temp_dir.name) / ".upload_tokens"
+        self.state.token_file = token_file
+        _, pair_body = self.pair()
+        reloaded = ReceiverState(
+            pairing_password="correct-password",
+            upload_dir=Path(self.temp_dir.name),
+            token_file=token_file,
+        )
+
+        reloaded.load_tokens()
+
+        self.assertIn(pair_body["uploadToken"], reloaded.tokens)
+
     def test_oversized_upload_is_rejected(self):
         _, pair_body = self.pair()
 

@@ -22,7 +22,25 @@ class ReceiverState:
     pairing_password: str
     upload_dir: Path
     max_upload_bytes: int = 1_048_576
+    token_file: Path | None = None
     tokens: set[str] = field(default_factory=set)
+
+    def load_tokens(self) -> None:
+        if self.token_file is None or not self.token_file.exists():
+            return
+        self.tokens.update(
+            line.strip()
+            for line in self.token_file.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        )
+
+    def add_token(self, token: str) -> None:
+        self.tokens.add(token)
+        if self.token_file is None:
+            return
+        self.token_file.parent.mkdir(parents=True, exist_ok=True)
+        with self.token_file.open("a", encoding="utf-8") as handle:
+            handle.write(f"{token}\n")
 
 
 def build_handler(state: ReceiverState) -> type[BaseHTTPRequestHandler]:
@@ -56,7 +74,7 @@ def build_handler(state: ReceiverState) -> type[BaseHTTPRequestHandler]:
                 return
 
             token = secrets.token_urlsafe(32)
-            state.tokens.add(token)
+            state.add_token(token)
             self._json_response(200, {"uploadToken": token})
 
         def _handle_upload(self, query: dict[str, list[str]]) -> None:
@@ -119,18 +137,21 @@ def main() -> None:
     if not password:
         raise SystemExit("ZWHEEL_PAIRING_PASSWORD is required")
 
-    host = os.environ.get("ZWHEEL_RECEIVER_HOST", "127.0.0.1")
+    host = os.environ.get("ZWHEEL_RECEIVER_HOST", "0.0.0.0")
     port = int(os.environ.get("ZWHEEL_RECEIVER_PORT", "8765"))
     upload_dir = Path(os.environ.get("ZWHEEL_UPLOAD_DIR", "/tmp/zwheel-ble-uploads"))
     max_upload_bytes = int(os.environ.get("ZWHEEL_MAX_UPLOAD_BYTES", "1048576"))
+    token_file = Path(os.environ.get("ZWHEEL_TOKEN_FILE", str(upload_dir / ".upload_tokens")))
     state = ReceiverState(
         pairing_password=password,
         upload_dir=upload_dir,
         max_upload_bytes=max_upload_bytes,
+        token_file=token_file,
     )
+    state.load_tokens()
 
     server = ThreadingHTTPServer((host, port), build_handler(state))
-    print(f"Listening on http://{host}:{port}; store={upload_dir}")
+    print(f"Listening on http://{host}:{port}; store={upload_dir}; tokens={token_file}")
     server.serve_forever()
 
 

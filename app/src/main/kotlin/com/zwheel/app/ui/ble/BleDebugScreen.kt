@@ -1,5 +1,7 @@
 package com.zwheel.app.ui.ble
 
+import android.Manifest
+import android.content.pm.PackageManager
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,13 +11,18 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import com.zwheel.app.ble.KableBleTransport
 import com.zwheel.core.ports.ScanResult
 import com.zwheel.core.protocol.GattCharacteristicId
@@ -29,12 +36,46 @@ import kotlinx.coroutines.launch
 @Composable
 fun BleDebugScreen(modifier: Modifier = Modifier) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     val transport = remember { KableBleTransport() }
     val devices = remember { mutableStateListOf<ScanResult>() }
     val logLines = remember { mutableStateListOf("Idle") }
     val selectedDevice = remember { mutableStateOf<ScanResult?>(null) }
     val scanJob = remember { mutableStateOf<Job?>(null) }
     val dumpJobs = remember { mutableStateListOf<Job>() }
+    val permissionDenied = remember { mutableStateOf<String?>(null) }
+    val pendingScan = remember { mutableStateOf(false) }
+
+    val requiredPermissions = remember {
+        listOf(
+            Manifest.permission.BLUETOOTH_SCAN,
+            Manifest.permission.BLUETOOTH_CONNECT,
+            Manifest.permission.ACCESS_FINE_LOCATION,
+        )
+    }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
+    ) { grantResults ->
+        val granted = requiredPermissions.all { permission ->
+            grantResults[permission] == true || hasPermission(context, permission)
+        }
+        if (granted) {
+            permissionDenied.value = null
+            if (pendingScan.value) {
+                pendingScan.value = false
+                startScan(scope, transport, devices, selectedDevice, scanJob, logLines)
+            }
+        } else {
+            pendingScan.value = false
+            permissionDenied.value = buildPermissionDeniedMessage()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (!hasAllRequiredPermissions(context, requiredPermissions)) {
+            permissionDenied.value = buildPermissionDeniedMessage()
+        }
+    }
 
     Column(
         modifier = modifier
@@ -43,22 +84,19 @@ fun BleDebugScreen(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text("BLE DEBUG", fontWeight = FontWeight.Black)
+        permissionDenied.value?.let { message ->
+            Text(message)
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(
                 onClick = {
-                    scanJob.value?.cancel()
-                    devices.clear()
-                    logLines.append("Scanning for Onewheel service")
-                    scanJob.value = scope.launch {
-                        runCatching {
-                            transport.scan(OwUuids.ONEWHEEL_SERVICE).collect { result ->
-                                if (devices.none { it.deviceId == result.deviceId }) {
-                                    devices += result
-                                }
-                                selectedDevice.value = selectedDevice.value ?: result
-                                logLines.append("Found ${result.label()}")
-                            }
-                        }.onFailure { error -> logLines.append("Scan failed: ${error.message}") }
+                    if (hasAllRequiredPermissions(context, requiredPermissions)) {
+                        permissionDenied.value = null
+                        startScan(scope, transport, devices, selectedDevice, scanJob, logLines)
+                    } else {
+                        pendingScan.value = true
+                        permissionDenied.value = buildPermissionDeniedMessage()
+                        permissionLauncher.launch(requiredPermissions.toTypedArray())
                     }
                 },
             ) {
@@ -108,6 +146,30 @@ fun BleDebugScreen(modifier: Modifier = Modifier) {
     }
 }
 
+private fun startScan(
+    scope: CoroutineScope,
+    transport: KableBleTransport,
+    devices: MutableList<ScanResult>,
+    selectedDevice: androidx.compose.runtime.MutableState<ScanResult?>,
+    scanJob: androidx.compose.runtime.MutableState<Job?>,
+    logLines: MutableList<String>,
+) {
+    scanJob.value?.cancel()
+    devices.clear()
+    logLines.append("Scanning for Onewheel service")
+    scanJob.value = scope.launch {
+        runCatching {
+            transport.scan(OwUuids.ONEWHEEL_SERVICE).collect { result ->
+                if (devices.none { it.deviceId == result.deviceId }) {
+                    devices += result
+                }
+                selectedDevice.value = selectedDevice.value ?: result
+                logLines.append("Found ${result.label()}")
+            }
+        }.onFailure { error -> logLines.append("Scan failed: ${error.message}") }
+    }
+}
+
 private fun startDumpJobs(
     scope: CoroutineScope,
     transport: KableBleTransport,
@@ -147,3 +209,14 @@ private fun GattCharacteristicId.shortName(): String =
 
 private fun ByteArray.toHexString(): String =
     joinToString(":") { byte -> byte.toUByte().toString(radix = 16).padStart(2, '0') }
+
+private fun hasPermission(context: android.content.Context, permission: String): Boolean =
+    ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+
+private fun hasAllRequiredPermissions(
+    context: android.content.Context,
+    permissions: List<String>,
+): Boolean = permissions.all { hasPermission(context, it) }
+
+private fun buildPermissionDeniedMessage(): String =
+    "Bluetooth scan, connect, and location permissions are required before scanning so ZWheel can find the board and keep the ride connection alive on Android 12+ and earlier devices."

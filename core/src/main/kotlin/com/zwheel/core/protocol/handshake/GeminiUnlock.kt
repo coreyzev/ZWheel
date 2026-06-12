@@ -6,9 +6,13 @@ import com.zwheel.core.protocol.HandshakeResult
 import com.zwheel.core.protocol.KeepAliveAction
 import com.zwheel.core.protocol.OwUuids
 import java.security.MessageDigest
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.withTimeout
 
 private const val CHALLENGE_TIMEOUT_MS = 5_000L
@@ -25,19 +29,29 @@ class NoneStrategy : HandshakeStrategy {
 }
 
 class GeminiStrategy : HandshakeStrategy {
-    override suspend fun unlock(io: GattIo): HandshakeResult {
-        // Subscribe before triggering so no notification is missed. Evidence: OWCE OWBoard.cs L861-876.
-        val challengeFlow = io.notifications(OwUuids.UART_READ)
+    override suspend fun unlock(io: GattIo): HandshakeResult = coroutineScope {
+        // Launch collection before the trigger write. Kable's observe() is a cold flow —
+        // the GATT CCCD write (enabling notifications) only happens when the flow is collected,
+        // not when notifications() is called. Without this, the board can emit the one-shot
+        // CRX challenge between the trigger write and .first() starting collection, and we
+        // time out. Evidence: OWCE OWBoard.cs L861-876.
+        val subscriptionReady = CompletableDeferred<Unit>()
+        val challengeAsync = async {
+            io.notifications(OwUuids.UART_READ)
+                .onStart { subscriptionReady.complete(Unit) }
+                .first()
+        }
+        subscriptionReady.await()
 
         // Read firmware revision and write it back unchanged; the board uses this write event
         // as a trigger to emit the Gemini challenge on UART_READ. The value itself is ignored.
         val firmwareRevision = io.read(OwUuids.FIRMWARE_REVISION)
         io.write(OwUuids.FIRMWARE_REVISION, firmwareRevision)
 
-        val challenge = withTimeout(CHALLENGE_TIMEOUT_MS) { challengeFlow.first() }
+        val challenge = withTimeout(CHALLENGE_TIMEOUT_MS) { challengeAsync.await() }
         val response = GeminiChallengeResponse.calculate(challenge)
         io.write(OwUuids.UART_WRITE, response)
-        return HandshakeResult(
+        HandshakeResult(
             unlocked = true,
             strategyName = "gemini",
             message = "Gemini challenge response sent",

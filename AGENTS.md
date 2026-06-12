@@ -20,7 +20,9 @@ Place this file at repo root. Read it at the start of EVERY session, along with
 5. Soft 300 / hard 500 line limit per file. Split before you hit it.
 6. All BLE UUIDs in `OwUuids.kt` only. A test asserts the writable allowlist =
    {unlock write, ride mode, lights}. **Never add a firmware/OTA UUID. Never.**
-7. No UI in services; services emit Flows, ViewModels render.
+7. No UI in services; services emit Flows, ViewModels render. Do not pass
+   `MutableState<T>` into non-`@Composable` functions — extract the value at the
+   call site and return/callback the new value instead.
 8. Room access only via `app/data` repositories.
 9. Tests land in the same commit as the code they cover. Parsers and handshake get
    fixture tests BEFORE hardware testing.
@@ -89,4 +91,12 @@ Place this file at repo root. Read it at the start of EVERY session, along with
   require writes for independent front/back control, or whether LIGHTS (e659f30c) alone
   is sufficient. If they need to be writable, add them to writableAllowlist AND update
   OwUuidsTest in the same commit.
+- 2026-06-12: Agent division of labor established by Corey. Claude: code review on every
+  PR before Corey merges, all security-sensitive code (handshake crypto, write allowlist),
+  architecture decisions and ADRs, cross-file reasoning and design judgment, writing test
+  scenarios and edge cases, maintaining AGENTS.md. Codex: feature implementation once
+  shape is known, mechanical/boilerplate tasks, UI (Compose screens, ViewModels), writing
+  tests from specs Claude provides. Workflow: Codex opens PRs, Claude reviews, Corey
+  merges. Neither agent merges. If both would touch the same file: Codex implements,
+  Claude reviews — never both implementing simultaneously on the same module.
 - (append discoveries here…)

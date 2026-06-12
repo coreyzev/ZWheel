@@ -99,4 +99,8 @@ Place this file at repo root. Read it at the start of EVERY session, along with
   tests from specs Claude provides. Workflow: Codex opens PRs, Claude reviews, Corey
   merges. Neither agent merges. If both would touch the same file: Codex implements,
   Claude reviews — never both implementing simultaneously on the same module.
+- 2026-06-12: PR #3 review established pattern: BLE transport (KableBleTransport) must
+  emit every advertisement it receives — dedup and staleness logic belong in the UI/call
+  site, not the transport. The seenDeviceIds filter was removed from scan(); the debug
+  screen owns dedup via deviceLastSeen. Apply this to any future scan flow work.
 - (append discoveries here…)

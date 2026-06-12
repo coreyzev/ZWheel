@@ -5,17 +5,21 @@ import com.zwheel.core.ports.HandshakeStrategy
 import com.zwheel.core.protocol.HandshakeResult
 import com.zwheel.core.protocol.KeepAliveAction
 import com.zwheel.core.protocol.OwUuids
+import com.zwheel.core.protocol.debug.BleDebugRecorder
 import java.security.MessageDigest
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.withTimeout
 
 private const val CHALLENGE_TIMEOUT_MS = 5_000L
+private const val MIN_CHALLENGE_BYTES = 19
 
 class NoneStrategy : HandshakeStrategy {
     override suspend fun unlock(io: GattIo): HandshakeResult =
@@ -28,7 +32,10 @@ class NoneStrategy : HandshakeStrategy {
     override fun keepAlive(): Flow<KeepAliveAction> = emptyFlow()
 }
 
-class GeminiStrategy : HandshakeStrategy {
+class GeminiStrategy(
+    private val debugRecorder: BleDebugRecorder? = null,
+    private val debugDeviceId: () -> String? = { null },
+) : HandshakeStrategy {
     override suspend fun unlock(io: GattIo): HandshakeResult = coroutineScope {
         // Launch collection before the trigger write. Kable's observe() is a cold flow —
         // the GATT CCCD write (enabling notifications) only happens when the flow is collected,
@@ -39,16 +46,23 @@ class GeminiStrategy : HandshakeStrategy {
         val challengeAsync = async {
             io.notifications(OwUuids.UART_READ)
                 .onStart { subscriptionReady.complete(Unit) }
+                .onEach(::recordRawNotification)
+                .filter(::isChallengePacket)
                 .first()
         }
-        subscriptionReady.await()
 
-        // Read firmware revision and write it back unchanged; the board uses this write event
-        // as a trigger to emit the Gemini challenge on UART_READ. The value itself is ignored.
-        val firmwareRevision = io.read(OwUuids.FIRMWARE_REVISION)
-        io.write(OwUuids.FIRMWARE_REVISION, firmwareRevision)
+        val challenge = withTimeout(CHALLENGE_TIMEOUT_MS) {
+            subscriptionReady.await()
 
-        val challenge = withTimeout(CHALLENGE_TIMEOUT_MS) { challengeAsync.await() }
+            // Read firmware revision and write it back unchanged; the board uses this write event
+            // as a trigger to emit the Gemini challenge on UART_READ. The value itself is ignored.
+            val firmwareRevision = io.read(OwUuids.FIRMWARE_REVISION)
+            recordTriggerWrite(status = "before", firmwareRevision = firmwareRevision)
+            io.write(OwUuids.FIRMWARE_REVISION, firmwareRevision)
+            recordTriggerWrite(status = "after", firmwareRevision = firmwareRevision)
+
+            challengeAsync.await()
+        }
         val response = GeminiChallengeResponse.calculate(challenge)
         io.write(OwUuids.UART_WRITE, response)
         HandshakeResult(
@@ -59,6 +73,31 @@ class GeminiStrategy : HandshakeStrategy {
     }
 
     override fun keepAlive(): Flow<KeepAliveAction> = emptyFlow()
+
+    private fun recordRawNotification(value: ByteArray) {
+        debugRecorder?.record(
+            type = "gemini_raw_notification",
+            deviceId = debugDeviceId(),
+            characteristicUuid = OwUuids.UART_READ.uuid.toString(),
+            characteristicName = "uart_read",
+            rawValueHex = value.toRawHexString(),
+            status = if (isChallengePacket(value)) "accepted_challenge" else "rejected_non_challenge",
+        )
+    }
+
+    private fun isChallengePacket(value: ByteArray): Boolean =
+        value.size >= MIN_CHALLENGE_BYTES && GeminiChallengeResponse.hasChallengePrefix(value)
+
+    private fun recordTriggerWrite(status: String, firmwareRevision: ByteArray) {
+        debugRecorder?.record(
+            type = "gemini_trigger_write",
+            deviceId = debugDeviceId(),
+            characteristicUuid = OwUuids.FIRMWARE_REVISION.uuid.toString(),
+            characteristicName = "firmware_revision",
+            rawValueHex = firmwareRevision.toRawHexString(),
+            status = status,
+        )
+    }
 }
 
 object GeminiChallengeResponse {
@@ -108,3 +147,6 @@ object GeminiChallengeResponse {
         return responseWithoutCheck + checkByte
     }
 }
+
+private fun ByteArray.toRawHexString(): String =
+    joinToString(separator = "") { byte -> byte.toUByte().toString(radix = 16).padStart(2, '0') }

@@ -13,7 +13,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -39,10 +39,9 @@ fun BleDebugScreen(
     val permanentlyDenied by viewModel.permanentlyDenied.collectAsStateWithLifecycle()
     val requiredPermissions = remember { bleScanPermissions() }
 
-    SideEffect {
-        viewModel.onPermissionsResult(
+    LaunchedEffect(Unit) {
+        viewModel.onInitialPermissionCheck(
             granted = hasAllRequiredPermissions(context, requiredPermissions),
-            permanentlyDenied = false,
         )
     }
 

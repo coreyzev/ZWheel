@@ -30,28 +30,28 @@ data class CellVoltageUiState(
     val isLow: Boolean,
 )
 
-fun mockDashboardStateFlow(): StateFlow<DashboardUiState> = MutableStateFlow(
-    DashboardUiState(
-        boardName = "XR 4029",
-        connectionLabel = "MOCK CONNECTED",
-        rssi = -58,
-        firmwareLabel = "FW GEMINI",
-        speedMph = 14.8,
-        topSpeedMph = 19.6,
-        estimatedRangeMiles = 7.4,
-        batteryPercent = 63,
-        packVoltage = 54.2,
-        amps = -8.4,
-        controllerTempF = 96,
-        cellVoltages = List(16) { index ->
-            val volts = if (index == 7) 3.86 else 3.94 + (index % 3) * 0.01
-            CellVoltageUiState(label = "C${index + 1}", volts = volts, isLow = volts < 3.9)
-        },
-        tripMiles = 3.42,
-        tripAmpHours = 2.14,
-        regenAmpHours = 0.31,
-        rideMode = "MISSION",
-        lightsLabel = "FRONT + BACK",
-        tireDiameterInches = 10.5,
-    ),
+fun mockDashboardState(): DashboardUiState = DashboardUiState(
+    boardName = "XR 4029",
+    connectionLabel = "MOCK CONNECTED",
+    rssi = -58,
+    firmwareLabel = "FW GEMINI",
+    speedMph = 14.8,
+    topSpeedMph = 19.6,
+    estimatedRangeMiles = 7.4,
+    batteryPercent = 63,
+    packVoltage = 54.2,
+    amps = -8.4,
+    controllerTempF = 96,
+    cellVoltages = List(16) { index ->
+        val volts = if (index == 7) 3.86 else 3.94 + (index % 3) * 0.01
+        CellVoltageUiState(label = "C${index + 1}", volts = volts, isLow = volts < 3.9)
+    },
+    tripMiles = 3.42,
+    tripAmpHours = 2.14,
+    regenAmpHours = 0.31,
+    rideMode = "MISSION",
+    lightsLabel = "FRONT + BACK",
+    tireDiameterInches = 10.5,
 )
+
+fun mockDashboardStateFlow(): StateFlow<DashboardUiState> = MutableStateFlow(mockDashboardState())

@@ -18,6 +18,8 @@ Hardware required: No
 - [ ] `core/src/main/kotlin` has no `android.*` or `androidx.*` imports.
 - [ ] Public behavior is represented through core ports/service interfaces before Android implementations.
 - [ ] `BleTransport`, `GattIo`, `HandshakeStrategy`, `RideStorage`, `Clock`, and `BoardStateService` interfaces exist.
+- [ ] `BleTransport` is a raw wire only: scan/connect/disconnect/read/write/notifications as raw bytes, with no `BoardState` dependency.
+- [ ] `BoardStateService` is the separate parsed state surface exposing `StateFlow<BoardState>`.
 - [ ] Core models/enums cover board identity, connection state, ride mode, board state, ride sessions, ride points, watch payload, speed units, and temperature units.
 - [ ] Speed, range, and top-speed calculation contracts exist in `:core`.
 

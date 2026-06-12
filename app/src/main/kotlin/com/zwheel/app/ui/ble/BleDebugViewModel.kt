@@ -1,5 +1,6 @@
 package com.zwheel.app.ui.ble
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zwheel.app.ble.ConnectionState
@@ -8,11 +9,16 @@ import com.zwheel.core.ports.ScanResult
 import com.zwheel.core.protocol.GattCharacteristicId
 import com.zwheel.core.protocol.OwUuids
 import com.zwheel.core.protocol.handshake.GeminiStrategy
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -20,6 +26,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 private const val SCAN_DURATION_MS = 30_000L
 private const val DEVICE_STALE_MS = 5_000L
 private const val DEVICE_PRUNE_INTERVAL_MS = 1_000L
+private const val TELEMETRY_PROBE_TIMEOUT_MS = 2_000L
 
 class BleDebugViewModel : ViewModel() {
     private val transport = KableBleTransport()
@@ -74,16 +81,24 @@ class BleDebugViewModel : ViewModel() {
         scanJob?.cancel()
         appendLog("Connecting ${device.label()}")
         viewModelScope.launch {
-            runCatching {
+            try {
                 transport.connect(device.deviceId)
-                appendLog("Sending Gemini unlock")
+                appendLog("GATT ready")
+                logBoardMetadata()
+                appendLog("Gemini wait UART 5s")
                 val result = GeminiStrategy().unlock(transport)
                 appendLog("Unlock ${result.strategyName}: ${result.unlocked}")
                 if (result.unlocked) {
                     appendLog("Connected")
                     startDumpJobs()
                 }
-            }.onFailure { error -> appendLog("Connect/unlock failed: ${error.message}") }
+            } catch (error: Throwable) {
+                appendLog("Connect/unlock failed: ${error.shortMessage()}")
+                if (error is TimeoutCancellationException) {
+                    appendLog(probeTelemetry())
+                    appendLog("OWCE trigger likely needed")
+                }
+            }
         }
     }
 
@@ -131,7 +146,11 @@ class BleDebugViewModel : ViewModel() {
                         cleanupJob.cancel()
                     }
                 } ?: appendLog("Scan stopped after 30s")
-            }.onFailure { error -> appendLog("Scan failed: ${error.message}") }
+            }.onFailure { error ->
+                if (error !is CancellationException) {
+                    appendLog("Scan failed: ${error.shortMessage()}")
+                }
+            }
         }
     }
 
@@ -181,7 +200,42 @@ class BleDebugViewModel : ViewModel() {
         }
     }
 
+    private suspend fun logBoardMetadata() {
+        val hardware = readHex(OwUuids.HARDWARE_REVISION)
+        val firmware = readHex(OwUuids.FIRMWARE_REVISION)
+        val rideMode = readHex(OwUuids.RIDE_MODE)
+        appendLog(
+            "Meta hw=${hardware.displayValue()} fw=${firmware.displayValue()} ride=${rideMode.displayValue()}",
+        )
+    }
+
+    private suspend fun readHex(characteristicId: GattCharacteristicId): String? =
+        runCatching { transport.read(characteristicId).toCompactDisplay() }
+            .onFailure { error -> Log.d(TAG, "Read ${characteristicId.shortName()} failed", error) }
+            .getOrNull()
+
+    private suspend fun probeTelemetry(): String {
+        val results = telemetryProbeCharacteristics.map { probe ->
+            viewModelScope.async {
+                val value = runCatching {
+                    withTimeoutOrNull(TELEMETRY_PROBE_TIMEOUT_MS) {
+                        transport.notifications(probe.characteristicId).first()
+                    }
+                }.onFailure { error ->
+                    Log.d(TAG, "Probe ${probe.name} failed", error)
+                }.getOrNull()
+                probe.name to value?.toCompactDisplay()
+            }
+        }.awaitAll()
+
+        return results.joinToString(
+            separator = " ",
+            prefix = "Probe ",
+        ) { (name, value) -> "$name=${value ?: "--"}" }
+    }
+
     private fun appendLog(line: String) {
+        Log.d(TAG, line)
         _logLines.value = (_logLines.value + line).takeLast(MAX_LOG_LINES)
     }
 
@@ -193,6 +247,7 @@ class BleDebugViewModel : ViewModel() {
     }
 
     private companion object {
+        const val TAG = "BleDebug"
         const val MAX_LOG_LINES = 80
     }
 }
@@ -206,6 +261,20 @@ private val dumpCharacteristics = listOf(
     OwUuids.RIDE_MODE,
 )
 
+private val telemetryProbeCharacteristics = listOf(
+    ProbeCharacteristic("bat", OwUuids.BATTERY_PERCENT),
+    ProbeCharacteristic("rpm", OwUuids.RPM),
+    ProbeCharacteristic("v", OwUuids.PACK_VOLTAGE),
+    ProbeCharacteristic("a", OwUuids.AMPS),
+    ProbeCharacteristic("tmp", OwUuids.TEMPERATURE),
+    ProbeCharacteristic("mode", OwUuids.RIDE_MODE),
+)
+
+private data class ProbeCharacteristic(
+    val name: String,
+    val characteristicId: GattCharacteristicId,
+)
+
 private fun ScanResult.deviceKey(): String = deviceId.lowercase()
 
 private fun ScanResult.label(): String =
@@ -216,3 +285,16 @@ private fun GattCharacteristicId.shortName(): String =
 
 private fun ByteArray.toHexString(): String =
     joinToString(":") { byte -> byte.toUByte().toString(radix = 16).padStart(2, '0') }
+
+private fun ByteArray.toCompactDisplay(): String =
+    if (size == 2) {
+        val value = get(0).toInt().and(0xff) or (get(1).toInt().and(0xff) shl 8)
+        "$value/${toHexString()}"
+    } else {
+        toHexString()
+    }
+
+private fun String?.displayValue(): String = this ?: "--"
+
+private fun Throwable.shortMessage(): String =
+    message ?: this::class.simpleName ?: "unknown"

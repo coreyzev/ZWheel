@@ -1,0 +1,11 @@
+.gradle/
+.kotlin/
+**/build/
+local.properties
+
+# Android Studio
+.idea/
+*.iml
+
+# OS/editor noise
+.DS_Store

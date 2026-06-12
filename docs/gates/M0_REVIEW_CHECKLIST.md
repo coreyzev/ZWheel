@@ -10,7 +10,8 @@ Hardware required: No
 - [ ] CI completes `clean check :app:assembleDebug :wear:assembleDebug`.
 - [ ] `:core` compiles as a Kotlin/JVM module.
 - [ ] `:app` and `:wear` assemble debug APKs.
-- [ ] No Gradle sync/build was attempted in this local handoff per Corey instruction.
+- [ ] Local Gradle baseline rerun completes after AndroidX, Java 17, and coarse-location fixes.
+- [ ] If local sandbox blocks Gradle daemon IPC, verify the same command in CI or an unrestricted shell.
 
 ## Core Purity And Contracts
 

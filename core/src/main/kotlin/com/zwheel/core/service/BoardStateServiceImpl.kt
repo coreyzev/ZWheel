@@ -1,6 +1,7 @@
 package com.zwheel.core.service
 
 import com.zwheel.core.calc.RpmBased
+import com.zwheel.core.model.BoardIdentity
 import com.zwheel.core.model.BoardState
 import com.zwheel.core.model.BoardType
 import com.zwheel.core.ports.BleTransport
@@ -21,12 +22,14 @@ class BoardStateServiceImpl(
     private val boardType: BoardType,
     private val diameterInches: Double,
     private val stockDiameterInches: Double,
+    private val boardIdentity: BoardIdentity? = null,
 ) : BoardStateService {
 
     private val _state = MutableStateFlow(BoardState())
     override val state: StateFlow<BoardState> = _state.asStateFlow()
 
     suspend fun start(scope: CoroutineScope) {
+        _state.update { it.copy(identity = boardIdentity) }
         scope.launch { collectAmps() }
         scope.launch { collectPackVoltage() }
         scope.launch { collectBatteryPercent() }

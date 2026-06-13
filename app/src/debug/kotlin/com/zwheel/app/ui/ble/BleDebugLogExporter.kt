@@ -13,6 +13,8 @@ import kotlinx.coroutines.withContext
 class BleDebugLogExporter(
     private val context: Context,
 ) {
+    // Keep this debug uploader available until release hardening. It is the fast path for
+    // Corey to send M2/M3 BLE fixtures to the receiver without rebuilding tooling.
     val uploadSupported: Boolean = true
 
     suspend fun share(jsonLines: String): String = withContext(Dispatchers.IO) {

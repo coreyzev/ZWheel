@@ -1,5 +1,7 @@
 package com.zwheel.app.ui
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,6 +21,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,41 +29,105 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.zwheel.app.ble.ConnectionState
 import com.zwheel.app.ui.ble.BleDebugScreen
+import com.zwheel.app.ui.ble.bleScanPermissions
+import com.zwheel.app.ui.ble.hasAllRequiredPermissions
+import com.zwheel.app.ui.ble.hasPermission
+import com.zwheel.app.ui.ble.hasPermanentlyDeniedPermission
+import com.zwheel.app.ui.ble.openAppSettings
 import com.zwheel.core.ports.ScanResult
+
 @Composable
 fun ZWheelAppScreen(
     viewModel: DashboardViewModel = hiltViewModel(),
 ) {
+    val context = LocalContext.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
     val devices by viewModel.devices.collectAsStateWithLifecycle()
+    val requiredPermissions = remember { bleScanPermissions() }
+    var permissionRequestAttempted by remember { mutableStateOf(false) }
+    var permissionsGranted by remember {
+        mutableStateOf(hasAllRequiredPermissions(context, requiredPermissions))
+    }
+    var permanentlyDenied by remember { mutableStateOf(false) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
+    ) { grantResults ->
+        permissionsGranted = requiredPermissions.all { permission ->
+            grantResults[permission] == true || hasPermission(context, permission)
+        }
+        permanentlyDenied = !permissionsGranted && hasPermanentlyDeniedPermission(
+            context = context,
+            permissions = requiredPermissions,
+            requestAttempted = permissionRequestAttempted,
+        )
+    }
+
+    fun requestBlePermissions() {
+        permissionRequestAttempted = true
+        permissionLauncher.launch(requiredPermissions.toTypedArray())
+    }
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        permissionsGranted = hasAllRequiredPermissions(context, requiredPermissions)
+        if (permissionsGranted) {
+            permanentlyDenied = false
+        }
+    }
+
+    LaunchedEffect(requiredPermissions) {
+        if (!permissionsGranted && !permissionRequestAttempted) {
+            requestBlePermissions()
+        }
+    }
+
     ZWheelDashboard(
         state = state.copy(connectionLabel = connectionState.name.uppercase()),
         connectionState = connectionState,
         devices = devices,
-        onScan = viewModel::scan,
+        permissionsGranted = permissionsGranted,
+        permanentlyDenied = permanentlyDenied,
+        onGrantPermissions = ::requestBlePermissions,
+        onOpenSettings = { context.openAppSettings() },
+        onScan = {
+            if (permissionsGranted) {
+                viewModel.scan()
+            } else {
+                requestBlePermissions()
+            }
+        },
         onConnect = viewModel::connect,
         onDisconnect = viewModel::disconnect,
     )
 }
+
 @Composable
 private fun ZWheelDashboard(
     state: DashboardUiState,
     connectionState: ConnectionState = ConnectionState.Idle,
     devices: List<ScanResult> = emptyList(),
+    permissionsGranted: Boolean = true,
+    permanentlyDenied: Boolean = false,
+    onGrantPermissions: () -> Unit = {},
+    onOpenSettings: () -> Unit = {},
     onScan: () -> Unit = {},
     onConnect: (String) -> Unit = {},
     onDisconnect: () -> Unit = {},
 ) {
     var showDebug by remember { mutableStateOf(false) }
+    val debugVisible = showDebug || !permissionsGranted
 
     Column(
         modifier = Modifier
@@ -70,11 +137,23 @@ private fun ZWheelDashboard(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        ConnectionBar(connectionState, devices, onScan, onConnect, onDisconnect)
+        ConnectionBar(
+            connectionState = connectionState,
+            devices = devices,
+            permissionsGranted = permissionsGranted,
+            permanentlyDenied = permanentlyDenied,
+            onGrantPermissions = onGrantPermissions,
+            onOpenSettings = onOpenSettings,
+            onScan = onScan,
+            onConnect = onConnect,
+            onDisconnect = onDisconnect,
+        )
+        // Keep this debug/log panel reachable until the app is ready to publish. It is the
+        // M2 hardware-capture path for permissions, BLE logs, share, pair, and upload.
         TextButton(onClick = { showDebug = !showDebug }) {
-            Text(if (showDebug) "Hide BLE debug" else "Show BLE debug")
+            Text(if (debugVisible) "Hide BLE debug + log upload" else "Show BLE debug + log upload")
         }
-        if (showDebug) {
+        if (debugVisible) {
             BleDebugScreen()
         }
         Header(state)
@@ -89,6 +168,10 @@ private fun ZWheelDashboard(
 private fun ConnectionBar(
     connectionState: ConnectionState,
     devices: List<ScanResult>,
+    permissionsGranted: Boolean,
+    permanentlyDenied: Boolean,
+    onGrantPermissions: () -> Unit,
+    onOpenSettings: () -> Unit,
     onScan: () -> Unit,
     onConnect: (String) -> Unit,
     onDisconnect: () -> Unit,
@@ -107,17 +190,38 @@ private fun ConnectionBar(
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        enabled = connectionState != ConnectionState.Scanning && connectionState != ConnectionState.Connected,
-                        onClick = onScan,
-                    ) {
-                        Text(if (connectionState == ConnectionState.Scanning) "Scanning" else "Scan")
+                    if (permissionsGranted) {
+                        Button(
+                            enabled = connectionState != ConnectionState.Scanning &&
+                                connectionState != ConnectionState.Connected,
+                            onClick = onScan,
+                        ) {
+                            Text(if (connectionState == ConnectionState.Scanning) "Scanning" else "Scan")
+                        }
+                    } else {
+                        Button(onClick = onGrantPermissions) {
+                            Text("Grant permissions")
+                        }
                     }
                     Button(
                         enabled = connectionState == ConnectionState.Connected,
                         onClick = onDisconnect,
                     ) {
                         Text("Disconnect")
+                    }
+                }
+            }
+            if (!permissionsGranted) {
+                Text(
+                    text = "Bluetooth permissions are required before ZWheel can scan for your board.",
+                    color = Color(0xff555555),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.sp,
+                )
+                if (permanentlyDenied) {
+                    TextButton(onClick = onOpenSettings) {
+                        Text("Open app settings")
                     }
                 }
             }

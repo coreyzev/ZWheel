@@ -67,7 +67,8 @@ Place this file at repo root. Read it at the start of EVERY session, along with
   one of two verdicts:
   - `LGTM — merge`
   - `Changes requested — [specific issue]`
-  Corey merges. Neither Codex nor Claude Code merges.
+  Corey merges by default. Claude Code web/CLI may merge when Corey explicitly directs
+  it. Codex does not merge.
 - Route work to Claude Code (not Codex) for: security-sensitive code, architecture
   violations, ADR authorship, or any task requiring cross-file design judgment.
   Everything else goes to Codex.
@@ -103,12 +104,14 @@ Place this file at repo root. Read it at the start of EVERY session, along with
   is sufficient. If they need to be writable, add them to writableAllowlist AND update
   OwUuidsTest in the same commit.
 - 2026-06-12: Agent division of labor established by Corey. Claude Code: code review on
-  every PR before Corey merges, all security-sensitive code (handshake crypto, write
-  allowlist), architecture decisions and ADRs, cross-file reasoning and design judgment,
-  writing test scenarios and edge cases, maintaining AGENTS.md. Codex: feature
-  implementation once shape is known, mechanical/boilerplate tasks, UI (Compose screens,
-  ViewModels), writing tests from specs Claude provides. Workflow: Codex opens PRs,
-  Claude Code reviews, Corey merges. Neither agent merges.
+  every PR before merge, all security-sensitive code (handshake crypto, write allowlist),
+  architecture decisions and ADRs, cross-file reasoning and design judgment, writing test
+  scenarios and edge cases, maintaining AGENTS.md. Codex: feature implementation once
+  shape is known, mechanical/boilerplate tasks, UI (Compose screens, ViewModels), writing
+  tests from specs Claude provides. Workflow: Codex opens PRs, Claude Code reviews, Corey
+  merges by default; Claude Code web/CLI may merge when Corey explicitly directs it. If
+  both would touch the same file: Codex implements, Claude Code reviews — never both
+  implementing simultaneously on the same module.
 - 2026-06-12: PR #3 review established pattern: BLE transport (KableBleTransport) must
   emit every advertisement it receives — dedup and staleness logic belong in the UI/call
   site, not the transport. The seenDeviceIds filter was removed from scan(); the debug
@@ -138,7 +141,8 @@ Place this file at repo root. Read it at the start of EVERY session, along with
   unconfirmed, not tested in this session.
 - 2026-06-13: Workflow simplified — Claude Code (web/CLI) is the sole reviewing agent.
   No separate "Claude Online" escalation path. Two verdicts only: `LGTM — merge` or
-  `Changes requested — [specific issue]`. Corey enabled RC on the review server.
+  `Changes requested — [specific issue]`. Corey enabled RC on the review server. Corey
+  merges by default; Claude Code web/CLI may merge when Corey explicitly directs it.
 - 2026-06-13: PR #18 review — three required changes: (1) `batteryPercent` lost its
   `.coerceIn(0, 100)` clamp (safety rule); (2) `amps` uses uint16 but current can be
   negative during regen — needs signed int16; (3) `amps` returns `Int` but

@@ -5,10 +5,11 @@ import com.zwheel.core.model.RideMode
 object Parsers {
     fun rpm(value: ByteArray): Int = value.uint16BigEndian()
 
-    // TODO(m2): verify current scale factor against a ride capture with regen/braking.
-    fun amps(value: ByteArray): Double = value.int16BigEndian().toDouble()
+    fun amps(value: ByteArray): Double = value.int16BigEndian() / 10.0
 
     fun packVoltage(value: ByteArray): Double = value.uint16BigEndian() / 10.0
+
+    // TODO(m3): implement e659f31b cell voltage parsing after a dedicated capture session.
 
     // M1 captured raw two-byte temperature values. Scale and byte order need warmer-board verification.
     fun temperatures(value: ByteArray): Pair<Int, Int> {

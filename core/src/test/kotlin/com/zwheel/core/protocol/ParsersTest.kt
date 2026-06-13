@@ -13,15 +13,15 @@ class ParsersTest {
     }
 
     @Test
-    fun `amps parses signed int16 big endian M1 peak sample`() {
+    fun `amps parses signed tenths of amps M1 peak sample`() {
         // Source: core/src/test/resources/xr4209-success-handshake-telemetry.jsonl,
         // e659f312 amps notification rawValueHex 01ef from the M1 XR 4209 success capture.
-        assertEquals(495.0, Parsers.amps(hex("01ef")))
+        assertEquals(49.5, Parsers.amps(hex("01ef")))
     }
 
     @Test
-    fun `amps parses signed int16 big endian regen sample`() {
-        assertEquals(-256.0, Parsers.amps(hex("ff00")))
+    fun `amps parses signed tenths of amps regen sample`() {
+        assertEquals(-25.6, Parsers.amps(hex("ff00")))
     }
 
     @Test

@@ -48,6 +48,7 @@ import com.zwheel.app.ui.ble.BleDebugScreen
 import com.zwheel.app.ui.onboarding.OemBatteryAdviceScreen
 import com.zwheel.app.ui.onboarding.batteryAdviceForManufacturer
 import com.zwheel.app.ui.ble.bleScanPermissions
+import com.zwheel.app.ui.history.RideDetailScreen
 import com.zwheel.app.ui.history.RideHistoryScreen
 import com.zwheel.app.ui.settings.SettingsScreen
 import com.zwheel.app.ui.ble.hasAllRequiredPermissions
@@ -67,7 +68,14 @@ fun ZWheelAppScreen() {
                 onOpenBatteryAdvice = { navController.navigate("battery") },
             )
         }
-        composable("history") { RideHistoryScreen() }
+        composable("history") {
+            RideHistoryScreen(
+                onRideClick = { sessionId -> navController.navigate("rideDetail/$sessionId") }
+            )
+        }
+        composable("rideDetail/{sessionId}") {
+            RideDetailScreen(onBack = { navController.popBackStack() })
+        }
         composable("settings") { SettingsScreen() }
         composable("battery") {
             val context = LocalContext.current

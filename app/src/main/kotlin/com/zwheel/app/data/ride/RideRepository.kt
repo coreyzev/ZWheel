@@ -19,6 +19,8 @@ class RideRepository @Inject constructor(private val dao: RideDao) {
     fun getAllSessions(): Flow<List<RideSession>> =
         dao.getAllSessions().map { list -> list.map { it.toModel() } }
 
+    suspend fun getSession(id: String): RideSession? = dao.getSession(id)?.toModel()
+
     suspend fun insertPoint(point: RideDataPoint) = dao.insertPoint(point.toEntity())
 
     fun getPointsForSession(sessionId: String): Flow<List<RideDataPoint>> =

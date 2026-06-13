@@ -84,3 +84,12 @@ jobs:
           make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prune old releases (keep last 2)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release list --limit 100 --json tagName --jq '.[2:][].tagName' | \
+            while IFS= read -r tag; do
+              gh release delete "$tag" --yes --cleanup-tag || true
+            done

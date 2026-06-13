@@ -45,6 +45,7 @@ import com.zwheel.app.ble.ConnectionState
 import com.zwheel.app.ui.ble.BleDebugScreen
 import com.zwheel.app.ui.ble.bleScanPermissions
 import com.zwheel.app.ui.history.RideHistoryScreen
+import com.zwheel.app.ui.settings.SettingsScreen
 import com.zwheel.app.ui.ble.hasAllRequiredPermissions
 import com.zwheel.app.ui.ble.hasPermission
 import com.zwheel.app.ui.ble.hasPermanentlyDeniedPermission
@@ -55,8 +56,14 @@ import com.zwheel.core.ports.ScanResult
 fun ZWheelAppScreen() {
     val navController = rememberNavController()
     NavHost(navController = navController, startDestination = "dashboard") {
-        composable("dashboard") { ZWheelDashboardScreen(onOpenHistory = { navController.navigate("history") }) }
+        composable("dashboard") {
+            ZWheelDashboardScreen(
+                onOpenHistory = { navController.navigate("history") },
+                onOpenSettings = { navController.navigate("settings") },
+            )
+        }
         composable("history") { RideHistoryScreen() }
+        composable("settings") { SettingsScreen() }
     }
 }
 
@@ -64,6 +71,7 @@ fun ZWheelAppScreen() {
 private fun ZWheelDashboardScreen(
     viewModel: DashboardViewModel = hiltViewModel(),
     onOpenHistory: () -> Unit = {},
+    onOpenSettings: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -125,6 +133,7 @@ private fun ZWheelDashboardScreen(
         onConnect = viewModel::connect,
         onDisconnect = viewModel::disconnect,
         onOpenHistory = onOpenHistory,
+        onOpenSettingsScreen = onOpenSettings,
     )
 }
 
@@ -141,6 +150,7 @@ private fun ZWheelDashboard(
     onConnect: (String) -> Unit = {},
     onDisconnect: () -> Unit = {},
     onOpenHistory: () -> Unit = {},
+    onOpenSettingsScreen: () -> Unit = {},
 ) {
     var showDebug by remember { mutableStateOf(false) }
     val debugVisible = showDebug || !permissionsGranted
@@ -169,8 +179,9 @@ private fun ZWheelDashboard(
             TextButton(onClick = { showDebug = !showDebug }) {
                 Text(if (debugVisible) "Hide BLE debug" else "Show BLE debug")
             }
-            TextButton(onClick = onOpenHistory) {
-                Text("Ride History")
+            Row {
+                TextButton(onClick = onOpenHistory) { Text("History") }
+                TextButton(onClick = onOpenSettingsScreen) { Text("Settings") }
             }
         }
         if (debugVisible) {

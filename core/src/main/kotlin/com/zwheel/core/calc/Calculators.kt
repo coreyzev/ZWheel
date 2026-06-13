@@ -1,6 +1,8 @@
 package com.zwheel.core.calc
 
 import com.zwheel.core.model.BoardType
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.math.PI
 
 interface SpeedCalculator {
     fun correctedMetersPerSecond(
@@ -38,13 +40,17 @@ class RpmBased : SpeedCalculator {
         if (diameterInches !in 8.0..16.0) return null
 
         val diameterMeters = diameterInches * 0.0254
-        return rpm * Math.PI * diameterMeters / 60.0
+        return rpm * PI * diameterMeters / 60.0
     }
 }
 
 class ScaledFirmware(
     private val stockDiameterInches: Double,
 ) : SpeedCalculator {
+    init {
+        require(stockDiameterInches > 0.0) { "stockDiameterInches must be positive, got $stockDiameterInches" }
+    }
+
     override fun correctedMetersPerSecond(
         rpm: Double?,
         firmwareSpeedMetersPerSecond: Double?,
@@ -58,26 +64,29 @@ class ScaledFirmware(
 }
 
 class DefaultTopSpeedTracker : TopSpeedTracker {
-    private var max: Double? = null
+    private val max = AtomicReference<Double?>(null)
 
     override val currentTripMaxMetersPerSecond: Double?
-        get() = max
+        get() = max.get()
 
     override fun consume(speedMetersPerSecond: Double?) {
         if (speedMetersPerSecond == null) return
 
-        val currentMax = max
-        if (currentMax == null || speedMetersPerSecond > currentMax) {
-            max = speedMetersPerSecond
+        max.updateAndGet { currentMax ->
+            if (currentMax == null || speedMetersPerSecond > currentMax) {
+                speedMetersPerSecond
+            } else {
+                currentMax
+            }
         }
     }
 
     internal fun reset() {
-        max = null
+        max.set(null)
     }
 }
 
-class DefaultRangeEstimator : RangeEstimator {
+object DefaultRangeEstimator : RangeEstimator {
     override fun estimateKilometersRemaining(
         batteryPct: Int?,
         boardType: BoardType,

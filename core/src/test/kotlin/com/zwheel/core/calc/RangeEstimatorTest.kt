@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 
 class RangeEstimatorTest {
-    private val estimator = DefaultRangeEstimator()
+    private val estimator = DefaultRangeEstimator
 
     @Test
     fun `uses conservative board type default when calibration is absent`() {

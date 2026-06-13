@@ -1,4 +1,5 @@
 [versions]
+room = "2.7.1"
 agp = "8.7.3"
 hilt = "2.52"
 junitJupiter = "5.11.3"
@@ -8,6 +9,8 @@ kotlinxCoroutines = "1.9.0"
 kable = "0.35.0"
 datastore = "1.1.1"
 hiltNavigationCompose = "1.2.0"
+robolectric = "4.13"
+androidxTestCore = "1.6.1"
 turbine = "1.1.0"
 androidxActivity = "1.9.3"
 androidxCore = "1.15.0"
@@ -16,6 +19,9 @@ composeBom = "2024.11.00"
 wearCompose = "1.4.1"
 
 [libraries]
+androidx-room-runtime  = { module = "androidx.room:room-runtime",  version.ref = "room" }
+androidx-room-ktx      = { module = "androidx.room:room-ktx",      version.ref = "room" }
+androidx-room-compiler = { module = "androidx.room:room-compiler",  version.ref = "room" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidxActivity" }
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "androidxLifecycle" }
@@ -26,6 +32,7 @@ androidx-compose-ui = { module = "androidx.compose.ui:ui" }
 androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
+androidx-test-core = { module = "androidx.test:core", version.ref = "androidxTestCore" }
 androidx-wear-compose-material = { module = "androidx.wear.compose:compose-material", version.ref = "wearCompose" }
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
 hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
@@ -34,6 +41,7 @@ kable-core-android = { module = "com.juul.kable:kable-core-android", version.ref
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinxCoroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
+robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
 
 [plugins]

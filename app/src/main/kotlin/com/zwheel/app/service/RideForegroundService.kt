@@ -13,6 +13,7 @@ import com.zwheel.app.R
 import com.zwheel.app.ble.ConnectionManager
 import com.zwheel.app.data.ride.RideRepository
 import com.zwheel.app.data.settings.SettingsRepository
+import com.zwheel.app.wear.WearDataLayerRepository
 import com.zwheel.core.ports.Clock
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -37,6 +38,7 @@ class RideForegroundService : LifecycleService() {
     @Inject lateinit var rideRepository: RideRepository
     @Inject lateinit var settingsRepository: SettingsRepository
     @Inject lateinit var clock: Clock
+    @Inject lateinit var wearDataLayerRepository: WearDataLayerRepository
 
     private var wakelock: PowerManager.WakeLock? = null
     private var rideRecorder: RideRecorder? = null
@@ -50,6 +52,7 @@ class RideForegroundService : LifecycleService() {
         mirrorConnectionState()
         mirrorBoardStateAndUpdateNotification()
         startRideRecorderTicker()
+        wearDataLayerRepository.startSync(lifecycleScope)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -111,6 +114,9 @@ class RideForegroundService : LifecycleService() {
 
     private fun startRideRecorderTicker() {
         val recorder = RideRecorder(rideRepository, clock)
+        recorder.onSessionChanged = { isRiding ->
+            rideServiceRepository.updateIsRiding(isRiding)
+        }
         rideRecorder = recorder
         lifecycleScope.launch {
             while (isActive) {

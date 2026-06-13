@@ -16,6 +16,8 @@ internal class RideRecorder(
     private val repository: RideRepository,
     private val clock: Clock,
 ) {
+    var onSessionChanged: ((Boolean) -> Unit)? = null
+
     private var currentSessionId: String? = null
     private var currentSession: RideSession? = null
     private var speedAboveThresholdCounterSeconds: Int = 0
@@ -95,6 +97,7 @@ internal class RideRecorder(
         speedBelowThresholdCounterSeconds = 0
         maxSpeedMetersPerSecondCorrected = 0.0
         distanceMetersCorrected = 0.0
+        onSessionChanged?.invoke(false)
     }
 
     private suspend fun startSession(state: BoardState) {
@@ -109,5 +112,6 @@ internal class RideRecorder(
         speedBelowThresholdCounterSeconds = 0
         maxSpeedMetersPerSecondCorrected = 0.0
         distanceMetersCorrected = 0.0
+        onSessionChanged?.invoke(true)
     }
 }

@@ -131,13 +131,12 @@ Place this file at repo root. Read it at the start of EVERY session, along with
   Debug app upload pairing is password-only and targets `http://116.203.200.55:8765`;
   cleartext is allowed only in the debug network security config for that IP.
 - 2026-06-12: M1 PASSED. Gemini handshake verified on XR HW 4209 FW 4134.
-  e659f30b confirmed as RPM. Reconnect verified. Board power-off produces burst of
-  zeros then silence — app does NOT auto-detect this and disconnect; Corey had to tap
-  disconnect manually ~22s later. Phase 3 must handle board power-off detection from
-  the burst-of-zeros pattern and auto-disconnect cleanly. Firmware trigger write
-  (read-then-write-back on e659f311) confirmed working. Challenge arrives fragmented
-  across ~10 BLE packets, assembled by buffer. Two AGENTS.md open questions resolved:
-  RPM UUID e659f30b: CONFIRMED. LIGHTS_FRONT/LIGHTS_BACK writability: still
+  e659f30b confirmed as RPM. Reconnect verified. M1 observed a telemetry burst of zeros
+  followed by silence; this may have been board power-off behavior, but it still needs a
+  controlled confirmation before Phase 3 uses it as an auto-disconnect signal. Firmware
+  trigger write (read-then-write-back on e659f311) confirmed working. Challenge arrives
+  fragmented across ~10 BLE packets, assembled by buffer. Two AGENTS.md open questions
+  resolved: RPM UUID e659f30b: CONFIRMED. LIGHTS_FRONT/LIGHTS_BACK writability: still
   unconfirmed, not tested in this session.
 - 2026-06-13: Workflow simplified — Claude Code (web/CLI) is the sole reviewing agent.
   No separate "Claude Online" escalation path. Two verdicts only: `LGTM — merge` or
@@ -153,5 +152,12 @@ Place this file at repo root. Read it at the start of EVERY session, along with
   falling back to unconfirmed odometer-derived raw speed when stationary RPM did not
   notify inside the old 3s calculator-selection window. Amps were active but looked off;
   wait for uploaded log parse before changing amps scaling beyond existing signed int16
-  tenths parser.
+  tenths parser. Corey clarified any zero-burst interpretation from this M2 test was not
+  board power-off: the board was still on/ridable, and was powered off only after in-app
+  disconnect.
+- 2026-06-13: M2 log analysis found debug export was truncated by
+  `BleDebugSessionLogger.startDumpJobs()` using `.take(20)` per characteristic. Remove
+  that cap before the next capture. Gemini suggested amps may be centiamps, but do not
+  change amps scaling on plausibility alone; keep signed int16 tenths unless OWCE/protocol
+  evidence or controlled capture proves otherwise.
 - (append discoveries here…)

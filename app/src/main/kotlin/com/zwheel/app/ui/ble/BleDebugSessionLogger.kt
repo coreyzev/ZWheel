@@ -11,7 +11,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -26,7 +25,6 @@ internal class BleDebugSessionLogger(
         dumpCharacteristics.map { characteristic ->
             scope.launch {
                 io.notifications(characteristic)
-                    .take(20)
                     .collect { value ->
                         recorder.record(
                             type = "notification",

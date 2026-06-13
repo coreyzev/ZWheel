@@ -56,7 +56,7 @@ internal fun ByteArray.toHexString(): String =
 
 internal fun ByteArray.toCompactDisplay(): String =
     if (size == 2) {
-        val value = get(0).toInt().and(0xff) or (get(1).toInt().and(0xff) shl 8)
+        val value = (get(0).toInt().and(0xff) shl 8) or get(1).toInt().and(0xff)
         "$value/${toHexString()}"
     } else {
         toHexString()

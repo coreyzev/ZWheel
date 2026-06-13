@@ -8,6 +8,8 @@ import com.zwheel.app.ble.KableBleTransport
 import com.zwheel.core.ports.ScanResult
 import com.zwheel.core.protocol.debug.BleDebugRecorder
 import com.zwheel.core.protocol.handshake.GeminiStrategy
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.TimeoutCancellationException
@@ -22,8 +24,10 @@ private const val SCAN_DURATION_MS = 30_000L
 private const val DEVICE_STALE_MS = 5_000L
 private const val DEVICE_PRUNE_INTERVAL_MS = 1_000L
 
-class BleDebugViewModel : ViewModel() {
-    private val transport = KableBleTransport()
+@HiltViewModel
+class BleDebugViewModel @Inject constructor(
+    private val transport: KableBleTransport,
+) : ViewModel() {
     private val recorder = BleDebugRecorder()
     private val deviceLastSeen = mutableMapOf<String, Long>()
     private var scanJob: Job? = null
@@ -255,7 +259,6 @@ class BleDebugViewModel : ViewModel() {
     override fun onCleared() {
         dumpJobs.forEach(Job::cancel)
         scanJob?.cancel()
-        viewModelScope.launch { transport.disconnect() }
         super.onCleared()
     }
 

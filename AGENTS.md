@@ -86,9 +86,6 @@ Place this file at repo root. Read it at the start of EVERY session, along with
   debug BLE screen, and Samsung battery advice screen were added.
 - 2026-06-12: FIRMWARE_REVISION (e659f311) added to writable allowlist for Gemini trigger
   only — read-then-write-same-value. Corey sign-off given. See ADR-004.
-- M1 open question: confirm RPM characteristic is e659f30b on Corey's 4209 XR from
-  the board capture fixture. Tighten OwUuids RPM doc comment to cite the specific
-  pOnewheel source file/commit once confirmed.
 - M1 open question: confirm whether LIGHTS_FRONT (e659f30d) and LIGHTS_BACK (e659f30e)
   require writes for independent front/back control, or whether LIGHTS (e659f30c) alone
   is sufficient. If they need to be writable, add them to writableAllowlist AND update
@@ -119,10 +116,15 @@ Place this file at repo root. Read it at the start of EVERY session, along with
 - 2026-06-12: Corey chose fixed debug receiver IP `116.203.200.55` for M1 log uploads.
   Debug app upload pairing is password-only and targets `http://116.203.200.55:8765`;
   cleartext is allowed only in the debug network security config for that IP.
-- 2026-06-12: M1 log showed Gemini UART_READ can deliver the 20-byte CRX challenge
-  fragmented across multiple small BLE notifications. GeminiStrategy buffers UART_READ
-  fragments for up to the existing 5s timeout, logs each `gemini_raw_notification`, and
-  logs `gemini_challenge_assembled` when the first 20 CRX bytes are complete.
+- 2026-06-12: M1 PASSED. Gemini handshake verified on XR HW 4209 FW 4134.
+  e659f30b confirmed as RPM. Reconnect verified. Board power-off produces burst of
+  zeros then silence — app does NOT auto-detect this and disconnect; Corey had to tap
+  disconnect manually ~22s later. Phase 3 must handle board power-off detection from
+  the burst-of-zeros pattern and auto-disconnect cleanly. Firmware trigger write
+  (read-then-write-back on e659f311) confirmed working. Challenge arrives fragmented
+  across ~10 BLE packets, assembled by buffer. Two AGENTS.md open questions resolved:
+  RPM UUID e659f30b: CONFIRMED. LIGHTS_FRONT/LIGHTS_BACK writability: still
+  unconfirmed, not tested in this session.
 - 2026-06-12: Workflow update — token efficiency. Codex writes code and opens PRs. Claude Code CLI reviews PRs directly via GH access and ends every review with one of three verdicts: 'LGTM — merge', 'Changes requested — [specific issue]', or 'Escalate to Claude Online — [reason]'. Claude Online acts as orchestrator: directs next steps, writes agent prompts, reviews logs and video/screenshots from Corey, and makes decisions when Claude Code CLI escalates. Claude Online does not review PRs unless Claude Code CLI escalates. Corey merges. Neither Codex nor Claude Code CLI merges.
 
 Route to Claude Code CLI (not Codex) only when: security-sensitive code, architecture violations, or explicit escalation needed. Everything else goes to Codex.

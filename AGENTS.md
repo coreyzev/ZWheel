@@ -1,6 +1,9 @@
 # AGENTS.md — Contract for the implementing agent
-Place this file at repo root. Read it at the start of EVERY session, along with
-01_PROJECT_BRIEF.md and 02_ARCHITECTURE.md. Update §6 (Memory) as you learn.
+**Orchestrator (Claude):** Read this file plus 01_PROJECT_BRIEF.md and 02_ARCHITECTURE.md
+at the start of every session. Update §6 (Memory) as you learn.
+**Implementing agent (Codex/Gemini) given a gate spec:** Read ONLY this file and the
+gate file named in your prompt. Skip 01_PROJECT_BRIEF.md and 02_ARCHITECTURE.md —
+the gate spec is the source of truth for your task.
 
 ## 1. Who does what
 - **Implementing agent (Codex):** all feature code, tests, UI (Compose screens,

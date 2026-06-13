@@ -18,6 +18,7 @@ class SettingsRepository(
             speedUnit = preferences[SPEED_UNIT].toEnumOrDefault(SpeedUnit.MPH),
             temperatureUnit = preferences[TEMPERATURE_UNIT].toEnumOrDefault(TemperatureUnit.FAHRENHEIT),
             tireDiameterInches = preferences[TIRE_DIAMETER]?.coerceIn(TIRE_DIAMETER_RANGE) ?: DEFAULT_TIRE_DIAMETER,
+            lastConnectedDeviceId = preferences[LAST_DEVICE_ID],
         )
     }
 
@@ -39,6 +40,13 @@ class SettingsRepository(
         }
     }
 
+    suspend fun saveLastConnectedDeviceId(id: String?) {
+        dataStore.edit { preferences ->
+            if (id != null) preferences[LAST_DEVICE_ID] = id
+            else preferences.remove(LAST_DEVICE_ID)
+        }
+    }
+
     private inline fun <reified T : Enum<T>> String?.toEnumOrDefault(default: T): T =
         enumValues<T>().firstOrNull { it.name == this } ?: default
 
@@ -46,6 +54,7 @@ class SettingsRepository(
         val SPEED_UNIT = stringPreferencesKey("speed_unit")
         val TEMPERATURE_UNIT = stringPreferencesKey("temperature_unit")
         val TIRE_DIAMETER = doublePreferencesKey("tire_diameter")
+        val LAST_DEVICE_ID = stringPreferencesKey("last_device_id")
         val TIRE_DIAMETER_RANGE = 8.0..16.0
         const val DEFAULT_TIRE_DIAMETER = 11.5
     }

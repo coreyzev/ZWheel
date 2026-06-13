@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.zwheel.app.ble.ConnectionManager
 import com.zwheel.app.ble.ConnectionState
 import com.zwheel.app.data.settings.SettingsRepository
+import com.zwheel.app.service.RideServiceController
+import com.zwheel.app.service.RideServiceRepository
 import com.zwheel.core.calc.DefaultTopSpeedTracker
 import com.zwheel.core.calc.RangeEstimator
 import com.zwheel.core.model.BoardType
@@ -15,18 +17,19 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
     private val connectionManager: ConnectionManager,
+    private val rideServiceRepository: RideServiceRepository,
+    private val rideServiceController: RideServiceController,
     settingsRepository: SettingsRepository,
     private val rangeEstimator: RangeEstimator,
 ) : ViewModel() {
     private val topSpeedTracker = DefaultTopSpeedTracker()
 
     val uiState: StateFlow<DashboardUiState> = combine(
-        connectionManager.boardState,
+        rideServiceRepository.boardState,
         settingsRepository.preferences,
     ) { boardState, prefs ->
         val correctedSpeed = boardState.speedMetersPerSecondCorrected
@@ -48,7 +51,10 @@ class DashboardViewModel @Inject constructor(
         initialValue = emptyDashboardState(),
     )
 
-    val connectionState: StateFlow<ConnectionState> = connectionManager.connectionState
+    val connectionState: StateFlow<ConnectionState> = rideServiceRepository.connectionState
+
+    // Scan is still UI-driven; scan results come from ConnectionManager until scan
+    // is moved into the service in a future gate.
     val devices: StateFlow<List<ScanResult>> = connectionManager.devices
 
     fun scan() {
@@ -56,12 +62,10 @@ class DashboardViewModel @Inject constructor(
     }
 
     fun connect(deviceId: String) {
-        viewModelScope.launch {
-            connectionManager.connect(deviceId)
-        }
+        rideServiceController.connect(deviceId)
     }
 
     fun disconnect() {
-        connectionManager.disconnect()
+        rideServiceController.disconnect()
     }
 }

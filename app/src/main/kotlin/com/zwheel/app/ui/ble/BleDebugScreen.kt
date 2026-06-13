@@ -28,14 +28,14 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.zwheel.app.ble.ConnectionState
 import kotlinx.coroutines.launch
 
 @Composable
 fun BleDebugScreen(
     modifier: Modifier = Modifier,
-    viewModel: BleDebugViewModel = viewModel(),
+    viewModel: BleDebugViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
     val devices by viewModel.devices.collectAsStateWithLifecycle()

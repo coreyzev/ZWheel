@@ -14,12 +14,15 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -27,17 +30,38 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.zwheel.app.ble.ConnectionState
 import com.zwheel.app.ui.ble.BleDebugScreen
-
+import com.zwheel.core.ports.ScanResult
 @Composable
-fun ZWheelAppScreen() {
-    val mockStateFlow = remember { mockDashboardStateFlow() }
-    val state by mockStateFlow.collectAsState()
-    ZWheelDashboard(state = state)
+fun ZWheelAppScreen(
+    viewModel: DashboardViewModel = hiltViewModel(),
+) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
+    val devices by viewModel.devices.collectAsStateWithLifecycle()
+    ZWheelDashboard(
+        state = state.copy(connectionLabel = connectionState.name.uppercase()),
+        connectionState = connectionState,
+        devices = devices,
+        onScan = viewModel::scan,
+        onConnect = viewModel::connect,
+        onDisconnect = viewModel::disconnect,
+    )
 }
-
 @Composable
-private fun ZWheelDashboard(state: DashboardUiState) {
+private fun ZWheelDashboard(
+    state: DashboardUiState,
+    connectionState: ConnectionState = ConnectionState.Idle,
+    devices: List<ScanResult> = emptyList(),
+    onScan: () -> Unit = {},
+    onConnect: (String) -> Unit = {},
+    onDisconnect: () -> Unit = {},
+) {
+    var showDebug by remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -46,13 +70,63 @@ private fun ZWheelDashboard(state: DashboardUiState) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        BleDebugScreen()
+        ConnectionBar(connectionState, devices, onScan, onConnect, onDisconnect)
+        TextButton(onClick = { showDebug = !showDebug }) {
+            Text(if (showDebug) "Hide BLE debug" else "Show BLE debug")
+        }
+        if (showDebug) {
+            BleDebugScreen()
+        }
         Header(state)
         SpeedCard(state)
         BatteryPackCard(state)
         CellVoltageCard(state.cellVoltages)
         TripStatsCard(state)
         RideModeCard(state)
+    }
+}
+@Composable
+private fun ConnectionBar(
+    connectionState: ConnectionState,
+    devices: List<ScanResult>,
+    onScan: () -> Unit,
+    onConnect: (String) -> Unit,
+    onDisconnect: () -> Unit,
+) {
+    DashboardCard(color = Color.White, contentColor = Color(0xff111111)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Column {
+                    Label("CONNECTION")
+                    Text(
+                        text = connectionState.name.uppercase(),
+                        color = Color(0xff111111),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 0.sp,
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        enabled = connectionState != ConnectionState.Scanning && connectionState != ConnectionState.Connected,
+                        onClick = onScan,
+                    ) {
+                        Text(if (connectionState == ConnectionState.Scanning) "Scanning" else "Scan")
+                    }
+                    Button(
+                        enabled = connectionState == ConnectionState.Connected,
+                        onClick = onDisconnect,
+                    ) {
+                        Text("Disconnect")
+                    }
+                }
+            }
+            devices.take(4).forEach { device ->
+                TextButton(enabled = connectionState != ConnectionState.Connected, onClick = { onConnect(device.deviceId) }) {
+                    Text(device.connectionLabel())
+                }
+            }
+        }
     }
 }
 
@@ -99,9 +173,9 @@ private fun SpeedCard(state: DashboardUiState) {
         ) {
             Column {
                 Label("SPEED")
-                Metric(value = "%.1f".format(state.speedMph), unit = "MPH", size = 64)
+                Metric(value = "%.1f".format(state.speedMph), unit = state.speedUnitLabel, size = 64)
                 Text(
-                    text = "TOP %.1f   RANGE %.1f MI".format(state.topSpeedMph, state.estimatedRangeMiles),
+                    text = "TOP %.1f   RANGE %.1f %s".format(state.topSpeedMph, state.estimatedRangeMiles, state.rangeUnitLabel),
                     color = Color(0xff111111),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Black,
@@ -128,7 +202,7 @@ private fun BatteryPackCard(state: DashboardUiState) {
             Column(horizontalAlignment = Alignment.End) {
                 SmallStat("PACK", "%.1f V".format(state.packVoltage), Color.White)
                 SmallStat("AMPS", "%.1f A".format(state.amps), Color.White)
-                SmallStat("TEMP", "${state.controllerTempF} F", Color.White)
+                SmallStat("TEMP", "${state.controllerTempF} ${state.temperatureUnitLabel}", Color.White)
             }
         }
     }
@@ -220,3 +294,6 @@ private fun ZWheelAppScreenPreview() {
         ZWheelDashboard(state = mockDashboardState())
     }
 }
+
+private fun ScanResult.connectionLabel(): String =
+    listOfNotNull(displayName, deviceId, rssi?.let { "$it dBm" }).joinToString("  ")

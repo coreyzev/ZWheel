@@ -1,6 +1,6 @@
-# ZWheel — Solo Handoff Guide (continue without Claude)
+# ZWheel — Solo Handoff Guide
 
-Written 2026-06-13 during Phase 2. Read this top-to-bottom once, then use the
+Updated 2026-06-13 (Phase 3 kick-off). Read this top-to-bottom once, then use the
 "Daily loop" section as your checklist.
 
 ---
@@ -8,22 +8,19 @@ Written 2026-06-13 during Phase 2. Read this top-to-bottom once, then use the
 ## 1. Where the project is right now
 
 **Merged to `main` (all CI-green):**
-- Phase 2 calculators: `RpmBased`, `ScaledFirmware`, `DefaultTopSpeedTracker`,
-  `DefaultRangeEstimator`, `UnitConversions` (in `core/calc/`).
-- `BoardStateServiceImpl` (`core/service/`) — subscribes to BLE characteristics,
-  emits `StateFlow<BoardState>`, selects speed calculator per ADR-006.
-- Settings: DataStore-backed `SettingsRepository` (tire diameter + speed/temp units)
-  with Hilt module, ViewModel, and Settings screen.
-- PR #24 dashboard integration: Hilt DI, `ConnectionManager` (owns
-  `BoardStateServiceImpl`, single shared `BleTransport`), and `DashboardViewModel`
-  mapping live `BoardState` → dashboard.
-- ADR-009: proposed ride-mode/lights write encoding and M2 hardware confirmation
-  checklist.
+- All Phase 2 merged: calculators, `BoardStateServiceImpl`, settings, dashboard integration, BLE subscription conflict fix, amps OWCE scaling, speed/debug fixes.
+- `BoardTypeDetector` in `core/protocol/` — detects `BoardType` from HW revision; `BoardIdentity` populated in `BoardState` after connect. (PR #31)
+- `BleDebugRecorder` moved to singleton scope; transport-layer notification recording. (PR #30)
+- ADR-008: foreground service architecture decided. ADR-009: ride-mode/lights write encoding proposed (pending Corey hardware confirmation).
 
-The app is at the **M2-testable** point: connect to the board and the dashboard shows
-live, diameter-corrected telemetry. Use the latest GitHub prerelease APK for the §6
-ride test, or use the local fallback at `app/build/outputs/apk/debug/app-debug.apk` if
-building locally.
+**PRs open, CI green, pending Corey merge:**
+- **PR #32** — "UNCORRECTED" badge on speed card when corrected speed unavailable (AGENTS.md §3 safety rule). Branch: `codex/m2-uncorrected-badge`.
+- **PR #33** — Room schema: `RideSessionEntity`, `RideDataPointEntity`, `RideDao`, `ZWheelDatabase`, `RideRepository`, `DatabaseModule`. Branch: `codex/p3-room-schema`.
+
+**Gate specs written (ready for implementation after merges):**
+- `docs/gates/gate-p3-foreground-service.md` — `RideForegroundService`, `RideServiceRepository` bridge, `DashboardViewModel` refactor. **Depends on PR #33 merged first.**
+
+**The app is M2-testable:** connect to the board and the dashboard shows live, diameter-corrected telemetry with board type auto-detected. Use the latest GitHub prerelease APK or build locally.
 
 ---
 
@@ -51,21 +48,25 @@ codex exec -C /root/zwheel-wt/<name> -s workspace-write \
 build are enabled in `~/.codex/config.toml`). Always tell it to compile before it
 reports done — that keeps CI green on the first try.
 
-**What Codex CANNOT do:** `git commit` (its sandbox protects `.git`). So **you commit
-its output yourself**:
-```bash
-cd /root/zwheel-wt/<name>
-git add <the files the gate allowed>          # do NOT add docs/gates/*
-git commit -m "feat(scope): ..."              # NO "Co-Authored-By" lines (house rule)
-git push -u origin codex/<name>
-gh pr create --title "..." --body "..."
-```
+**What Codex CAN do (updated 2026-06-13):** write files, run gradle, make git commits
+(sandbox now allows `.git`). Always tell it to compile before finishing.
 
-**Gate-writing tips that make Codex reliable:**
+**Codex context-window tip:** The tight prompt that works:
+```
+"You are a code writer. Read ONLY docs/gates/gate-<name>.md. Do NOT read any other files.
+ Write the files exactly as the gate specifies. After writing all files, run:
+ ./gradlew :app:compileDebugKotlin and fix errors. Then: git add -A && git commit -m '...'"
+```
+Do NOT ask Codex to read AGENTS.md, 01_PROJECT_BRIEF.md, or 02_ARCHITECTURE.md — it exhausts its context window before writing any files. The gate spec is the only doc it needs.
+
+If Codex writes deps but not source files: it ran out of context. Just write the source files yourself — the gate spec describes them exactly. Run `./gradlew :app:kspDebugKotlin :app:compileDebugKotlin`, fix errors, commit manually.
+
+If /tmp fills up: `rm -rf /tmp/zwheel-gradle /tmp/gradle-home /tmp/gradle-wrapper-cache` frees ~2.5 GB.
+
+**Gate-writing tips:**
 - List an explicit "Allowed files" set; tell it to STOP rather than touch anything else.
 - Give exact signatures / class names / Hilt annotations. The more precise, the better.
 - For pure-`core/` work, remind it: zero `android.*`/`androidx.*` imports (CI enforces).
-- Tell it to run the build and fix until green before finishing.
 
 If Codex hangs: you forgot `< /dev/null`. Kill it (`pkill -f 'codex exec'`) and rerun.
 

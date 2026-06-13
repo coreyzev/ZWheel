@@ -10,16 +10,16 @@ import java.security.MessageDigest
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.withTimeout
 
 private const val CHALLENGE_TIMEOUT_MS = 5_000L
-private const val MIN_CHALLENGE_BYTES = 19
+private const val CHALLENGE_BYTES = 20
 
 class NoneStrategy : HandshakeStrategy {
     override suspend fun unlock(io: GattIo): HandshakeResult =
@@ -44,10 +44,14 @@ class GeminiStrategy(
         // time out. Evidence: OWCE OWBoard.cs L861-876.
         val subscriptionReady = CompletableDeferred<Unit>()
         val challengeAsync = async {
+            var buffer = ByteArray(0)
             io.notifications(OwUuids.UART_READ)
                 .onStart { subscriptionReady.complete(Unit) }
                 .onEach(::recordRawNotification)
-                .filter(::isChallengePacket)
+                .mapNotNull { value ->
+                    buffer += value
+                    assembledChallengeOrNull(buffer)?.also(::recordChallengeAssembled)
+                }
                 .first()
         }
 
@@ -81,12 +85,29 @@ class GeminiStrategy(
             characteristicUuid = OwUuids.UART_READ.uuid.toString(),
             characteristicName = "uart_read",
             rawValueHex = value.toRawHexString(),
-            status = if (isChallengePacket(value)) "accepted_challenge" else "rejected_non_challenge",
+            status = "fragment",
         )
     }
 
-    private fun isChallengePacket(value: ByteArray): Boolean =
-        value.size >= MIN_CHALLENGE_BYTES && GeminiChallengeResponse.hasChallengePrefix(value)
+    private fun assembledChallengeOrNull(buffer: ByteArray): ByteArray? =
+        GeminiChallengeResponse.challengePrefixOnset(buffer)?.let { onset ->
+            if (buffer.size - onset >= CHALLENGE_BYTES) {
+                buffer.copyOfRange(fromIndex = onset, toIndex = onset + CHALLENGE_BYTES)
+            } else {
+                null
+            }
+        }
+
+    private fun recordChallengeAssembled(challenge: ByteArray) {
+        debugRecorder?.record(
+            type = "gemini_challenge_assembled",
+            deviceId = debugDeviceId(),
+            characteristicUuid = OwUuids.UART_READ.uuid.toString(),
+            characteristicName = "uart_read",
+            rawValueHex = challenge.toRawHexString(),
+            status = "ok",
+        )
+    }
 
     private fun recordTriggerWrite(status: String, firmwareRevision: ByteArray) {
         debugRecorder?.record(
@@ -101,6 +122,8 @@ class GeminiStrategy(
 }
 
 object GeminiChallengeResponse {
+    const val PREFIX_SIZE = 3
+
     private val challengePrefix = byteArrayOf(0x43, 0x52, 0x58)
 
     private val challengeResponsePassword = byteArrayOf(
@@ -122,11 +145,16 @@ object GeminiChallengeResponse {
         0x65,
     )
 
-    fun hasChallengePrefix(value: ByteArray): Boolean =
-        value.size >= challengePrefix.size &&
-            value[0] == challengePrefix[0] &&
-            value[1] == challengePrefix[1] &&
-            value[2] == challengePrefix[2]
+    fun hasChallengePrefix(value: ByteArray, offset: Int = 0): Boolean =
+        offset >= 0 &&
+            value.size - offset >= PREFIX_SIZE &&
+            value[offset] == challengePrefix[0] &&
+            value[offset + 1] == challengePrefix[1] &&
+            value[offset + 2] == challengePrefix[2]
+
+    fun challengePrefixOnset(value: ByteArray): Int? =
+        (0..value.size - PREFIX_SIZE)
+            .firstOrNull { offset -> hasChallengePrefix(value, offset) }
 
     fun calculate(challenge: ByteArray): ByteArray {
         require(challenge.size >= 19) { "Gemini challenge must contain at least 19 bytes" }

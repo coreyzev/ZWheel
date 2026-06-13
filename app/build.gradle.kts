@@ -101,6 +101,9 @@ tasks.withType<Test>().configureEach {
 }
 
 dependencies {
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
     implementation(project(":core"))
 
     implementation(platform(libs.androidx.compose.bom))
@@ -117,6 +120,8 @@ dependencies {
     implementation(libs.kable.core.android)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.core)
+    testImplementation(libs.androidx.test.core)
     testImplementation(libs.junit.jupiter)
+    testImplementation(libs.robolectric)
     ksp(libs.hilt.compiler)
 }

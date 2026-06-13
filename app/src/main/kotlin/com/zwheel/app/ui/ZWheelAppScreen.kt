@@ -38,9 +38,18 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import android.os.Build
+import android.os.PowerManager
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.zwheel.app.ble.ConnectionState
 import com.zwheel.app.ui.ble.BleDebugScreen
+import com.zwheel.app.ui.onboarding.OemBatteryAdviceScreen
+import com.zwheel.app.ui.onboarding.batteryAdviceForManufacturer
 import com.zwheel.app.ui.ble.bleScanPermissions
+import com.zwheel.app.ui.history.RideHistoryScreen
+import com.zwheel.app.ui.settings.SettingsScreen
 import com.zwheel.app.ui.ble.hasAllRequiredPermissions
 import com.zwheel.app.ui.ble.hasPermission
 import com.zwheel.app.ui.ble.hasPermanentlyDeniedPermission
@@ -48,8 +57,35 @@ import com.zwheel.app.ui.ble.openAppSettings
 import com.zwheel.core.ports.ScanResult
 
 @Composable
-fun ZWheelAppScreen(
+fun ZWheelAppScreen() {
+    val navController = rememberNavController()
+    NavHost(navController = navController, startDestination = "dashboard") {
+        composable("dashboard") {
+            ZWheelDashboardScreen(
+                onOpenHistory = { navController.navigate("history") },
+                onOpenSettings = { navController.navigate("settings") },
+                onOpenBatteryAdvice = { navController.navigate("battery") },
+            )
+        }
+        composable("history") { RideHistoryScreen() }
+        composable("settings") { SettingsScreen() }
+        composable("battery") {
+            val context = LocalContext.current
+            OemBatteryAdviceScreen(
+                advice = batteryAdviceForManufacturer(Build.MANUFACTURER),
+                onOpenSettings = { context.openAppSettings() },
+                onDone = { navController.popBackStack() },
+            )
+        }
+    }
+}
+
+@Composable
+private fun ZWheelDashboardScreen(
     viewModel: DashboardViewModel = hiltViewModel(),
+    onOpenHistory: () -> Unit = {},
+    onOpenSettings: () -> Unit = {},
+    onOpenBatteryAdvice: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -61,6 +97,7 @@ fun ZWheelAppScreen(
         mutableStateOf(hasAllRequiredPermissions(context, requiredPermissions))
     }
     var permanentlyDenied by remember { mutableStateOf(false) }
+    var batteryOptimized by remember { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
@@ -82,9 +119,9 @@ fun ZWheelAppScreen(
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         permissionsGranted = hasAllRequiredPermissions(context, requiredPermissions)
-        if (permissionsGranted) {
-            permanentlyDenied = false
-        }
+        if (permissionsGranted) permanentlyDenied = false
+        val pm = context.getSystemService(android.content.Context.POWER_SERVICE) as PowerManager
+        batteryOptimized = !pm.isIgnoringBatteryOptimizations(context.packageName)
     }
 
     LaunchedEffect(requiredPermissions) {
@@ -110,6 +147,10 @@ fun ZWheelAppScreen(
         },
         onConnect = viewModel::connect,
         onDisconnect = viewModel::disconnect,
+        onOpenHistory = onOpenHistory,
+        onOpenSettingsScreen = onOpenSettings,
+        onOpenBatteryAdvice = onOpenBatteryAdvice,
+        batteryOptimized = batteryOptimized,
     )
 }
 
@@ -125,6 +166,10 @@ private fun ZWheelDashboard(
     onScan: () -> Unit = {},
     onConnect: (String) -> Unit = {},
     onDisconnect: () -> Unit = {},
+    onOpenHistory: () -> Unit = {},
+    onOpenSettingsScreen: () -> Unit = {},
+    onOpenBatteryAdvice: () -> Unit = {},
+    batteryOptimized: Boolean = false,
 ) {
     var showDebug by remember { mutableStateOf(false) }
     val debugVisible = showDebug || !permissionsGranted
@@ -148,10 +193,32 @@ private fun ZWheelDashboard(
             onConnect = onConnect,
             onDisconnect = onDisconnect,
         )
-        // Keep this debug/log panel reachable until the app is ready to publish. It is the
-        // M2 hardware-capture path for permissions, BLE logs, share, pair, and upload.
-        TextButton(onClick = { showDebug = !showDebug }) {
-            Text(if (debugVisible) "Hide BLE debug + log upload" else "Show BLE debug + log upload")
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            // Keep this debug/log panel reachable until the app is ready to publish.
+            TextButton(onClick = { showDebug = !showDebug }) {
+                Text(if (debugVisible) "Hide BLE debug" else "Show BLE debug")
+            }
+            Row {
+                TextButton(onClick = onOpenHistory) { Text("History") }
+                TextButton(onClick = onOpenSettingsScreen) { Text("Settings") }
+            }
+        }
+        if (batteryOptimized) {
+            DashboardCard(color = Color(0xfff59e0b), contentColor = Color(0xff111111)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "Battery optimization is ON — ZWheel may be killed mid-ride.",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(onClick = onOpenBatteryAdvice) { Text("Fix") }
+                }
+            }
         }
         if (debugVisible) {
             BleDebugScreen()

@@ -8,6 +8,8 @@ object UnitConversions {
 
     fun metersToMiles(meters: Double): Double = meters / 1609.344
 
+    fun metersToKilometers(meters: Double): Double = meters / 1000.0
+
     fun kilometersToMiles(kilometers: Double): Double = kilometers / 1.609344
 
     fun celsiusToFahrenheit(celsius: Double): Double = celsius * 9.0 / 5.0 + 32.0

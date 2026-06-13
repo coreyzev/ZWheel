@@ -11,11 +11,16 @@ import androidx.lifecycle.lifecycleScope
 import com.zwheel.app.MainActivity
 import com.zwheel.app.R
 import com.zwheel.app.ble.ConnectionManager
+import com.zwheel.app.data.ride.RideRepository
 import com.zwheel.app.data.settings.SettingsRepository
+import com.zwheel.core.ports.Clock
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 private const val CHANNEL_ID = "zwheel_ride"
 private const val NOTIFICATION_ID = 1
@@ -29,9 +34,12 @@ class RideForegroundService : LifecycleService() {
 
     @Inject lateinit var connectionManager: ConnectionManager
     @Inject lateinit var rideServiceRepository: RideServiceRepository
+    @Inject lateinit var rideRepository: RideRepository
     @Inject lateinit var settingsRepository: SettingsRepository
+    @Inject lateinit var clock: Clock
 
     private var wakelock: PowerManager.WakeLock? = null
+    private var rideRecorder: RideRecorder? = null
     private var speedAboveThresholdTicks = 0
     private var speedBelowThresholdTicks = 0
 
@@ -41,6 +49,7 @@ class RideForegroundService : LifecycleService() {
         acquireWakelockIfNeeded()
         mirrorConnectionState()
         mirrorBoardStateAndUpdateNotification()
+        startRideRecorderTicker()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -66,6 +75,9 @@ class RideForegroundService : LifecycleService() {
     }
 
     override fun onDestroy() {
+        runBlocking {
+            rideRecorder?.endCurrentSession()
+        }
         connectionManager.disconnect()
         wakelock?.takeIf { it.isHeld }?.release()
         super.onDestroy()
@@ -93,6 +105,17 @@ class RideForegroundService : LifecycleService() {
                     else -> "ZWheel · Connected"
                 }
                 notify(content)
+            }
+        }
+    }
+
+    private fun startRideRecorderTicker() {
+        val recorder = RideRecorder(rideRepository, clock)
+        rideRecorder = recorder
+        lifecycleScope.launch {
+            while (isActive) {
+                delay(1_000L)
+                recorder.onTick(rideServiceRepository.boardState.value)
             }
         }
     }

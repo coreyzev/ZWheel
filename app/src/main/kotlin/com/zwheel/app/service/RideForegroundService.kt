@@ -41,7 +41,7 @@ class RideForegroundService : LifecycleService() {
     @Inject lateinit var clock: Clock
     @Inject lateinit var wearDataLayerRepository: WearDataLayerRepository
 
-    private val topSpeedTracker = DefaultTopSpeedTracker()
+    private var topSpeedTracker = DefaultTopSpeedTracker()
     private var wakelock: PowerManager.WakeLock? = null
     private var rideRecorder: RideRecorder? = null
     private var speedAboveThresholdTicks = 0
@@ -127,6 +127,10 @@ class RideForegroundService : LifecycleService() {
         val recorder = RideRecorder(rideRepository, clock)
         recorder.onSessionChanged = { isRiding ->
             rideServiceRepository.updateIsRiding(isRiding)
+            if (!isRiding) {
+                topSpeedTracker = DefaultTopSpeedTracker()
+                rideServiceRepository.updateTopSpeed(0.0)
+            }
         }
         rideRecorder = recorder
         lifecycleScope.launch {

@@ -9,8 +9,8 @@ import com.zwheel.core.protocol.GattCharacteristicId
 import com.zwheel.core.protocol.OwUuids
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -35,6 +35,7 @@ private class FakeClock(var currentMillis: Long = 0L) : Clock {
     override fun nowEpochMillis() = currentMillis
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class BoardStateServiceImplTest {
     @Test
     fun `selects RpmBased when RPM arrives within 3 s`() = runTest(UnconfinedTestDispatcher()) {
@@ -47,7 +48,7 @@ class BoardStateServiceImplTest {
             stockDiameterInches = 11.5,
         )
 
-        launch { service.start(this) }
+        service.start(backgroundScope)
 
         service.state.test {
             // First emission consumed by selectCalculator() to detect RPM availability.
@@ -71,7 +72,7 @@ class BoardStateServiceImplTest {
             stockDiameterInches = 11.5,
         )
 
-        launch { service.start(this) }
+        service.start(backgroundScope)
 
         service.state.test {
             transport.emit(OwUuids.BATTERY_PERCENT, byteArrayOf(0x00, 0x60))
@@ -92,7 +93,7 @@ class BoardStateServiceImplTest {
             stockDiameterInches = 11.5,
         )
 
-        launch { service.start(this) }
+        service.start(backgroundScope)
         transport.emit(OwUuids.BATTERY_PERCENT, byteArrayOf(0x42))
         runCurrent()
 
@@ -110,7 +111,7 @@ class BoardStateServiceImplTest {
             stockDiameterInches = 11.5,
         )
 
-        launch { service.start(this) }
+        service.start(backgroundScope)
 
         service.state.test {
             clock.currentMillis = 0L

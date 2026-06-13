@@ -21,10 +21,9 @@ Written 2026-06-13 during Phase 2. Read this top-to-bottom once, then use the
   checklist.
 
 The app is at the **M2-testable** point: connect to the board and the dashboard shows
-live, diameter-corrected telemetry. Latest GitHub prerelease: **Debug Build #35**
-(`build-35`), produced from `main` at ADR-009 commit `1bdfe69`. Use that APK for the
-§6 ride test, or use the local fallback at
-`app/build/outputs/apk/debug/app-debug.apk` if building locally.
+live, diameter-corrected telemetry. Use the latest GitHub prerelease APK for the §6
+ride test, or use the local fallback at `app/build/outputs/apk/debug/app-debug.apk` if
+building locally.
 
 ---
 
@@ -91,8 +90,8 @@ gh pr checks <N>                              # or: gh run watch <run-id> --exit
 
 ## 4. Daily loop (what to actually do)
 
-1. **Install the latest debug APK** (GitHub prerelease `build-35`, or local fallback
-   `app/build/outputs/apk/debug/app-debug.apk`) and run the §6 ride test on your XR.
+1. **Install the latest debug APK** from GitHub Releases, or the local fallback at
+   `app/build/outputs/apk/debug/app-debug.apk`, and run the §6 ride test on your XR.
    File issues for anything off.
 2. Pick the next roadmap slice (§5), write a gate, dispatch Codex (§2), commit (§2),
    merge (§3). One concern per PR.

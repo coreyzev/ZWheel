@@ -119,6 +119,10 @@ Place this file at repo root. Read it at the start of EVERY session, along with
 - 2026-06-12: Corey chose fixed debug receiver IP `116.203.200.55` for M1 log uploads.
   Debug app upload pairing is password-only and targets `http://116.203.200.55:8765`;
   cleartext is allowed only in the debug network security config for that IP.
+- 2026-06-12: M1 log showed Gemini UART_READ can deliver the 20-byte CRX challenge
+  fragmented across multiple small BLE notifications. GeminiStrategy buffers UART_READ
+  fragments for up to the existing 5s timeout, logs each `gemini_raw_notification`, and
+  logs `gemini_challenge_assembled` when the first 20 CRX bytes are complete.
 - 2026-06-12: Workflow update — token efficiency. Codex writes code and opens PRs. Claude Code CLI reviews PRs directly via GH access and ends every review with one of three verdicts: 'LGTM — merge', 'Changes requested — [specific issue]', or 'Escalate to Claude Online — [reason]'. Claude Online acts as orchestrator: directs next steps, writes agent prompts, reviews logs and video/screenshots from Corey, and makes decisions when Claude Code CLI escalates. Claude Online does not review PRs unless Claude Code CLI escalates. Corey merges. Neither Codex nor Claude Code CLI merges.
 
 Route to Claude Code CLI (not Codex) only when: security-sensitive code, architecture violations, or explicit escalation needed. Everything else goes to Codex.

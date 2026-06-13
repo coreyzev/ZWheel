@@ -41,6 +41,8 @@ capture time. The format is designed for human review and AI-agent parsing.
   successful write.
 - `gemini_raw_notification`: raw `UART_READ` notification observed during Gemini
   handshake, including short packets rejected before challenge parsing.
+- `gemini_challenge_assembled`: complete 20-byte Gemini challenge assembled from one or
+  more raw `UART_READ` notifications.
 - `gemini_result`: Gemini strategy returned an unlock result.
 - `connect_failure`: connect, metadata read, or unlock attempt failed.
 - `telemetry_probe`: one probe characteristic notification result after Gemini timeout.

@@ -24,12 +24,10 @@ class GeminiStrategyTest {
         //   3. Receive the CRX challenge on UART_READ.
         //   4. Compute MD5 response and write to UART_WRITE.
         val challenge = "43:52:58:7f:9e:5c:14:df:42:e2:62:82:62:62:62:62:62:77:f6:9c".strategyHexBytes()
-        val legacyAck = "01:02:03".strategyHexBytes()
-        val nonChallengePacket = "99:52:58:7f:9e:5c:14:df:42:e2:62:82:62:62:62:62:62:77:f6".strategyHexBytes()
         val recorder = BleDebugRecorder(salt = "test-salt", sessionId = "session-1", startEpochMs = 0)
         val io = FakeGattIo(
             reads = mapOf(OwUuids.FIRMWARE_REVISION to firmwareRevisionBytes),
-            notifications = mapOf(OwUuids.UART_READ to listOf(legacyAck, nonChallengePacket, challenge)),
+            notifications = mapOf(OwUuids.UART_READ to listOf(challenge)),
         )
 
         val result = GeminiStrategy(
@@ -58,13 +56,67 @@ class GeminiStrategyTest {
         val debugEvents = recorder.snapshot()
         assertEquals(
             listOf(
-                "gemini_raw_notification:rejected_non_challenge:010203",
+                "gemini_raw_notification:fragment:4352587f9e5c14df42e26282626262626277f69c",
+                "gemini_challenge_assembled:ok:4352587f9e5c14df42e26282626262626277f69c",
                 "gemini_trigger_write:before:1071",
                 "gemini_trigger_write:after:1071",
-                "gemini_raw_notification:rejected_non_challenge:9952587f9e5c14df42e26282626262626277f6",
-                "gemini_raw_notification:accepted_challenge:4352587f9e5c14df42e26282626262626277f69c",
             ),
             debugEvents.map { event -> "${event.type}:${event.status}:${event.rawValueHex}" },
+        )
+    }
+
+    @Test
+    fun `unlock assembles fragmented M1 challenge before writing response`() = runBlocking {
+        val fragments = listOf(
+            "43",
+            "52:58",
+            "ff:6e:9d:ff",
+            "da:3f",
+            "e7:e7",
+            "57",
+            "17:17",
+            "17:17",
+            "17:83",
+            "82:1e",
+        ).map { it.strategyHexBytes() }
+        val recorder = BleDebugRecorder(salt = "test-salt", sessionId = "session-1", startEpochMs = 0)
+        val io = FakeGattIo(
+            reads = mapOf(OwUuids.FIRMWARE_REVISION to firmwareRevisionBytes),
+            notifications = mapOf(OwUuids.UART_READ to fragments),
+        )
+
+        val result = GeminiStrategy(
+            debugRecorder = recorder,
+            debugDeviceId = { "AA:BB:CC:DD:EE:FF" },
+        ).unlock(io)
+
+        assertEquals(true, result.unlocked)
+        assertEquals(
+            "43:52:58:1c:ea:39:a9:50:3d:1a:9c:93:f6:40:ec:81:e3:9d:d9:2b",
+            io.writesSeen.last().value.toHexString(),
+        )
+
+        val debugEvents = recorder.snapshot()
+        assertEquals(
+            listOf(
+                "43",
+                "5258",
+                "ff6e9dff",
+                "da3f",
+                "e7e7",
+                "57",
+                "1717",
+                "1717",
+                "1783",
+                "821e",
+            ),
+            debugEvents
+                .filter { event -> event.type == "gemini_raw_notification" }
+                .map { event -> event.rawValueHex },
+        )
+        assertEquals(
+            "435258ff6e9dffda3fe7e757171717171783821e",
+            debugEvents.single { event -> event.type == "gemini_challenge_assembled" }.rawValueHex,
         )
     }
 }

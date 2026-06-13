@@ -10,16 +10,16 @@ import java.security.MessageDigest
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.withTimeout
 
 private const val CHALLENGE_TIMEOUT_MS = 5_000L
-private const val MIN_CHALLENGE_BYTES = 19
+private const val CHALLENGE_BYTES = 20
 
 class NoneStrategy : HandshakeStrategy {
     override suspend fun unlock(io: GattIo): HandshakeResult =
@@ -44,10 +44,14 @@ class GeminiStrategy(
         // time out. Evidence: OWCE OWBoard.cs L861-876.
         val subscriptionReady = CompletableDeferred<Unit>()
         val challengeAsync = async {
+            var buffer = ByteArray(0)
             io.notifications(OwUuids.UART_READ)
                 .onStart { subscriptionReady.complete(Unit) }
                 .onEach(::recordRawNotification)
-                .filter(::isChallengePacket)
+                .mapNotNull { value ->
+                    buffer += value
+                    assembledChallengeOrNull(buffer)?.also(::recordChallengeAssembled)
+                }
                 .first()
         }
 
@@ -81,12 +85,27 @@ class GeminiStrategy(
             characteristicUuid = OwUuids.UART_READ.uuid.toString(),
             characteristicName = "uart_read",
             rawValueHex = value.toRawHexString(),
-            status = if (isChallengePacket(value)) "accepted_challenge" else "rejected_non_challenge",
+            status = "fragment",
         )
     }
 
-    private fun isChallengePacket(value: ByteArray): Boolean =
-        value.size >= MIN_CHALLENGE_BYTES && GeminiChallengeResponse.hasChallengePrefix(value)
+    private fun assembledChallengeOrNull(buffer: ByteArray): ByteArray? =
+        if (buffer.size >= CHALLENGE_BYTES && GeminiChallengeResponse.hasChallengePrefix(buffer)) {
+            buffer.copyOfRange(fromIndex = 0, toIndex = CHALLENGE_BYTES)
+        } else {
+            null
+        }
+
+    private fun recordChallengeAssembled(challenge: ByteArray) {
+        debugRecorder?.record(
+            type = "gemini_challenge_assembled",
+            deviceId = debugDeviceId(),
+            characteristicUuid = OwUuids.UART_READ.uuid.toString(),
+            characteristicName = "uart_read",
+            rawValueHex = challenge.toRawHexString(),
+            status = "ok",
+        )
+    }
 
     private fun recordTriggerWrite(status: String, firmwareRevision: ByteArray) {
         debugRecorder?.record(

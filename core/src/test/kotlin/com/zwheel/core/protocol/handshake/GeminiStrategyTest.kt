@@ -66,7 +66,8 @@ class GeminiStrategyTest {
     }
 
     @Test
-    fun `unlock assembles fragmented M1 challenge before writing response`() = runBlocking {
+    fun `unlock discards stray bytes and assembles fragmented M1 challenge before writing response`() = runBlocking {
+        val legacyAck = "01:02:03".strategyHexBytes()
         val fragments = listOf(
             "43",
             "52:58",
@@ -82,7 +83,7 @@ class GeminiStrategyTest {
         val recorder = BleDebugRecorder(salt = "test-salt", sessionId = "session-1", startEpochMs = 0)
         val io = FakeGattIo(
             reads = mapOf(OwUuids.FIRMWARE_REVISION to firmwareRevisionBytes),
-            notifications = mapOf(OwUuids.UART_READ to fragments),
+            notifications = mapOf(OwUuids.UART_READ to listOf(legacyAck) + fragments),
         )
 
         val result = GeminiStrategy(
@@ -99,6 +100,7 @@ class GeminiStrategyTest {
         val debugEvents = recorder.snapshot()
         assertEquals(
             listOf(
+                "010203",
                 "43",
                 "5258",
                 "ff6e9dff",
@@ -141,6 +143,8 @@ private class FakeGattIo(
             "No fake notification for $characteristicId"
         }
         return flow {
+            // The fake emits the first value immediately so tests can cover pre-trigger stray
+            // UART_READ traffic. Real hardware normally emits the challenge after the trigger.
             emit(values.first())
             while (writesSeen.none { it.characteristicId == OwUuids.FIRMWARE_REVISION }) {
                 delay(1)

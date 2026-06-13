@@ -90,10 +90,12 @@ class GeminiStrategy(
     }
 
     private fun assembledChallengeOrNull(buffer: ByteArray): ByteArray? =
-        if (buffer.size >= CHALLENGE_BYTES && GeminiChallengeResponse.hasChallengePrefix(buffer)) {
-            buffer.copyOfRange(fromIndex = 0, toIndex = CHALLENGE_BYTES)
-        } else {
-            null
+        GeminiChallengeResponse.challengePrefixOnset(buffer)?.let { onset ->
+            if (buffer.size - onset >= CHALLENGE_BYTES) {
+                buffer.copyOfRange(fromIndex = onset, toIndex = onset + CHALLENGE_BYTES)
+            } else {
+                null
+            }
         }
 
     private fun recordChallengeAssembled(challenge: ByteArray) {
@@ -120,6 +122,8 @@ class GeminiStrategy(
 }
 
 object GeminiChallengeResponse {
+    const val PREFIX_SIZE = 3
+
     private val challengePrefix = byteArrayOf(0x43, 0x52, 0x58)
 
     private val challengeResponsePassword = byteArrayOf(
@@ -141,11 +145,16 @@ object GeminiChallengeResponse {
         0x65,
     )
 
-    fun hasChallengePrefix(value: ByteArray): Boolean =
-        value.size >= challengePrefix.size &&
-            value[0] == challengePrefix[0] &&
-            value[1] == challengePrefix[1] &&
-            value[2] == challengePrefix[2]
+    fun hasChallengePrefix(value: ByteArray, offset: Int = 0): Boolean =
+        offset >= 0 &&
+            value.size - offset >= PREFIX_SIZE &&
+            value[offset] == challengePrefix[0] &&
+            value[offset + 1] == challengePrefix[1] &&
+            value[offset + 2] == challengePrefix[2]
+
+    fun challengePrefixOnset(value: ByteArray): Int? =
+        (0..value.size - PREFIX_SIZE)
+            .firstOrNull { offset -> hasChallengePrefix(value, offset) }
 
     fun calculate(challenge: ByteArray): ByteArray {
         require(challenge.size >= 19) { "Gemini challenge must contain at least 19 bytes" }

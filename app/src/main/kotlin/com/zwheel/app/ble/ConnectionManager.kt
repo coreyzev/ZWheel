@@ -5,6 +5,7 @@ import com.zwheel.core.model.BoardState
 import com.zwheel.core.model.BoardType
 import com.zwheel.core.ports.Clock
 import com.zwheel.core.ports.ScanResult
+import com.zwheel.core.protocol.debug.BleDebugRecorder
 import com.zwheel.core.protocol.handshake.GeminiStrategy
 import com.zwheel.core.service.BoardStateServiceImpl
 import javax.inject.Inject

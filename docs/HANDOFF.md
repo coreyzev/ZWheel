@@ -14,15 +14,17 @@ Written 2026-06-13 during Phase 2. Read this top-to-bottom once, then use the
   emits `StateFlow<BoardState>`, selects speed calculator per ADR-006.
 - Settings: DataStore-backed `SettingsRepository` (tire diameter + speed/temp units)
   with Hilt module, ViewModel, and Settings screen.
+- PR #24 dashboard integration: Hilt DI, `ConnectionManager` (owns
+  `BoardStateServiceImpl`, single shared `BleTransport`), and `DashboardViewModel`
+  mapping live `BoardState` → dashboard.
+- ADR-009: proposed ride-mode/lights write encoding and M2 hardware confirmation
+  checklist.
 
-**Open PR awaiting merge:**
-- **#24 `feat(ui): wire live board telemetry into dashboard`** — Hilt DI,
-  `ConnectionManager` (owns `BoardStateServiceImpl`, single shared `BleTransport`),
-  `DashboardViewModel` mapping live `BoardState` → dashboard. Compiles locally
-  (`BUILD SUCCESSFUL`). **Check its CI and merge when green** (see §3).
-
-Once #24 merges, the app is at the **M2-testable** point: connect to the board and
-the dashboard shows live, diameter-corrected telemetry. Then run the §6 ride test.
+The app is at the **M2-testable** point: connect to the board and the dashboard shows
+live, diameter-corrected telemetry. Latest GitHub prerelease: **Debug Build #35**
+(`build-35`), produced from `main` at ADR-009 commit `1bdfe69`. Use that APK for the
+§6 ride test, or use the local fallback at
+`app/build/outputs/apk/debug/app-debug.apk` if building locally.
 
 ---
 
@@ -89,10 +91,10 @@ gh pr checks <N>                              # or: gh run watch <run-id> --exit
 
 ## 4. Daily loop (what to actually do)
 
-1. **Merge #24** once its CI is green (§3). Delete its worktree afterward:
-   `git worktree remove --force /root/zwheel-wt/integration && git branch -D codex/p2-dashboard-integration`
-2. **Build a test APK** and run the §6 ride test on your XR. File issues for anything off.
-3. Pick the next roadmap slice (§5), write a gate, dispatch Codex (§2), commit (§2),
+1. **Install the latest debug APK** (GitHub prerelease `build-35`, or local fallback
+   `app/build/outputs/apk/debug/app-debug.apk`) and run the §6 ride test on your XR.
+   File issues for anything off.
+2. Pick the next roadmap slice (§5), write a gate, dispatch Codex (§2), commit (§2),
    merge (§3). One concern per PR.
 
 ---
@@ -110,8 +112,9 @@ gh pr checks <N>                              # or: gh run watch <run-id> --exit
 - These are **deferred on purpose**: the write byte-encoding is hardware-unconfirmed
   and AGENTS.md §3 requires an ADR + your sign-off for any new writable behavior.
   RIDE_MODE and LIGHTS are already in `OwUuids.writableAllowlist`, but confirm the
-  payload encoding against your board (capture from OWCE) before implementing. Write
-  ADR-009 for the encoding, then gate it to Codex.
+  payload encoding against your board before implementing. ADR-009 is now proposed;
+  use its hardware confirmation checklist, then flip it to Accepted only after Corey
+  sign-off.
 
 **Phase 3 (per docs/04_BUILD_PLAN.md):** `RideForegroundService` (the "never killed"
 service), Room schema + ride recording, Samsung battery onboarding. This is the next

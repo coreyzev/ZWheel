@@ -3,8 +3,12 @@ Place this file at repo root. Read it at the start of EVERY session, along with
 01_PROJECT_BRIEF.md and 02_ARCHITECTURE.md. Update §6 (Memory) as you learn.
 
 ## 1. Who does what
-- **Implementing agent (Claude Code — or Hermes if Corey chooses):** all code, tests,
-  ADRs, docs. One agent. No multi-agent handoffs.
+- **Implementing agent (Codex):** all feature code, tests, UI (Compose screens,
+  ViewModels), mechanical/boilerplate tasks. Opens PRs for Claude to review.
+- **Claude Code (this agent):** code review on every Codex PR, all security-sensitive
+  code (handshake crypto, write allowlist), architecture decisions and ADRs,
+  cross-file reasoning and design judgment, writing test scenarios and edge cases,
+  maintaining AGENTS.md. Ends every review with exactly one verdict (see §5).
 - **Corey (human):** physical-device testing (BLE cannot be emulated), milestone
   sign-off, product decisions, signing keys, anything touching real hardware.
 - Agent NEVER claims hardware verification it didn't do. Anything requiring a real
@@ -59,6 +63,14 @@ Place this file at repo root. Read it at the start of EVERY session, along with
 - After each phase: update this file's §6 and write/refresh the phase ADRs.
 - When blocked on hardware: prepare the build + a numbered test checklist for Corey,
   then move to the next non-blocked task. Never idle, never fake results.
+- **PR review:** Codex opens PRs. Claude Code reviews every PR and ends with exactly
+  one of two verdicts:
+  - `LGTM — merge`
+  - `Changes requested — [specific issue]`
+  Corey merges. Neither Codex nor Claude Code merges.
+- Route work to Claude Code (not Codex) for: security-sensitive code, architecture
+  violations, ADR authorship, or any task requiring cross-file design judgment.
+  Everything else goes to Codex.
 
 ## 6. Memory (append-only; agent maintains)
 - 2026-06: Project initialized from Fable design package. Reference protocol sources:
@@ -90,14 +102,13 @@ Place this file at repo root. Read it at the start of EVERY session, along with
   require writes for independent front/back control, or whether LIGHTS (e659f30c) alone
   is sufficient. If they need to be writable, add them to writableAllowlist AND update
   OwUuidsTest in the same commit.
-- 2026-06-12: Agent division of labor established by Corey. Claude: code review on every
-  PR before Corey merges, all security-sensitive code (handshake crypto, write allowlist),
-  architecture decisions and ADRs, cross-file reasoning and design judgment, writing test
-  scenarios and edge cases, maintaining AGENTS.md. Codex: feature implementation once
-  shape is known, mechanical/boilerplate tasks, UI (Compose screens, ViewModels), writing
-  tests from specs Claude provides. Workflow: Codex opens PRs, Claude reviews, Corey
-  merges. Neither agent merges. If both would touch the same file: Codex implements,
-  Claude reviews — never both implementing simultaneously on the same module.
+- 2026-06-12: Agent division of labor established by Corey. Claude Code: code review on
+  every PR before Corey merges, all security-sensitive code (handshake crypto, write
+  allowlist), architecture decisions and ADRs, cross-file reasoning and design judgment,
+  writing test scenarios and edge cases, maintaining AGENTS.md. Codex: feature
+  implementation once shape is known, mechanical/boilerplate tasks, UI (Compose screens,
+  ViewModels), writing tests from specs Claude provides. Workflow: Codex opens PRs,
+  Claude Code reviews, Corey merges. Neither agent merges.
 - 2026-06-12: PR #3 review established pattern: BLE transport (KableBleTransport) must
   emit every advertisement it receives — dedup and staleness logic belong in the UI/call
   site, not the transport. The seenDeviceIds filter was removed from scan(); the debug
@@ -125,7 +136,11 @@ Place this file at repo root. Read it at the start of EVERY session, along with
   across ~10 BLE packets, assembled by buffer. Two AGENTS.md open questions resolved:
   RPM UUID e659f30b: CONFIRMED. LIGHTS_FRONT/LIGHTS_BACK writability: still
   unconfirmed, not tested in this session.
-- 2026-06-12: Workflow update — token efficiency. Codex writes code and opens PRs. Claude Code CLI reviews PRs directly via GH access and ends every review with one of three verdicts: 'LGTM — merge', 'Changes requested — [specific issue]', or 'Escalate to Claude Online — [reason]'. Claude Online acts as orchestrator: directs next steps, writes agent prompts, reviews logs and video/screenshots from Corey, and makes decisions when Claude Code CLI escalates. Claude Online does not review PRs unless Claude Code CLI escalates. Corey merges. Neither Codex nor Claude Code CLI merges.
-
-Route to Claude Code CLI (not Codex) only when: security-sensitive code, architecture violations, or explicit escalation needed. Everything else goes to Codex.
+- 2026-06-13: Workflow simplified — Claude Code (web/CLI) is the sole reviewing agent.
+  No separate "Claude Online" escalation path. Two verdicts only: `LGTM — merge` or
+  `Changes requested — [specific issue]`. Corey enabled RC on the review server.
+- 2026-06-13: PR #18 review — three required changes: (1) `batteryPercent` lost its
+  `.coerceIn(0, 100)` clamp (safety rule); (2) `amps` uses uint16 but current can be
+  negative during regen — needs signed int16; (3) `amps` returns `Int` but
+  `BoardState.amps` is `Double?` — will be a compile error at wiring time.
 - (append discoveries here…)

@@ -8,4 +8,5 @@ data class UserPreferences(
     val temperatureUnit: TemperatureUnit = TemperatureUnit.FAHRENHEIT,
     val tireDiameterInches: Double = 11.5,
     val lastConnectedDeviceId: String? = null,
+    val hasRequestedBatteryOptimization: Boolean = false,
 )

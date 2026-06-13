@@ -2,6 +2,7 @@ package com.zwheel.app.data.settings
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -19,6 +20,7 @@ class SettingsRepository(
             temperatureUnit = preferences[TEMPERATURE_UNIT].toEnumOrDefault(TemperatureUnit.FAHRENHEIT),
             tireDiameterInches = preferences[TIRE_DIAMETER]?.coerceIn(TIRE_DIAMETER_RANGE) ?: DEFAULT_TIRE_DIAMETER,
             lastConnectedDeviceId = preferences[LAST_DEVICE_ID],
+            hasRequestedBatteryOptimization = preferences[HAS_REQUESTED_BATTERY_OPT] ?: false,
         )
     }
 
@@ -40,6 +42,10 @@ class SettingsRepository(
         }
     }
 
+    suspend fun saveHasRequestedBatteryOptimization() {
+        dataStore.edit { it[HAS_REQUESTED_BATTERY_OPT] = true }
+    }
+
     suspend fun saveLastConnectedDeviceId(id: String?) {
         dataStore.edit { preferences ->
             if (id != null) preferences[LAST_DEVICE_ID] = id
@@ -55,6 +61,7 @@ class SettingsRepository(
         val TEMPERATURE_UNIT = stringPreferencesKey("temperature_unit")
         val TIRE_DIAMETER = doublePreferencesKey("tire_diameter")
         val LAST_DEVICE_ID = stringPreferencesKey("last_device_id")
+        val HAS_REQUESTED_BATTERY_OPT = booleanPreferencesKey("has_requested_battery_opt")
         val TIRE_DIAMETER_RANGE = 8.0..16.0
         const val DEFAULT_TIRE_DIAMETER = 11.5
     }

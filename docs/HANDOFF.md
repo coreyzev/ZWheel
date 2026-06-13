@@ -1,7 +1,6 @@
 # ZWheel — Solo Handoff Guide
 
-Updated 2026-06-13 (Phase 3 complete — PRs open for merge). Read this top-to-bottom
-once, then use the "Daily loop" section as your checklist.
+Updated 2026-06-13 (Phase 3 complete, Phase 4a merged, Phase 4b/4c in progress).
 
 ---
 
@@ -13,16 +12,23 @@ once, then use the "Daily loop" section as your checklist.
 - `BoardTypeDetector` in `core/protocol/` — detects `BoardType` from HW revision. (PR #31)
 - `BleDebugRecorder` moved to singleton scope. (PR #30)
 - UNCORRECTED badge on speed card (PR #32), Room schema (PR #33).
+- Phase 3 complete: `RideForegroundService` (PR #34), `RideRecorder` (PR #35),
+  `RideHistoryScreen` + NavHost (PR #36), docs (PR #37).
+- **Phase 4a** (#38): `WearDataLayerRepository` phone-side Wear OS sync. The phone app
+  now pushes `BoardState + connectionState + isRiding + prefs` to `/zwheel/state` DataItem.
+  `RideServiceRepository` gains `isRiding: StateFlow<Boolean>`.
 
-**PRs open, pending merge (merge in order — each depends on the previous):**
-- **PR #34** — `RideForegroundService` + `RideServiceRepository` + `RideServiceController` + `DashboardViewModel` refactor. Branch: `codex/p3-foreground-service`. CI was re-run after POST_NOTIFICATIONS fix — should be green.
-- **PR #35** — `RideRecorder` state machine, 1Hz ride data point recording. Branch: `codex/p3-ride-recording`. Depends on #34.
-- **PR #36** — `RideHistoryScreen` + `RideHistoryViewModel` + NavHost navigation + Settings screen wired. Branch: `codex/p3-ride-history`. Depends on #35.
+**PRs in flight (work in progress, not yet opened):**
+- **P4b** (branch: `codex/p4b-wear-data-layer-watch`) — Watch-side: `WearDataLayerRepository`
+  listener, `MainViewModel`, wire existing `ZWheelWearScreen` UI to real data. Codex implementing.
+- **P4c** (branch: `codex/p4c-wear-top-speed-range`) — Wire `DefaultTopSpeedTracker` +
+  `DefaultRangeEstimator` into the service so the watch shows real top-speed and range. Codex implementing.
 
-**The app is M2-testable and Phase 3 is feature-complete.** After merging #34→#35→#36:
+**The app is M2-testable:**
 - Foreground service keeps BLE alive when screen is off / app killed
 - Rides auto-record to Room DB (auto-start at 1.5 mph / 3s, auto-end after 90s idle)
 - History screen shows past rides with distance, speed, date, duration
+- Phone pushes live data to watch (P4a); watch receiving implementation in progress (P4b)
 
 ---
 
@@ -79,25 +85,27 @@ then the next will need a rebase/merge from the updated base. The CI will rerun.
 
 ## 5. Roadmap next (priority order)
 
-**Phase 3 wrap-up (hardware needed):**
+**Phase 4 — Wear OS sync (in progress):**
+- **P4b**: Watch-side `WearDataLayerRepository` + wire existing `ZWheelWearScreen` to real data (Codex implementing)
+- **P4c**: Wire `DefaultTopSpeedTracker` + `DefaultRangeEstimator` into service for watch (Codex implementing)
+- **P4d** (future): Watch tile / WatchFaceService — not started
+
+**M2 hardware validation needed:**
 - Validate foreground service survives screen-off on Samsung S25 Ultra
 - Confirm ride sessions actually appear in history after a ride
 - Verify UNCORRECTED badge clears once corrected speed is active
 
-**Phase 4 — Wear OS sync:**
-- ADR-007 (Data Layer / Watch payload) — write the ADR first
-- `WearDataLayerRepository` sending `WatchPayload` via DataClient
-- Wear app `WatchFaceService` rendering speed/battery
+**Ready to implement (gate specs written):**
+- Battery optimization first-launch dialog (`docs/gates/gate-m3-battery-opt-dialog.md`)
 
 **Ride mode + lights writes (needs Corey sign-off first):**
 - ADR-009 is proposed — run the hardware confirmation checklist, then accept it
 - Add RIDE_MODE and LIGHTS writes (already in `OwUuids.writableAllowlist`)
 
-**Other deferred items:**
+**Deferred items:**
 - Cell voltage parsing for `e659f31b` (firmware-version-dependent, needs capture)
 - Ride detail screen (tap a history item → detail) — `// TODO(m3)` in code
 - GPS integration for ride recording latitude/longitude — `// TODO(m3)`
-- Battery optimization onboarding dialog (ADR-008 §6 spec exists)
 
 ---
 
@@ -129,4 +137,4 @@ then the next will need a rebase/merge from the updated base. The CI will rerun.
 - Gate specs: `docs/gates/`
 - Worktrees: `/root/zwheel-wt/`. List: `git worktree list`. Clean merged: `git worktree remove --force <path>`.
 - Gradle cache cleanup: `rm -rf /tmp/zwheel-gradle /tmp/gradle-home /tmp/gradle-wrapper-cache`
-- PR chain: #34 (P3b service) → #35 (P3c recording) → #36 (P3d history)
+- PR chain: #34 (P3b service) → #35 (P3c recording) → #36 (P3d history) → #38 (P4a phone wear) → P4b (watch) / P4c (topspeed+range)

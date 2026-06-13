@@ -1,3 +1,5 @@
+import org.gradle.api.tasks.testing.Test
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -94,6 +96,10 @@ tasks.check {
     dependsOn(verifyNetworkPermissionScoping)
 }
 
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
+}
+
 dependencies {
     implementation(project(":core"))
 
@@ -111,5 +117,6 @@ dependencies {
     implementation(libs.kable.core.android)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.core)
+    testImplementation(libs.junit.jupiter)
     ksp(libs.hilt.compiler)
 }

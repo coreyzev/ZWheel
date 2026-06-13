@@ -80,7 +80,6 @@ fun BoardState.toDashboardUiState(
     estimatedRangeKilometers: Double?,
 ): DashboardUiState {
     val displaySpeedMetersPerSecond = speedMetersPerSecondCorrected
-        ?: speedMetersPerSecondRaw
         ?: 0.0
     val speed = displaySpeedMetersPerSecond.toDisplaySpeed(prefs.speedUnit)
     val topSpeed = (topSpeedMetersPerSecond ?: 0.0).toDisplaySpeed(prefs.speedUnit)

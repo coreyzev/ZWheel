@@ -147,4 +147,11 @@ Place this file at repo root. Read it at the start of EVERY session, along with
   `.coerceIn(0, 100)` clamp (safety rule); (2) `amps` uses uint16 but current can be
   negative during regen — needs signed int16; (3) `amps` returns `Int` but
   `BoardState.amps` is `Double?` — will be a compile error at wiring time.
+- 2026-06-13: M2 first ride smoke test on XR: app connected/unlocked cleanly and showed
+  live voltage/amps while Corey rode back and forth ~4 ft for ~40s, then disconnected
+  in-app. Speed display was wrong, showing only 0 or ~29 mph. Root cause likely service
+  falling back to unconfirmed odometer-derived raw speed when stationary RPM did not
+  notify inside the old 3s calculator-selection window. Amps were active but looked off;
+  wait for uploaded log parse before changing amps scaling beyond existing signed int16
+  tenths parser.
 - (append discoveries here…)

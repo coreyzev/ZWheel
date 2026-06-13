@@ -38,7 +38,7 @@ private class FakeClock(var currentMillis: Long = 0L) : Clock {
 @OptIn(ExperimentalCoroutinesApi::class)
 class BoardStateServiceImplTest {
     @Test
-    fun `selects RpmBased when RPM arrives within 3 s`() = runTest(UnconfinedTestDispatcher()) {
+    fun `uses RpmBased when RPM arrives`() = runTest(UnconfinedTestDispatcher()) {
         val transport = FakeBleTransport()
         val clock = FakeClock()
         val service = BoardStateServiceImpl(
@@ -51,9 +51,6 @@ class BoardStateServiceImplTest {
         service.start(backgroundScope)
 
         service.state.test {
-            // First emission consumed by selectCalculator() to detect RPM availability.
-            // Second emission reaches collectRpm() and triggers the speed update.
-            transport.emit(OwUuids.RPM, byteArrayOf(0x00, 0x1D))
             transport.emit(OwUuids.RPM, byteArrayOf(0x00, 0x1D))
 
             val state = awaitState { it.speedMetersPerSecondCorrected != null }

@@ -1,8 +1,6 @@
 package com.zwheel.core.service
 
 import com.zwheel.core.calc.RpmBased
-import com.zwheel.core.calc.ScaledFirmware
-import com.zwheel.core.calc.SpeedCalculator
 import com.zwheel.core.model.BoardState
 import com.zwheel.core.ports.BleTransport
 import com.zwheel.core.ports.BoardStateService
@@ -13,10 +11,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 
 class BoardStateServiceImpl(
     private val transport: BleTransport,
@@ -35,20 +31,11 @@ class BoardStateServiceImpl(
         scope.launch { collectTemperature() }
         scope.launch { collectRideMode() }
         scope.launch { collectOdometer() }
-        scope.launch {
-            val calculator = selectCalculator()
-            collectRpm(calculator)
-        }
+        scope.launch { collectRpm() }
     }
 
-    private suspend fun selectCalculator(): SpeedCalculator {
-        val firstRpm = withTimeoutOrNull(3_000L) {
-            transport.notifications(OwUuids.RPM).first()
-        }
-        return if (firstRpm != null) RpmBased() else ScaledFirmware(stockDiameterInches)
-    }
-
-    private suspend fun collectRpm(calculator: SpeedCalculator) {
+    private suspend fun collectRpm() {
+        val calculator = RpmBased()
         transport.notifications(OwUuids.RPM).collect { bytes ->
             try {
                 val rpm = Parsers.rpm(bytes).toDouble()

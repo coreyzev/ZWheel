@@ -38,9 +38,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.zwheel.app.ble.ConnectionState
 import com.zwheel.app.ui.ble.BleDebugScreen
 import com.zwheel.app.ui.ble.bleScanPermissions
+import com.zwheel.app.ui.history.RideHistoryScreen
 import com.zwheel.app.ui.ble.hasAllRequiredPermissions
 import com.zwheel.app.ui.ble.hasPermission
 import com.zwheel.app.ui.ble.hasPermanentlyDeniedPermission
@@ -48,8 +52,18 @@ import com.zwheel.app.ui.ble.openAppSettings
 import com.zwheel.core.ports.ScanResult
 
 @Composable
-fun ZWheelAppScreen(
+fun ZWheelAppScreen() {
+    val navController = rememberNavController()
+    NavHost(navController = navController, startDestination = "dashboard") {
+        composable("dashboard") { ZWheelDashboardScreen(onOpenHistory = { navController.navigate("history") }) }
+        composable("history") { RideHistoryScreen() }
+    }
+}
+
+@Composable
+private fun ZWheelDashboardScreen(
     viewModel: DashboardViewModel = hiltViewModel(),
+    onOpenHistory: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -110,6 +124,7 @@ fun ZWheelAppScreen(
         },
         onConnect = viewModel::connect,
         onDisconnect = viewModel::disconnect,
+        onOpenHistory = onOpenHistory,
     )
 }
 
@@ -125,6 +140,7 @@ private fun ZWheelDashboard(
     onScan: () -> Unit = {},
     onConnect: (String) -> Unit = {},
     onDisconnect: () -> Unit = {},
+    onOpenHistory: () -> Unit = {},
 ) {
     var showDebug by remember { mutableStateOf(false) }
     val debugVisible = showDebug || !permissionsGranted
@@ -148,10 +164,14 @@ private fun ZWheelDashboard(
             onConnect = onConnect,
             onDisconnect = onDisconnect,
         )
-        // Keep this debug/log panel reachable until the app is ready to publish. It is the
-        // M2 hardware-capture path for permissions, BLE logs, share, pair, and upload.
-        TextButton(onClick = { showDebug = !showDebug }) {
-            Text(if (debugVisible) "Hide BLE debug + log upload" else "Show BLE debug + log upload")
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            // Keep this debug/log panel reachable until the app is ready to publish.
+            TextButton(onClick = { showDebug = !showDebug }) {
+                Text(if (debugVisible) "Hide BLE debug" else "Show BLE debug")
+            }
+            TextButton(onClick = onOpenHistory) {
+                Text("Ride History")
+            }
         }
         if (debugVisible) {
             BleDebugScreen()

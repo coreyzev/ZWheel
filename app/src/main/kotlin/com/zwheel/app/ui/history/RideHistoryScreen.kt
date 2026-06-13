@@ -1,6 +1,7 @@
 package com.zwheel.app.ui.history
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,7 +26,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
-fun RideHistoryScreen(viewModel: RideHistoryViewModel = hiltViewModel()) {
+fun RideHistoryScreen(
+    viewModel: RideHistoryViewModel = hiltViewModel(),
+    onRideClick: (sessionId: String) -> Unit = {},
+) {
     val sessions by viewModel.sessions.collectAsStateWithLifecycle()
 
     Box(
@@ -45,7 +49,7 @@ fun RideHistoryScreen(viewModel: RideHistoryViewModel = hiltViewModel()) {
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(sessions, key = { it.id }) { item ->
-                    RideHistoryCard(item)
+                    RideHistoryCard(item, onClick = { onRideClick(item.id) })
                 }
             }
         }
@@ -53,8 +57,11 @@ fun RideHistoryScreen(viewModel: RideHistoryViewModel = hiltViewModel()) {
 }
 
 @Composable
-private fun RideHistoryCard(item: RideHistoryItem) {
+private fun RideHistoryCard(item: RideHistoryItem, onClick: () -> Unit = {}) {
     Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
         color = Color(0xff1a1a1a),
         contentColor = Color.White,

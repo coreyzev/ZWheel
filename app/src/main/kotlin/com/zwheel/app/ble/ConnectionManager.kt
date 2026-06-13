@@ -5,6 +5,7 @@ import com.zwheel.core.model.BoardState
 import com.zwheel.core.model.BoardType
 import com.zwheel.core.ports.Clock
 import com.zwheel.core.ports.ScanResult
+import com.zwheel.core.protocol.debug.BleDebugRecorder
 import com.zwheel.core.protocol.handshake.GeminiStrategy
 import com.zwheel.core.service.BoardStateServiceImpl
 import javax.inject.Inject
@@ -32,9 +33,14 @@ class ConnectionManager @Inject constructor(
     private val transport: KableBleTransport,
     private val clock: Clock,
     private val settingsRepository: SettingsRepository,
+    private val recorder: BleDebugRecorder,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val deviceLastSeen = mutableMapOf<String, Long>()
+
+    init {
+        transport.setDebugRecorder(recorder)
+    }
     private var scanJob: Job? = null
     private var stateMirrorJob: Job? = null
 

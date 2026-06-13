@@ -6,6 +6,7 @@ import com.zwheel.core.calc.DefaultRangeEstimator
 import com.zwheel.core.calc.RangeEstimator
 import com.zwheel.core.ports.BleTransport
 import com.zwheel.core.ports.Clock
+import com.zwheel.core.protocol.debug.BleDebugRecorder
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -30,4 +31,8 @@ object AppModule {
     @Provides
     @Singleton
     fun provideRangeEstimator(): RangeEstimator = DefaultRangeEstimator
+
+    @Provides
+    @Singleton
+    fun provideBleDebugRecorder(): BleDebugRecorder = BleDebugRecorder()
 }

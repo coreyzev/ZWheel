@@ -26,13 +26,6 @@ internal class BleDebugSessionLogger(
             scope.launch {
                 io.notifications(characteristic)
                     .collect { value ->
-                        recorder.record(
-                            type = "notification",
-                            deviceId = selectedDeviceId(),
-                            characteristicUuid = characteristic.uuid.toString(),
-                            characteristicName = characteristic.debugName(),
-                            rawValueHex = value.toRawHexString(),
-                        )
                         appendLog("${characteristic.shortName()} ${value.toHexString()}")
                     }
             }

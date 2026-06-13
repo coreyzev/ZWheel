@@ -13,11 +13,16 @@ import com.zwheel.core.ports.GattIo
 import com.zwheel.core.ports.ScanResult
 import com.zwheel.core.protocol.GattCharacteristicId
 import com.zwheel.core.protocol.OwUuids
+import com.zwheel.core.protocol.debug.BleDebugRecorder
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emitAll
@@ -29,15 +34,25 @@ import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.withTimeout
 
 @OptIn(ObsoleteKableApi::class)
 class KableBleTransport : BleTransport, GattIo {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val advertisements = mutableMapOf<String, Advertisement>()
     private val _connectionState = MutableStateFlow(ConnectionState.Idle)
     private var peripheral: com.juul.kable.Peripheral? = null
+    private var activeDeviceId: String? = null
+
+    private val sharedFlows = mutableMapOf<GattCharacteristicId, Flow<ByteArray>>()
+    private var debugRecorder: BleDebugRecorder? = null
 
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
+
+    fun setDebugRecorder(recorder: BleDebugRecorder) {
+        this.debugRecorder = recorder
+    }
 
     override suspend fun scan(): Flow<ScanResult> {
         val primaryHadResults = AtomicBoolean(false)
@@ -83,6 +98,7 @@ class KableBleTransport : BleTransport, GattIo {
 
     override suspend fun connect(deviceId: String) {
         val advertisement = advertisements[deviceId]
+        activeDeviceId = deviceId
         peripheral = if (advertisement != null) {
             Peripheral(advertisement)
         } else {
@@ -99,8 +115,12 @@ class KableBleTransport : BleTransport, GattIo {
     }
 
     override suspend fun disconnect() {
+        synchronized(sharedFlows) {
+            sharedFlows.clear()
+        }
         peripheral?.disconnect()
         peripheral = null
+        activeDeviceId = null
         _connectionState.value = ConnectionState.Disconnected
     }
 
@@ -114,8 +134,42 @@ class KableBleTransport : BleTransport, GattIo {
         currentPeripheral().write(characteristicId.toKableCharacteristic(), value, WriteType.WithResponse)
     }
 
-    override fun notifications(characteristicId: GattCharacteristicId): Flow<ByteArray> =
-        currentPeripheral().observe(characteristicId.toKableCharacteristic())
+    override fun notifications(characteristicId: GattCharacteristicId): Flow<ByteArray> = synchronized(sharedFlows) {
+        sharedFlows.getOrPut(characteristicId) {
+            currentPeripheral()
+                .observe(characteristicId.toKableCharacteristic())
+                .onEach { bytes ->
+                    debugRecorder?.record(
+                        type = "notification",
+                        deviceId = activeDeviceId,
+                        characteristicUuid = characteristicId.uuid.toString(),
+                        characteristicName = characteristicId.debugName(),
+                        rawValueHex = bytes.toRawHexString(),
+                    )
+                }
+                .shareIn(
+                    scope = scope,
+                    started = SharingStarted.WhileSubscribed(),
+                    replay = 1,
+                )
+        }
+    }
+
+    private fun GattCharacteristicId.debugName(): String =
+        when (this) {
+            OwUuids.BATTERY_PERCENT -> "battery_percent"
+            OwUuids.RPM -> "rpm"
+            OwUuids.PACK_VOLTAGE -> "pack_voltage"
+            OwUuids.AMPS -> "amps"
+            OwUuids.TEMPERATURE -> "temperature"
+            OwUuids.RIDE_MODE -> "ride_mode"
+            OwUuids.HARDWARE_REVISION -> "hardware_revision"
+            OwUuids.FIRMWARE_REVISION -> "firmware_revision"
+            else -> uuid.toString().substring(startIndex = 4, endIndex = 8)
+        }
+
+    private fun ByteArray.toRawHexString(): String =
+        joinToString(separator = "") { byte -> byte.toUByte().toString(radix = 16).padStart(2, '0') }
 
     private fun currentPeripheral(): com.juul.kable.Peripheral =
         checkNotNull(peripheral) { "No active BLE peripheral" }

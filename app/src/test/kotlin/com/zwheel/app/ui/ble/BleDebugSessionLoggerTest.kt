@@ -17,25 +17,23 @@ import org.junit.jupiter.api.Test
 
 class BleDebugSessionLoggerTest {
     @Test
-    fun `dump jobs record more than first twenty notifications`() = runBlocking {
+    fun `dump jobs call appendLog for notifications`() = runBlocking {
         val io = FakeGattIo()
         val recorder = BleDebugRecorder()
         val scope = CoroutineScope(Job() + Dispatchers.Unconfined)
+        val logs = mutableListOf<String>()
         val jobs = BleDebugSessionLogger(
             io = io,
             recorder = recorder,
             selectedDeviceId = { "device-1" },
-        ).startDumpJobs(scope, appendLog = {})
+        ).startDumpJobs(scope, appendLog = { logs.add(it) })
 
         repeat(25) { index ->
             io.emit(OwUuids.RPM, byteArrayOf(0x00, index.toByte()))
         }
         yield()
 
-        val rpmEvents = recorder.snapshot().filter { event ->
-            event.type == "notification" && event.characteristicName == "rpm"
-        }
-        assertEquals(25, rpmEvents.size)
+        assertEquals(25, logs.size)
 
         jobs.forEach { job -> job.cancelAndJoin() }
     }

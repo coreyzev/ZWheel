@@ -58,9 +58,10 @@ Place this file at repo root. Read it at the start of EVERY session, along with
 ## 5. Workflow
 - Branch per task → PR (or direct commit if Corey runs trunk-based; his call) →
   CI green (build app+wear, unit tests) → merge.
-- At the start of each new task, check relevant open GitHub issues once to avoid
-  duplicate work and capture known blockers. Do not repeatedly poll issues during a
-  task unless the task itself is issue/PR triage or new evidence arrives.
+- (Orchestrator/Claude only) At the start of each new task, check relevant open
+  GitHub issues once to avoid duplicate work and capture known blockers.
+  Implementing agents (Codex, Gemini) skip this step — the gate spec is the
+  source of truth and already incorporates any relevant blockers.
 - Before starting a phase: re-read the phase section of 04_BUILD_PLAN.md and confirm
   the previous milestone's exit criteria are met or explicitly waived by Corey.
 - After each phase: update this file's §6 and write/refresh the phase ADRs.

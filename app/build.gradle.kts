@@ -120,6 +120,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.hilt.android)
     implementation(libs.kable.core.android)
+    implementation(libs.play.services.wearable)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.core)
     testImplementation(libs.androidx.test.core)

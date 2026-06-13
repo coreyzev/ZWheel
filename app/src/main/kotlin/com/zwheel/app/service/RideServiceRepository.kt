@@ -16,11 +16,18 @@ class RideServiceRepository @Inject constructor() {
     private val _connectionState = MutableStateFlow(ConnectionState.Idle)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
 
+    private val _isRiding = MutableStateFlow(false)
+    val isRiding: StateFlow<Boolean> = _isRiding.asStateFlow()
+
     internal fun updateBoardState(state: BoardState) {
         _boardState.value = state
     }
 
     internal fun updateConnectionState(state: ConnectionState) {
         _connectionState.value = state
+    }
+
+    internal fun updateIsRiding(riding: Boolean) {
+        _isRiding.value = riding
     }
 }

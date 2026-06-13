@@ -24,6 +24,8 @@ object Parsers {
         else -> RideMode.UNKNOWN
     }
 
+    fun unsignedInt16(value: ByteArray): Int = value.uint16BigEndian()
+
     fun hardwareRevision(value: ByteArray): Int = value.uint16BigEndian()
 
     fun firmwareRevision(value: ByteArray): Int = value.uint16BigEndian()

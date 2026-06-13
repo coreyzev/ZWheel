@@ -13,10 +13,15 @@ class ParsersTest {
     }
 
     @Test
-    fun `amps parses uint16 big endian M1 peak sample`() {
+    fun `amps parses signed int16 big endian M1 peak sample`() {
         // Source: core/src/test/resources/xr4209-success-handshake-telemetry.jsonl,
         // e659f312 amps notification rawValueHex 01ef from the M1 XR 4209 success capture.
-        assertEquals(495, Parsers.amps(hex("01ef")))
+        assertEquals(495.0, Parsers.amps(hex("01ef")))
+    }
+
+    @Test
+    fun `amps parses signed int16 big endian regen sample`() {
+        assertEquals(-256.0, Parsers.amps(hex("ff00")))
     }
 
     @Test
@@ -39,6 +44,11 @@ class ParsersTest {
         // Source: core/src/test/resources/xr4209-success-handshake-telemetry.jsonl,
         // e659f303 battery_percent notification rawValueHex 0060 from the M1 XR 4209 success capture.
         assertEquals(96, Parsers.batteryPercent(hex("0060")))
+    }
+
+    @Test
+    fun `battery percent clamps above display range`() {
+        assertEquals(100, Parsers.batteryPercent(hex("00ff")))
     }
 
     @Test

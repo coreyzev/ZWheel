@@ -5,7 +5,8 @@ import com.zwheel.core.model.RideMode
 object Parsers {
     fun rpm(value: ByteArray): Int = value.uint16BigEndian()
 
-    fun amps(value: ByteArray): Int = value.uint16BigEndian()
+    // TODO(m2): verify current scale factor against a ride capture with regen/braking.
+    fun amps(value: ByteArray): Double = value.int16BigEndian().toDouble()
 
     fun packVoltage(value: ByteArray): Double = value.uint16BigEndian() / 10.0
 
@@ -15,7 +16,7 @@ object Parsers {
         return Pair(bytes[0].toInt() and 0xff, bytes[1].toInt() and 0xff)
     }
 
-    fun batteryPercent(value: ByteArray): Int = value.uint16BigEndian()
+    fun batteryPercent(value: ByteArray): Int = value.uint16BigEndian().coerceIn(0, 100)
 
     fun rideMode(value: ByteArray): RideMode = when (value.uint16BigEndian()) {
         0 -> RideMode.CUSTOM
@@ -30,6 +31,8 @@ object Parsers {
         val bytes = requireSize(2)
         return ((bytes[0].toInt() and 0xff) shl 8) or (bytes[1].toInt() and 0xff)
     }
+
+    private fun ByteArray.int16BigEndian(): Int = uint16BigEndian().toShort().toInt()
 
     private fun ByteArray.requireSize(expected: Int): ByteArray {
         require(size == expected) { "Expected $expected byte(s), got $size." }

@@ -1,10 +1,14 @@
 package com.zwheel.app.ble
 
 import com.zwheel.app.data.settings.SettingsRepository
+import com.zwheel.app.data.settings.UserPreferences
+import com.zwheel.core.model.BoardIdentity
 import com.zwheel.core.model.BoardState
-import com.zwheel.core.model.BoardType
 import com.zwheel.core.ports.Clock
 import com.zwheel.core.ports.ScanResult
+import com.zwheel.core.protocol.BoardTypeDetector
+import com.zwheel.core.protocol.OwUuids
+import com.zwheel.core.protocol.Parsers
 import com.zwheel.core.protocol.debug.BleDebugRecorder
 import com.zwheel.core.protocol.handshake.GeminiStrategy
 import com.zwheel.core.service.BoardStateServiceImpl
@@ -96,14 +100,32 @@ class ConnectionManager @Inject constructor(
         val unlockResult = GeminiStrategy().unlock(transport)
         check(unlockResult.unlocked) { "Board unlock failed: ${unlockResult.strategyName}" }
 
-        val boardType = BoardType.XR
-        val tireDiameter = settingsRepository.preferences.first().tireDiameterInches
+        val hwBytes = transport.read(OwUuids.HARDWARE_REVISION)
+        val fwBytes = transport.read(OwUuids.FIRMWARE_REVISION)
+        val hwRev = Parsers.hardwareRevision(hwBytes)
+        val fwRev = Parsers.firmwareRevision(fwBytes)
+        val boardType = BoardTypeDetector.detect(hwRev)
+        val identity = BoardIdentity(
+            boardId = deviceId,
+            name = boardType.displayName,
+            type = boardType,
+            firmwareRevision = fwRev.toString(),
+            hardwareRevision = hwRev.toString(),
+        )
+
+        val savedDiameter = settingsRepository.preferences.first().tireDiameterInches
+        val tireDiameter = if (savedDiameter != UserPreferences().tireDiameterInches) {
+            savedDiameter
+        } else {
+            boardType.stockTireDiameterInches
+        }
         val service = BoardStateServiceImpl(
             transport = transport,
             clock = clock,
             boardType = boardType,
             diameterInches = tireDiameter,
             stockDiameterInches = boardType.stockTireDiameterInches,
+            boardIdentity = identity,
         )
         service.start(scope)
         stateMirrorJob = scope.launch {

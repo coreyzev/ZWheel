@@ -58,6 +58,13 @@ class RideForegroundService : LifecycleService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
         startForeground(NOTIFICATION_ID, buildNotification("ZWheel · Connecting…"))
+        lifecycleScope.launch {
+            val prefs = settingsRepository.preferences.first()
+            if (!prefs.hasRequestedBatteryOptimization) {
+                settingsRepository.saveHasRequestedBatteryOptimization()
+                requestBatteryOptimizationExemption()
+            }
+        }
         if (intent?.action == "DISCONNECT") {
             stopSelf()
             return START_NOT_STICKY
@@ -137,6 +144,19 @@ class RideForegroundService : LifecycleService() {
             if (speedBelowThresholdTicks >= WAKELOCK_RELEASE_TICKS) {
                 wakelock?.takeIf { it.isHeld }?.release()
             }
+        }
+    }
+
+    private fun requestBatteryOptimizationExemption() {
+        val pm = getSystemService(POWER_SERVICE) as PowerManager
+        if (!pm.isIgnoringBatteryOptimizations(packageName)) {
+            val intent = Intent(
+                android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                android.net.Uri.parse("package:$packageName"),
+            ).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            startActivity(intent)
         }
     }
 

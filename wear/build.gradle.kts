@@ -41,5 +41,9 @@ dependencies {
     implementation(libs.androidx.wear.compose.material)
     implementation(libs.hilt.android)
     implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.play.services.wearable)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.hilt.navigation.compose)
     ksp(libs.hilt.compiler)
 }

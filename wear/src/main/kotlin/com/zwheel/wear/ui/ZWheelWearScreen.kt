@@ -11,9 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -27,13 +24,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import com.zwheel.core.model.SpeedUnit
+import com.zwheel.core.model.WatchPayload
+
+private const val METERS_PER_SECOND_TO_MPH = 2.23694
+private const val METERS_PER_SECOND_TO_KPH = 3.6
+private const val METERS_TO_MILES = 0.000621371
+private const val METERS_TO_KM = 0.001
 
 @Composable
-fun ZWheelWearScreen() {
-    val mockStateFlow = remember { mockWearDashboardStateFlow() }
-    val state by mockStateFlow.collectAsState()
+fun ZWheelWearScreen(payload: WatchPayload?) {
+    val state = payload?.toUiState() ?: WearDashboardUiState.empty()
     WearDashboard(state = state)
 }
 
@@ -53,7 +54,7 @@ private fun WearDashboard(state: WearDashboardUiState) {
                 verticalArrangement = Arrangement.Center,
             ) {
                 Text(
-                    text = "%.1f".format(state.speedMph),
+                    text = state.speedDisplay,
                     color = Color.White,
                     fontSize = 58.sp,
                     fontWeight = FontWeight.Black,
@@ -62,7 +63,7 @@ private fun WearDashboard(state: WearDashboardUiState) {
                     lineHeight = 58.sp,
                 )
                 Text(
-                    text = "MPH",
+                    text = state.speedUnitLabel,
                     color = Color(0xffffd400),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Black,
@@ -76,9 +77,9 @@ private fun WearDashboard(state: WearDashboardUiState) {
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.Bottom,
             ) {
-                WearStat("TOP", "%.1f".format(state.topSpeedMph))
-                WearStat("BAT", "${state.batteryPercent}%")
-                WearStat("RANGE", "%.1f".format(state.rangeMiles))
+                WearStat("TOP", state.topSpeedDisplay)
+                WearStat("BAT", state.batteryDisplay)
+                WearStat("RANGE", state.rangeDisplay)
             }
             Text(
                 modifier = Modifier.align(Alignment.TopCenter),
@@ -141,19 +142,51 @@ private fun BatteryRing(percent: Int) {
 }
 
 private data class WearDashboardUiState(
-    val speedMph: Double,
-    val topSpeedMph: Double,
+    val speedDisplay: String,
+    val speedUnitLabel: String,
+    val topSpeedDisplay: String,
     val batteryPercent: Int,
-    val rangeMiles: Double,
+    val batteryDisplay: String,
+    val rangeDisplay: String,
     val connectionLabel: String,
-)
+) {
+    companion object {
+        fun empty() = WearDashboardUiState(
+            speedDisplay = "--",
+            speedUnitLabel = "MPH",
+            topSpeedDisplay = "--",
+            batteryPercent = 0,
+            batteryDisplay = "--%",
+            rangeDisplay = "--",
+            connectionLabel = "DISCONNECTED",
+        )
+    }
+}
 
-private fun mockWearDashboardStateFlow(): StateFlow<WearDashboardUiState> = MutableStateFlow(
-    WearDashboardUiState(
-        speedMph = 14.8,
-        topSpeedMph = 19.6,
-        batteryPercent = 63,
-        rangeMiles = 7.4,
-        connectionLabel = "MOCK CONNECTED",
-    ),
-)
+private fun WatchPayload.toUiState(): WearDashboardUiState {
+    val isMph = speedUnit == SpeedUnit.MPH
+    val speedConversion = if (isMph) METERS_PER_SECOND_TO_MPH else METERS_PER_SECOND_TO_KPH
+    val rangeConversion = if (isMph) METERS_TO_MILES else METERS_TO_KM
+    val unitLabel = if (isMph) "MPH" else "KPH"
+
+    val speedVal = speedMetersPerSecondCorrected
+    val speedStr = if (speedVal != null) "%.1f".format(speedVal * speedConversion) else "--"
+
+    val topSpeedStr = "%.1f".format(topSpeedMetersPerSecond * speedConversion)
+
+    val batPct = batteryPercent ?: 0
+    val batStr = if (batteryPercent != null) "$batteryPercent%" else "--%"
+
+    val rangeVal = estimatedRangeMeters
+    val rangeStr = if (rangeVal != null) "%.1f".format(rangeVal * rangeConversion) else "--"
+
+    return WearDashboardUiState(
+        speedDisplay = speedStr,
+        speedUnitLabel = unitLabel,
+        topSpeedDisplay = topSpeedStr,
+        batteryPercent = batPct,
+        batteryDisplay = batStr,
+        rangeDisplay = rangeStr,
+        connectionLabel = connectionState.name,
+    )
+}

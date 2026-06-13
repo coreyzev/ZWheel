@@ -17,6 +17,7 @@ androidxCore = "1.15.0"
 androidxLifecycle = "2.8.7"
 composeBom = "2024.11.00"
 wearCompose = "1.4.1"
+playServicesWearable = "18.2.0"
 
 [libraries]
 androidx-room-runtime  = { module = "androidx.room:room-runtime",  version.ref = "room" }
@@ -36,6 +37,7 @@ androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-com
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version = "2.8.4" }
 androidx-test-core = { module = "androidx.test:core", version.ref = "androidxTestCore" }
 androidx-wear-compose-material = { module = "androidx.wear.compose:compose-material", version.ref = "wearCompose" }
+play-services-wearable = { module = "com.google.android.gms:play-services-wearable", version.ref = "playServicesWearable" }
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
 hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junitJupiter" }

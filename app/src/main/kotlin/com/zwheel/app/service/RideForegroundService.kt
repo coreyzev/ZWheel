@@ -14,6 +14,7 @@ import com.zwheel.app.ble.ConnectionManager
 import com.zwheel.app.data.ride.RideRepository
 import com.zwheel.app.data.settings.SettingsRepository
 import com.zwheel.app.wear.WearDataLayerRepository
+import com.zwheel.core.calc.DefaultTopSpeedTracker
 import com.zwheel.core.ports.Clock
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -40,6 +41,7 @@ class RideForegroundService : LifecycleService() {
     @Inject lateinit var clock: Clock
     @Inject lateinit var wearDataLayerRepository: WearDataLayerRepository
 
+    private val topSpeedTracker = DefaultTopSpeedTracker()
     private var wakelock: PowerManager.WakeLock? = null
     private var rideRecorder: RideRecorder? = null
     private var speedAboveThresholdTicks = 0
@@ -98,6 +100,8 @@ class RideForegroundService : LifecycleService() {
         lifecycleScope.launch {
             connectionManager.boardState.collect { state ->
                 rideServiceRepository.updateBoardState(state)
+                topSpeedTracker.consume(state.speedMetersPerSecondCorrected)
+                rideServiceRepository.updateTopSpeed(topSpeedTracker.currentTripMaxMetersPerSecond ?: 0.0)
                 updateWakelockState(state.speedMetersPerSecondCorrected ?: 0.0)
                 val speed = state.speedMetersPerSecondCorrected
                 val battery = state.batteryPercent

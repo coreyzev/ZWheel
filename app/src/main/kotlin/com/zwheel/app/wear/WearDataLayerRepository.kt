@@ -6,7 +6,9 @@ import com.google.android.gms.wearable.Wearable
 import com.zwheel.app.ble.ConnectionState
 import com.zwheel.app.data.settings.SettingsRepository
 import com.zwheel.app.service.RideServiceRepository
+import com.zwheel.core.calc.DefaultRangeEstimator
 import com.zwheel.core.model.BoardState
+import com.zwheel.core.model.BoardType
 import com.zwheel.core.model.SpeedUnit
 import com.zwheel.core.model.WatchPayload
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -34,8 +36,13 @@ class WearDataLayerRepository @Inject constructor(
                 rideServiceRepository.connectionState,
                 rideServiceRepository.isRiding,
                 settingsRepository.preferences,
-            ) { boardState, connectionState, isRiding, prefs ->
-                toWatchPayload(boardState, connectionState, isRiding, prefs.speedUnit)
+                rideServiceRepository.topSpeedMetersPerSecond,
+            ) { boardState, connectionState, isRiding, prefs, topSpeedMps ->
+                val estimatedRangeMeters = DefaultRangeEstimator.estimateKilometersRemaining(
+                    batteryPct = boardState.batteryPercent,
+                    boardType = boardState.identity?.type ?: BoardType.UNKNOWN,
+                )?.let { it * 1000.0 }
+                toWatchPayload(boardState, connectionState, isRiding, prefs.speedUnit, topSpeedMps, estimatedRangeMeters)
             }.collect { payload ->
                 if (payload != lastSentPayload) {
                     putPayload(payload)
@@ -70,6 +77,8 @@ private fun toWatchPayload(
     connectionState: ConnectionState,
     isRiding: Boolean,
     speedUnit: SpeedUnit,
+    topSpeedMetersPerSecond: Double,
+    estimatedRangeMeters: Double?,
 ): WatchPayload {
     val coreConnectionState = when (connectionState) {
         ConnectionState.Connected -> com.zwheel.core.model.ConnectionState.SUBSCRIBED
@@ -79,9 +88,9 @@ private fun toWatchPayload(
     }
     return WatchPayload(
         speedMetersPerSecondCorrected = boardState.speedMetersPerSecondCorrected,
-        topSpeedMetersPerSecond = 0.0, // TODO(p4): wire TopSpeedTracker into service
+        topSpeedMetersPerSecond = topSpeedMetersPerSecond,
         batteryPercent = boardState.batteryPercent,
-        estimatedRangeMeters = null,   // TODO(p4): wire RangeEstimator into service
+        estimatedRangeMeters = estimatedRangeMeters,
         speedUnit = speedUnit,
         isRiding = isRiding,
         connectionState = coreConnectionState,

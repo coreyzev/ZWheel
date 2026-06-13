@@ -58,6 +58,9 @@ Place this file at repo root. Read it at the start of EVERY session, along with
 ## 5. Workflow
 - Branch per task → PR (or direct commit if Corey runs trunk-based; his call) →
   CI green (build app+wear, unit tests) → merge.
+- At the start of each new task, check relevant open GitHub issues once to avoid
+  duplicate work and capture known blockers. Do not repeatedly poll issues during a
+  task unless the task itself is issue/PR triage or new evidence arrives.
 - Before starting a phase: re-read the phase section of 04_BUILD_PLAN.md and confirm
   the previous milestone's exit criteria are met or explicitly waived by Corey.
 - After each phase: update this file's §6 and write/refresh the phase ADRs.
@@ -160,4 +163,11 @@ Place this file at repo root. Read it at the start of EVERY session, along with
   that cap before the next capture. Gemini suggested amps may be centiamps, but do not
   change amps scaling on plausibility alone; keep signed int16 tenths unless OWCE/protocol
   evidence or controlled capture proves otherwise.
+- 2026-06-13: OWCE `OWBoard.cs` parses `e659f312` current as signed/two's-complement
+  raw value multiplied by a board-type scale, not `/10` or `/100`; XR/Pint/Pint X/GT
+  use `0.002`, Plus uses `0.0018`, V1 uses `0.0009`. ZWheel's current
+  `Parsers.amps()` signed-int16 `/10.0` behavior does not match OWCE and should be
+  replaced with board-type-aware scaling after byte-order confirmation. OWCE cell
+  voltage parsing for `e659f31b` is firmware-dependent: FW >= 4141 uses high-nibble cell
+  ID and low 12 bits * `0.0011`; older FW uses `data[1]` cell ID and `data[0] * 0.02`.
 - (append discoveries here…)

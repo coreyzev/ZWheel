@@ -14,6 +14,7 @@ data class DashboardUiState(
     val rssi: Int,
     val firmwareLabel: String,
     val speedMph: Double,
+    val isSpeedCorrected: Boolean,
     val speedUnitLabel: String,
     val topSpeedMph: Double,
     val estimatedRangeMiles: Double,
@@ -44,6 +45,7 @@ fun mockDashboardState(): DashboardUiState = DashboardUiState(
     rssi = -58,
     firmwareLabel = "FW GEMINI",
     speedMph = 14.8,
+    isSpeedCorrected = true,
     speedUnitLabel = "MPH",
     topSpeedMph = 19.6,
     estimatedRangeMiles = 7.4,
@@ -79,6 +81,7 @@ fun BoardState.toDashboardUiState(
     topSpeedMetersPerSecond: Double?,
     estimatedRangeKilometers: Double?,
 ): DashboardUiState {
+    val isSpeedCorrected = speedMetersPerSecondCorrected != null
     val displaySpeedMetersPerSecond = speedMetersPerSecondCorrected
         ?: 0.0
     val speed = displaySpeedMetersPerSecond.toDisplaySpeed(prefs.speedUnit)
@@ -95,7 +98,8 @@ fun BoardState.toDashboardUiState(
         rssi = 0,
         firmwareLabel = identity?.firmwareRevision?.let { "FW $it" } ?: "FW --",
         speedMph = speed,
-        speedUnitLabel = prefs.speedUnit.name,
+        isSpeedCorrected = isSpeedCorrected,
+        speedUnitLabel = if (isSpeedCorrected) prefs.speedUnit.name else "${prefs.speedUnit.name}\nUNCORRECTED",
         topSpeedMph = topSpeed,
         estimatedRangeMiles = range,
         rangeUnitLabel = if (prefs.speedUnit == SpeedUnit.MPH) "MI" else "KM",

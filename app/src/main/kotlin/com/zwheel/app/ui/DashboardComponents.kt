@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -83,13 +84,26 @@ fun Label(text: String, color: Color = Color(0xff111111)) {
 
 @Composable
 fun Metric(value: String, unit: String, size: Int) {
-    Text(
-        text = "$value $unit",
-        fontSize = size.sp,
-        fontWeight = FontWeight.Black,
-        letterSpacing = 0.sp,
-        lineHeight = size.sp,
-    )
+    val unitParts = unit.lines()
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = "$value ${unitParts.first()}",
+            fontSize = size.sp,
+            fontWeight = FontWeight.Black,
+            letterSpacing = 0.sp,
+            lineHeight = size.sp,
+        )
+        unitParts.drop(1).forEach { badge ->
+            Text(
+                text = badge,
+                color = Color(0xff8a1f11),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 0.sp,
+                lineHeight = 12.sp,
+            )
+        }
+    }
 }
 
 @Composable

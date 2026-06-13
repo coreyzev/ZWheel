@@ -1,5 +1,6 @@
 package com.zwheel.core.protocol
 
+import com.zwheel.core.model.BoardType
 import com.zwheel.core.model.RideMode
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -13,15 +14,20 @@ class ParsersTest {
     }
 
     @Test
-    fun `amps parses signed tenths of amps M1 peak sample`() {
+    fun `amps parses signed XR current with OWCE scale`() {
         // Source: core/src/test/resources/xr4209-success-handshake-telemetry.jsonl,
         // e659f312 amps notification rawValueHex 01ef from the M1 XR 4209 success capture.
-        assertEquals(49.5, Parsers.amps(hex("01ef")))
+        assertEquals(0.99, Parsers.amps(hex("01ef"), BoardType.XR))
     }
 
     @Test
-    fun `amps parses signed tenths of amps regen sample`() {
-        assertEquals(-25.6, Parsers.amps(hex("ff00")))
+    fun `amps preserves signed regen with OWCE scale`() {
+        assertEquals(-0.512, Parsers.amps(hex("ff00"), BoardType.XR))
+    }
+
+    @Test
+    fun `amps uses Plus current scale from OWCE`() {
+        assertEquals(0.891, Parsers.amps(hex("01ef"), BoardType.PLUS))
     }
 
     @Test

@@ -2,6 +2,7 @@ package com.zwheel.core.service
 
 import com.zwheel.core.calc.RpmBased
 import com.zwheel.core.model.BoardState
+import com.zwheel.core.model.BoardType
 import com.zwheel.core.ports.BleTransport
 import com.zwheel.core.ports.BoardStateService
 import com.zwheel.core.ports.Clock
@@ -17,6 +18,7 @@ import kotlinx.coroutines.launch
 class BoardStateServiceImpl(
     private val transport: BleTransport,
     private val clock: Clock,
+    private val boardType: BoardType,
     private val diameterInches: Double,
     private val stockDiameterInches: Double,
 ) : BoardStateService {
@@ -50,7 +52,7 @@ class BoardStateServiceImpl(
     private suspend fun collectAmps() {
         transport.notifications(OwUuids.AMPS).collect { bytes ->
             try {
-                _state.update { it.copy(amps = Parsers.amps(bytes)) }
+                _state.update { it.copy(amps = Parsers.amps(bytes, boardType)) }
             } catch (e: IllegalArgumentException) {
                 println("[BoardStateServiceImpl] AMPS: ${e.message}")
             }

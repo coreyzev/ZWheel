@@ -2,6 +2,7 @@ package com.zwheel.core.service
 
 import app.cash.turbine.test
 import com.zwheel.core.model.BoardState
+import com.zwheel.core.model.BoardType
 import com.zwheel.core.ports.BleTransport
 import com.zwheel.core.ports.Clock
 import com.zwheel.core.ports.ScanResult
@@ -44,6 +45,7 @@ class BoardStateServiceImplTest {
         val service = BoardStateServiceImpl(
             transport = transport,
             clock = clock,
+            boardType = BoardType.XR,
             diameterInches = 11.5,
             stockDiameterInches = 11.5,
         )
@@ -65,6 +67,7 @@ class BoardStateServiceImplTest {
         val service = BoardStateServiceImpl(
             transport = transport,
             clock = clock,
+            boardType = BoardType.XR,
             diameterInches = 11.5,
             stockDiameterInches = 11.5,
         )
@@ -86,6 +89,7 @@ class BoardStateServiceImplTest {
         val service = BoardStateServiceImpl(
             transport = transport,
             clock = clock,
+            boardType = BoardType.XR,
             diameterInches = 11.5,
             stockDiameterInches = 11.5,
         )
@@ -104,6 +108,7 @@ class BoardStateServiceImplTest {
         val service = BoardStateServiceImpl(
             transport = transport,
             clock = clock,
+            boardType = BoardType.XR,
             diameterInches = 11.5,
             stockDiameterInches = 11.5,
         )

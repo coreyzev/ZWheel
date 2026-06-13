@@ -95,6 +95,7 @@ class ConnectionManager @Inject constructor(
         val service = BoardStateServiceImpl(
             transport = transport,
             clock = clock,
+            boardType = boardType,
             diameterInches = tireDiameter,
             stockDiameterInches = boardType.stockTireDiameterInches,
         )

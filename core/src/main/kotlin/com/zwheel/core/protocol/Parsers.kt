@@ -1,11 +1,24 @@
 package com.zwheel.core.protocol
 
+import com.zwheel.core.model.BoardType
 import com.zwheel.core.model.RideMode
 
 object Parsers {
     fun rpm(value: ByteArray): Int = value.uint16BigEndian()
 
-    fun amps(value: ByteArray): Double = value.int16BigEndian() / 10.0
+    fun amps(value: ByteArray, boardType: BoardType): Double {
+        val scale = when (boardType) {
+            BoardType.ONEWHEEL_V1 -> 0.0009
+            BoardType.PLUS -> 0.0018
+            BoardType.XR,
+            BoardType.PINT,
+            BoardType.PINT_X -> 0.002
+            BoardType.UNKNOWN -> throw IllegalArgumentException(
+                "Cannot parse amps for unknown board type.",
+            )
+        }
+        return value.int16BigEndian() * scale
+    }
 
     fun packVoltage(value: ByteArray): Double = value.uint16BigEndian() / 10.0
 

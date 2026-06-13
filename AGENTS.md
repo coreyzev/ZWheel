@@ -174,4 +174,8 @@ the gate spec is the source of truth for your task.
   replaced with board-type-aware scaling after byte-order confirmation. OWCE cell
   voltage parsing for `e659f31b` is firmware-dependent: FW >= 4141 uses high-nibble cell
   ID and low 12 bits * `0.0011`; older FW uses `data[1]` cell ID and `data[0] * 0.02`.
+- 2026-06-13: Phase 3 kick-off. PRs merged or in-flight: #30 (BLE subscription fix + recorder singleton), #31 (board-type detection + BoardIdentity population), #32 (UNCORRECTED badge), #33 (Room schema). Gate specs written for P3b (foreground service, ADR-008 Accepted) and P3c (ride recording). Next: merge pending PRs, implement P3b then P3c.
+- 2026-06-13: Codex context-window issue discovered: when dispatched with `codex exec`, Codex reads AGENTS.md + 01_PROJECT_BRIEF.md + 02_ARCHITECTURE.md first (following AGENTS.md instructions) and exhausts its context before writing files. Fix: per AGENTS.md §1 updated heading, sub-agents skip the full doc preamble when given a gate spec. Tight prompt that works: "Read ONLY docs/gates/gate-<name>.md. Do NOT read any other files. Write files. Compile. Commit."
+- 2026-06-13: /tmp fills up quickly from Gradle caches. If build daemons crash, run: `rm -rf /tmp/zwheel-gradle /tmp/gradle-home /tmp/gradle-wrapper-cache` to free ~2.5 GB.
+- 2026-06-13: BoardTypeDetector HW revision ranges are approximate (Codex estimated them). Anchor: HW 4209 → XR ✓. Other ranges flagged for OWCE OWBoard.cs verification when other board types available.
 - (append discoveries here…)

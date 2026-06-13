@@ -15,6 +15,7 @@ import com.zwheel.app.data.ride.RideRepository
 import com.zwheel.app.data.settings.SettingsRepository
 import com.zwheel.app.wear.WearDataLayerRepository
 import com.zwheel.core.calc.DefaultTopSpeedTracker
+import com.zwheel.core.model.SpeedUnit
 import com.zwheel.core.ports.Clock
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -42,6 +43,7 @@ class RideForegroundService : LifecycleService() {
     @Inject lateinit var wearDataLayerRepository: WearDataLayerRepository
 
     private var topSpeedTracker = DefaultTopSpeedTracker()
+    private var notificationSpeedUnit = SpeedUnit.MPH
     private var wakelock: PowerManager.WakeLock? = null
     private var rideRecorder: RideRecorder? = null
     private var speedAboveThresholdTicks = 0
@@ -51,6 +53,7 @@ class RideForegroundService : LifecycleService() {
         super.onCreate()
         createNotificationChannel()
         acquireWakelockIfNeeded()
+        trackSpeedUnitPreference()
         mirrorConnectionState()
         mirrorBoardStateAndUpdateNotification()
         startRideRecorderTicker()
@@ -95,6 +98,14 @@ class RideForegroundService : LifecycleService() {
         super.onDestroy()
     }
 
+    private fun trackSpeedUnitPreference() {
+        lifecycleScope.launch {
+            settingsRepository.preferences.collect { prefs ->
+                notificationSpeedUnit = prefs.speedUnit
+            }
+        }
+    }
+
     private fun mirrorConnectionState() {
         lifecycleScope.launch {
             connectionManager.connectionState.collect { state ->
@@ -113,8 +124,12 @@ class RideForegroundService : LifecycleService() {
                 val speed = state.speedMetersPerSecondCorrected
                 val battery = state.batteryPercent
                 val content = when {
-                    speed != null && battery != null ->
-                        "%.0f mph · %d%%".format(speed * 2.237, battery)
+                    speed != null && battery != null -> {
+                        val isMph = notificationSpeedUnit == SpeedUnit.MPH
+                        val speedDisplay = if (isMph) speed * 2.23694 else speed * 3.6
+                        val unitLabel = if (isMph) "mph" else "kph"
+                        "%.0f %s · %d%%".format(speedDisplay, unitLabel, battery)
+                    }
                     battery != null -> "%d%%".format(battery)
                     else -> "ZWheel · Connected"
                 }

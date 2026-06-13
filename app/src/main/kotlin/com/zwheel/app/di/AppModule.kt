@@ -9,7 +9,7 @@ import com.zwheel.core.ports.Clock
 import com.zwheel.core.protocol.debug.BleDebugRecorder
 import dagger.Module
 import dagger.Provides
-import dagger.InstallIn
+import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 

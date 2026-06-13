@@ -27,8 +27,8 @@ private const val DEVICE_PRUNE_INTERVAL_MS = 1_000L
 @HiltViewModel
 class BleDebugViewModel @Inject constructor(
     private val transport: KableBleTransport,
+    private val recorder: BleDebugRecorder,
 ) : ViewModel() {
-    private val recorder = BleDebugRecorder()
     private val deviceLastSeen = mutableMapOf<String, Long>()
     private var scanJob: Job? = null
     private val dumpJobs = mutableListOf<Job>()

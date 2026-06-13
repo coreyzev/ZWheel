@@ -32,9 +32,14 @@ class ConnectionManager @Inject constructor(
     private val transport: KableBleTransport,
     private val clock: Clock,
     private val settingsRepository: SettingsRepository,
+    private val recorder: BleDebugRecorder,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val deviceLastSeen = mutableMapOf<String, Long>()
+
+    init {
+        transport.setDebugRecorder(recorder)
+    }
     private var scanJob: Job? = null
     private var stateMirrorJob: Job? = null
 

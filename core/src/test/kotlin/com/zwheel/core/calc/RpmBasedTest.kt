@@ -52,4 +52,20 @@ class RpmBasedTest {
             ),
         )
     }
+
+    @Test
+    fun `larger diameter produces proportionally higher speed at same RPM`() {
+        val smallWheel = calculator.correctedMetersPerSecond(
+            rpm = 500.0,
+            firmwareSpeedMetersPerSecond = null,
+            diameterInches = 10.5,
+        )!!
+        val largeWheel = calculator.correctedMetersPerSecond(
+            rpm = 500.0,
+            firmwareSpeedMetersPerSecond = null,
+            diameterInches = 11.5,
+        )!!
+
+        assertEquals(11.5 / 10.5, largeWheel / smallWheel, 0.001)
+    }
 }

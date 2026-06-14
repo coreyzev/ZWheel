@@ -37,6 +37,9 @@ class BoardStateServiceImpl(
         scope.launch { collectRideMode() }
         scope.launch { collectOdometer() }
         scope.launch { collectRpm() }
+        scope.launch { collectPitch() }
+        scope.launch { collectRoll() }
+        scope.launch { collectYaw() }
     }
 
     private suspend fun collectRpm() {
@@ -68,6 +71,36 @@ class BoardStateServiceImpl(
                 _state.update { it.copy(packVoltage = Parsers.packVoltage(bytes)) }
             } catch (e: IllegalArgumentException) {
                 println("[BoardStateServiceImpl] PACK_VOLTAGE: ${e.message}")
+            }
+        }
+    }
+
+    private suspend fun collectPitch() {
+        transport.notifications(OwUuids.PITCH).collect { bytes ->
+            try {
+                _state.update { it.copy(pitchDegrees = Parsers.pitch(bytes)) }
+            } catch (e: IllegalArgumentException) {
+                println("[BoardStateServiceImpl] PITCH: ${e.message}")
+            }
+        }
+    }
+
+    private suspend fun collectRoll() {
+        transport.notifications(OwUuids.ROLL).collect { bytes ->
+            try {
+                _state.update { it.copy(rollDegrees = Parsers.roll(bytes)) }
+            } catch (e: IllegalArgumentException) {
+                println("[BoardStateServiceImpl] ROLL: ${e.message}")
+            }
+        }
+    }
+
+    private suspend fun collectYaw() {
+        transport.notifications(OwUuids.YAW).collect { bytes ->
+            try {
+                _state.update { it.copy(yawDegrees = Parsers.yaw(bytes)) }
+            } catch (e: IllegalArgumentException) {
+                println("[BoardStateServiceImpl] YAW: ${e.message}")
             }
         }
     }

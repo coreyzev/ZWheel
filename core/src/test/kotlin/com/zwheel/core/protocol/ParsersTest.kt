@@ -88,6 +88,30 @@ class ParsersTest {
     }
 
     @Test
+    fun `batteryTemperature XR reads first byte`() {
+        // XR: data[0]=0x1E=30 -> 30 C
+        assertEquals(30, Parsers.batteryTemperature(hex("1e00"), BoardType.XR))
+    }
+
+    @Test
+    fun `batteryTemperature V1 reads second byte`() {
+        // V1: data[1]=0x1E=30 -> 30 C
+        assertEquals(30, Parsers.batteryTemperature(hex("001e"), BoardType.ONEWHEEL_V1))
+    }
+
+    @Test
+    fun `safetyHeadroom parses raw uint16`() {
+        // 0x0064 = 100 -> full pushback headroom
+        assertEquals(100, Parsers.safetyHeadroom(hex("0064")))
+    }
+
+    @Test
+    fun `statusError parses raw uint16`() {
+        // 0x0000 = no error
+        assertEquals(0, Parsers.statusError(hex("0000")))
+    }
+
+    @Test
     fun `battery percent parses uint16 big endian M1 sample`() {
         // Source: core/src/test/resources/xr4209-success-handshake-telemetry.jsonl,
         // e659f303 battery_percent notification rawValueHex 0060 from the M1 XR 4209 success capture.

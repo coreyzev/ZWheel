@@ -60,6 +60,9 @@ data class BoardState(
     val yawDegrees: Double? = null,
     val controllerTempCelsius: Double? = null,
     val motorTempCelsius: Double? = null,
+    val batteryTempCelsius: Int? = null,
+    val safetyHeadroom: Int? = null,
+    val statusError: Int? = null,
     val rideMode: RideMode = RideMode.UNKNOWN,
     val lightsOn: Boolean? = null,
 )

@@ -110,14 +110,22 @@ Source: https://github.com/DanMcInerney/architect-loop
 **Over-dispatch Codex aggressively.** Codex finishes a lane with 70% of its context
 window to spare while Claude's is maxed. The scarce resource is Claude-time, not
 Codex-time. Four lanes where two might suffice is correct allocation, not waste. Last
-session: Claude ran out of context while Codex had been burning only 30% per run.
+session: Claude burned 40% of its context limit implementing a refactor while Codex
+sat at 8% — a perfect illustration of misallocated effort.
 
-**Dispatch command:**
+**Claude implementing code directly is near-last resort.** If Codex runs out of
+context: switch to a larger-context model (`-c model="o3"` or similar) and re-dispatch.
+If Codex errors: tighten the prompt or gate spec, then re-dispatch. Taking
+implementation back from Codex is the expensive wrong answer — fix the dispatch first.
+
+**Dispatch command (gpt-5.5 is the default model — use it for all implementation work):**
 ```bash
-git worktree add /tmp/zwheel-codex-<lane> fix/gemini-keepalive
-codex exec --worktree /tmp/zwheel-codex-<lane> \
-  "Read ONLY docs/gates/<gate-file>.md. Do NOT read any other files first. Write the files. Compile. Commit."
+git worktree add /tmp/zwheel-codex-<lane> -b codex/<lane> <base-branch>
+codex exec -C /tmp/zwheel-codex-<lane> -s workspace-write \
+  "Read ONLY docs/gates/<gate-file>.md. Do NOT read any other files first. Write the files. Compile. Commit." \
+  < /dev/null > /tmp/codex-<lane>.log 2>&1 &
 ```
+If gpt-5.5 runs out of context: add `-c model="o3"` and re-dispatch. Do NOT take the work back to Claude.
 
 **Stall triage:** If Codex has not committed after 10 min, check `ps aux | grep codex`.
 If blocked on Gradle daemon: `rm -rf /tmp/gradle-home && GRADLE_USER_HOME=/tmp/gradle-home ./gradlew`.

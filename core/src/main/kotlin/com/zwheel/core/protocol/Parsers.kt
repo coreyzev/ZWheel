@@ -22,7 +22,19 @@ object Parsers {
 
     fun packVoltage(value: ByteArray): Double = value.uint16BigEndian() / 10.0
 
-    // TODO(m3): implement e659f31b cell voltage parsing after a dedicated capture session.
+    fun cellVoltage(value: ByteArray, firmwareMajor: Int): Pair<Int, Double> {
+        return if (firmwareMajor >= 4141) {
+            val raw = value.uint16BigEndian()
+            val cellIndex = (raw shr 12) and 0xF
+            val voltage = (raw and 0xFFF) * 0.0011
+            Pair(cellIndex, voltage)
+        } else {
+            val bytes = value.requireSize(2)
+            val cellIndex = bytes[1].toInt() and 0xFF
+            val voltage = (bytes[0].toInt() and 0xFF) * 0.02
+            Pair(cellIndex, voltage)
+        }
+    }
 
     // M1 captured raw two-byte temperature values. Scale and byte order need warmer-board verification.
     fun temperatures(value: ByteArray): Pair<Int, Int> {

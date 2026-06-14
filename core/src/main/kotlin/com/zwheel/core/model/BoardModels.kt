@@ -90,6 +90,7 @@ data class RideDataPoint(
     val batteryPercent: Int?,
     val latitude: Double?,
     val longitude: Double?,
+    val altitude: Double? = null,
     val amps: Double?,
     val pitchDegrees: Double?,
     val rollDegrees: Double?,

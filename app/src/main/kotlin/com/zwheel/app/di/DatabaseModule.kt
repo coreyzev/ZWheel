@@ -2,6 +2,7 @@ package com.zwheel.app.di
 
 import android.content.Context
 import androidx.room.Room
+import com.zwheel.app.data.ride.MIGRATION_1_2
 import com.zwheel.app.data.ride.RideDao
 import com.zwheel.app.data.ride.ZWheelDatabase
 import dagger.Module
@@ -17,7 +18,9 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): ZWheelDatabase =
-        Room.databaseBuilder(context, ZWheelDatabase::class.java, "zwheel.db").build()
+        Room.databaseBuilder(context, ZWheelDatabase::class.java, "zwheel.db")
+            .addMigrations(MIGRATION_1_2)
+            .build()
 
     @Provides
     fun provideRideDao(db: ZWheelDatabase): RideDao = db.rideDao()

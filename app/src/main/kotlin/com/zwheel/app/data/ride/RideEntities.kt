@@ -28,6 +28,7 @@ data class RideDataPointEntity(
     val batteryPercent: Int?,
     val latitude: Double?,
     val longitude: Double?,
+    val altitude: Double?,
     val amps: Double?,
     val pitchDegrees: Double?,
     val rollDegrees: Double?,

@@ -28,6 +28,7 @@ data class DashboardUiState(
     val tripMiles: Double,
     val tripAmpHours: Double,
     val regenAmpHours: Double,
+    val gpsLocked: Boolean = false,
     val rideMode: String,
     val lightsLabel: String,
     val tireDiameterInches: Double,
@@ -62,6 +63,7 @@ fun mockDashboardState(): DashboardUiState = DashboardUiState(
     tripMiles = 3.42,
     tripAmpHours = 2.14,
     regenAmpHours = 0.31,
+    gpsLocked = true,
     rideMode = "MISSION",
     lightsLabel = "FRONT + BACK",
     tireDiameterInches = 10.5,
@@ -81,6 +83,7 @@ fun BoardState.toDashboardUiState(
     topSpeedMetersPerSecond: Double?,
     estimatedRangeKilometers: Double?,
     tripDistanceMeters: Double = 0.0,
+    gpsLocked: Boolean = false,
 ): DashboardUiState {
     val isSpeedCorrected = speedMetersPerSecondCorrected != null
     val displaySpeedMetersPerSecond = speedMetersPerSecondCorrected
@@ -118,6 +121,7 @@ fun BoardState.toDashboardUiState(
         },
         tripAmpHours = 0.0,
         regenAmpHours = 0.0,
+        gpsLocked = gpsLocked,
         rideMode = rideMode.name,
         lightsLabel = when (lightsOn) {
             true -> "ON"

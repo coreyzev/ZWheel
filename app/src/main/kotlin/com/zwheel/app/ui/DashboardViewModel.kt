@@ -32,7 +32,8 @@ class DashboardViewModel @Inject constructor(
         rideServiceRepository.boardState,
         settingsRepository.preferences,
         rideServiceRepository.tripDistanceMeters,
-    ) { boardState, prefs, tripDistanceMeters ->
+        rideServiceRepository.gpsLocked,
+    ) { boardState, prefs, tripDistanceMeters, gpsLocked ->
         val correctedSpeed = boardState.speedMetersPerSecondCorrected
         topSpeedTracker.consume(correctedSpeed)
         val boardType = boardState.identity?.type ?: BoardType.XR
@@ -46,6 +47,7 @@ class DashboardViewModel @Inject constructor(
             topSpeedMetersPerSecond = topSpeedTracker.currentTripMaxMetersPerSecond,
             estimatedRangeKilometers = estimatedRange,
             tripDistanceMeters = tripDistanceMeters,
+            gpsLocked = gpsLocked,
         )
     }.stateIn(
         scope = viewModelScope,

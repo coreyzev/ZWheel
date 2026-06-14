@@ -184,10 +184,14 @@ class RideForegroundService : LifecycleService() {
         val callback = object : com.google.android.gms.location.LocationCallback() {
             override fun onLocationResult(result: com.google.android.gms.location.LocationResult) {
                 val loc = result.lastLocation ?: return
-                if (loc.accuracy > 30f) return
+                if (loc.accuracy > 30f) {
+                    rideServiceRepository.updateGpsLock(false)
+                    return
+                }
                 lastLatitude = loc.latitude
                 lastLongitude = loc.longitude
                 lastAltitude = loc.altitude
+                rideServiceRepository.updateGpsLock(true)
             }
         }
         locationCallback = callback

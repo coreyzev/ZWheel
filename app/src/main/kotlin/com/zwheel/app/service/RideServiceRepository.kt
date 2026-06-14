@@ -22,6 +22,9 @@ class RideServiceRepository @Inject constructor() {
     private val _tripDistanceMeters = MutableStateFlow(0.0)
     val tripDistanceMeters: StateFlow<Double> = _tripDistanceMeters.asStateFlow()
 
+    private val _gpsLocked = MutableStateFlow(false)
+    val gpsLocked: StateFlow<Boolean> = _gpsLocked.asStateFlow()
+
     private val _topSpeedMetersPerSecond = MutableStateFlow(0.0)
     val topSpeedMetersPerSecond: StateFlow<Double> = _topSpeedMetersPerSecond.asStateFlow()
 
@@ -43,5 +46,9 @@ class RideServiceRepository @Inject constructor() {
 
     internal fun updateTripDistance(meters: Double) {
         _tripDistanceMeters.value = meters
+    }
+
+    internal fun updateGpsLock(locked: Boolean) {
+        _gpsLocked.value = locked
     }
 }

@@ -38,6 +38,30 @@ class ParsersTest {
     }
 
     @Test
+    fun `cellVoltage old encoding parses cell index from byte 1 and voltage from byte 0`() {
+        // FW 4134 (< 4141): bytes[0]=200 -> 200*0.02=4.0V, bytes[1]=0x00 -> cell 0
+        assertEquals(Pair(0, 4.0), Parsers.cellVoltage(hex("c800"), 4134))
+    }
+
+    @Test
+    fun `cellVoltage old encoding parses non-zero cell index`() {
+        // FW 4134: bytes[0]=202 -> 4.04V, bytes[1]=0x07 -> cell 7
+        assertEquals(Pair(7, 4.04), Parsers.cellVoltage(hex("ca07"), 4134))
+    }
+
+    @Test
+    fun `cellVoltage new encoding extracts top 4 bits as cell index`() {
+        // FW 4141: uint16=0x3E34, top nibble=3 -> cell 3, raw=0xE34=3636, 3636*0.0011=3.9996V
+        assertEquals(Pair(3, 3.9996), Parsers.cellVoltage(hex("3e34"), 4141))
+    }
+
+    @Test
+    fun `cellVoltage new encoding cell 0`() {
+        // FW 4141: uint16=0x0E34, top nibble=0 -> cell 0, raw=3636, 3.9996V
+        assertEquals(Pair(0, 3.9996), Parsers.cellVoltage(hex("0e34"), 4141))
+    }
+
+    @Test
     fun `temperatures parse raw two byte M1 sample`() {
         // Source: core/src/test/resources/xr4209-success-handshake-telemetry.jsonl,
         // e659f310 temperature notification rawValueHex 1918 from the M1 XR 4209 success capture.

@@ -31,6 +31,28 @@ class ParsersTest {
     }
 
     @Test
+    fun `tripAmpHours XR scale 0x0064 = 100 * 0_00018`() {
+        // 0x0064 = 100, 100 * 0.00018 = 0.018 Ah
+        assertEquals(0.018, Parsers.tripAmpHours(hex("0064"), BoardType.XR), 1e-9)
+    }
+
+    @Test
+    fun `tripAmpHours V1 scale 0x0064 = 100 * 0_00009`() {
+        assertEquals(0.009, Parsers.tripAmpHours(hex("0064"), BoardType.ONEWHEEL_V1), 1e-9)
+    }
+
+    @Test
+    fun `tripRegenAmpHours XR scale 0x0032 = 50 * 0_00018`() {
+        // 0x0032 = 50, 50 * 0.00018 = 0.009 Ah
+        assertEquals(0.009, Parsers.tripRegenAmpHours(hex("0032"), BoardType.XR), 1e-9)
+    }
+
+    @Test
+    fun `tripRegenAmpHours zero returns 0`() {
+        assertEquals(0.0, Parsers.tripRegenAmpHours(hex("0000"), BoardType.XR), 1e-9)
+    }
+
+    @Test
     fun `pack voltage parses tenths of volts M1 sample`() {
         // Source: core/src/test/resources/xr4209-success-handshake-telemetry.jsonl,
         // e659f316 pack_voltage notification rawValueHex 0266 from the M1 XR 4209 success capture.

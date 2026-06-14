@@ -62,6 +62,24 @@ class ParsersTest {
     }
 
     @Test
+    fun `pitch at level returns 0 degrees`() {
+        // value=1800 (0x0708): 0.1*(1800-1800)=0.0
+        assertEquals(0.0, Parsers.pitch(hex("0708")))
+    }
+
+    @Test
+    fun `pitch forward lean returns positive degrees`() {
+        // value=1710 (0x06AE): 0.1*(1800-1710)=9.0
+        assertEquals(9.0, Parsers.pitch(hex("06ae")))
+    }
+
+    @Test
+    fun `pitch backward lean returns negative degrees`() {
+        // value=1890 (0x0762): 0.1*(1800-1890)=-9.0
+        assertEquals(-9.0, Parsers.pitch(hex("0762")))
+    }
+
+    @Test
     fun `temperatures parse raw two byte M1 sample`() {
         // Source: core/src/test/resources/xr4209-success-handshake-telemetry.jsonl,
         // e659f310 temperature notification rawValueHex 1918 from the M1 XR 4209 success capture.

@@ -36,6 +36,12 @@ object Parsers {
         }
     }
 
+    fun pitch(value: ByteArray): Double = 0.1 * (1800 - value.uint16BigEndian())
+
+    fun roll(value: ByteArray): Double = 0.1 * (1800 - value.uint16BigEndian())
+
+    fun yaw(value: ByteArray): Double = 0.1 * (1800 - value.uint16BigEndian())
+
     // M1 captured raw two-byte temperature values. Scale and byte order need warmer-board verification.
     fun temperatures(value: ByteArray): Pair<Int, Int> {
         val bytes = value.requireSize(2)

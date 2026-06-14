@@ -37,6 +37,7 @@ class BoardStateServiceImpl(
         scope.launch { collectRideMode() }
         scope.launch { collectOdometer() }
         scope.launch { collectRpm() }
+        scope.launch { collectCellVoltages() }
     }
 
     private suspend fun collectRpm() {
@@ -68,6 +69,25 @@ class BoardStateServiceImpl(
                 _state.update { it.copy(packVoltage = Parsers.packVoltage(bytes)) }
             } catch (e: IllegalArgumentException) {
                 println("[BoardStateServiceImpl] PACK_VOLTAGE: ${e.message}")
+            }
+        }
+    }
+
+    private suspend fun collectCellVoltages() {
+        val firmwareMajor = boardIdentity?.firmwareRevision?.toIntOrNull() ?: return
+        val cellMap = mutableMapOf<Int, Double>()
+        transport.notifications(OwUuids.CELL_VOLTAGES).collect { bytes ->
+            try {
+                val (cellIndex, voltage) = Parsers.cellVoltage(bytes, firmwareMajor)
+                if (cellIndex < 15) {
+                    cellMap[cellIndex] = voltage
+                    _state.update { state ->
+                        val sorted = cellMap.entries.sortedBy { it.key }.map { it.value }
+                        state.copy(cellVoltages = sorted)
+                    }
+                }
+            } catch (e: IllegalArgumentException) {
+                println("[BoardStateServiceImpl] CELL_VOLTAGES: ${e.message}")
             }
         }
     }

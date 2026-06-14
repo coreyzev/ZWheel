@@ -164,6 +164,54 @@ app/build/outputs/apk/debug/app-debug.apk
 
 ---
 
+## Wear OS Install
+
+The watch app lives in the `:wear` module. It receives live board state (speed,
+battery, top speed, estimated range, connection status) from the phone app over
+the Wearable Data Layer — no BLE on the watch side.
+
+### Prerequisites
+
+- Wear OS 3+ watch paired to your phone via the Wear OS companion app
+- Developer options enabled on the watch (tap **Build number** 7× in
+  Settings → System → About)
+- ADB debugging enabled on the watch
+
+### Connect ADB to the watch
+
+**WiFi (Wear OS 3+, recommended)**
+
+1. On the watch: Settings → Developer options → **Wireless debugging** → enable
+2. Tap **Pair new device** and note the pairing code + port
+3. On your computer:
+   ```bash
+   adb pair <watch-ip>:<pair-port>   # enter the pairing code when prompted
+   adb connect <watch-ip>:5555
+   ```
+
+**Bluetooth (older Wear OS)**
+
+1. On your phone: open the Wear OS app → Advanced Settings → enable
+   **Bluetooth debugging**
+2. On your computer:
+   ```bash
+   adb forward tcp:4444 localabstract:/adb-hub
+   adb connect localhost:4444
+   ```
+
+### Build and install
+
+```bash
+./gradlew :wear:assembleDebug
+adb -s <watch-device-id> install wear/build/outputs/apk/debug/wear-debug.apk
+```
+
+Confirm the device ID with `adb devices` after connecting. The ZWheel watch app
+will appear in the app drawer. It shows live data whenever the phone app's
+foreground service is running (i.e. while connected to your board).
+
+---
+
 ## Distribution
 
 Development builds are published from `main`:

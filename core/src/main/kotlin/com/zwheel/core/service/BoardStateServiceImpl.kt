@@ -34,6 +34,9 @@ class BoardStateServiceImpl(
         scope.launch { collectPackVoltage() }
         scope.launch { collectBatteryPercent() }
         scope.launch { collectTemperature() }
+        scope.launch { collectBatteryTemperature() }
+        scope.launch { collectSafetyHeadroom() }
+        scope.launch { collectStatusError() }
         scope.launch { collectRideMode() }
         scope.launch { collectOdometer() }
         scope.launch { collectRpm() }
@@ -147,6 +150,36 @@ class BoardStateServiceImpl(
                 }
             } catch (e: IllegalArgumentException) {
                 println("[BoardStateServiceImpl] TEMPERATURE: ${e.message}")
+            }
+        }
+    }
+
+    private suspend fun collectBatteryTemperature() {
+        transport.notifications(OwUuids.BATTERY_TEMPERATURE).collect { bytes ->
+            try {
+                _state.update { it.copy(batteryTempCelsius = Parsers.batteryTemperature(bytes, boardType)) }
+            } catch (e: IllegalArgumentException) {
+                println("[BoardStateServiceImpl] BATTERY_TEMPERATURE: ${e.message}")
+            }
+        }
+    }
+
+    private suspend fun collectSafetyHeadroom() {
+        transport.notifications(OwUuids.SAFETY_HEADROOM).collect { bytes ->
+            try {
+                _state.update { it.copy(safetyHeadroom = Parsers.safetyHeadroom(bytes)) }
+            } catch (e: IllegalArgumentException) {
+                println("[BoardStateServiceImpl] SAFETY_HEADROOM: ${e.message}")
+            }
+        }
+    }
+
+    private suspend fun collectStatusError() {
+        transport.notifications(OwUuids.STATUS_ERROR).collect { bytes ->
+            try {
+                _state.update { it.copy(statusError = Parsers.statusError(bytes)) }
+            } catch (e: IllegalArgumentException) {
+                println("[BoardStateServiceImpl] STATUS_ERROR: ${e.message}")
             }
         }
     }

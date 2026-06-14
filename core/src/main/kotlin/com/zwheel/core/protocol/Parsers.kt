@@ -48,6 +48,18 @@ object Parsers {
         return Pair(bytes[0].toInt() and 0xff, bytes[1].toInt() and 0xff)
     }
 
+    fun batteryTemperature(value: ByteArray, boardType: BoardType): Int {
+        val bytes = value.requireSize(2)
+        return when (boardType) {
+            BoardType.ONEWHEEL_V1, BoardType.PLUS -> bytes[1].toInt() and 0xff
+            else -> bytes[0].toInt() and 0xff
+        }
+    }
+
+    fun safetyHeadroom(value: ByteArray): Int = value.uint16BigEndian()
+
+    fun statusError(value: ByteArray): Int = value.uint16BigEndian()
+
     fun batteryPercent(value: ByteArray): Int = value.uint16BigEndian().coerceIn(0, 100)
 
     fun rideMode(value: ByteArray, boardType: BoardType): RideMode {

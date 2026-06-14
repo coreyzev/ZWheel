@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 
 private const val SCAN_DURATION_MS = 30_000L
@@ -274,6 +275,8 @@ class BleDebugViewModel @Inject constructor(
     override fun onCleared() {
         dumpJobs.forEach(Job::cancel)
         scanJob?.cancel()
+        keepAliveJob?.cancel()
+        runBlocking { runCatching { transport.disconnect() } }
         super.onCleared()
     }
 

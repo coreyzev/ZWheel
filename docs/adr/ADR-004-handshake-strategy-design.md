@@ -55,6 +55,18 @@ entry is guarded by a doc comment and an assertion in `OwUuidsTest` that names t
 Any future agent or reviewer who sees `FIRMWARE_REVISION` as writable should consult this
 section before removing it.
 
+## Keep-Alive Mechanism
+
+XR/Gemini telemetry can stop about 20 seconds after unlock unless the app keeps the
+handshake alive. A 2026-06-14 XR 4209 capture showed live telemetry starting at
+35,518 ms and a zero burst at 55,543 ms, a 20.041 s gap. OWCE handles this by writing
+the current firmware revision value back to `FIRMWARE_REVISION` immediately after
+unlock and then every 15 seconds.
+
+ZWheel follows that OWCE pattern. This is the same trigger event described above, using
+the same read value written back unchanged. It adds no new writable UUIDs and is not a
+firmware-update path.
+
 ## Byte Flow
 
 The Phase 1 handshake fixture tests must lock down the exact byte transforms before any

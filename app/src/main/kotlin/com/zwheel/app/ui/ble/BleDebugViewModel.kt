@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.zwheel.app.ble.ConnectionState
 import com.zwheel.app.ble.KableBleTransport
 import com.zwheel.core.ports.ScanResult
+import com.zwheel.core.protocol.KeepAliveAction
 import com.zwheel.core.protocol.debug.BleDebugRecorder
 import com.zwheel.core.protocol.handshake.GeminiStrategy
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -31,6 +32,7 @@ class BleDebugViewModel @Inject constructor(
 ) : ViewModel() {
     private val deviceLastSeen = mutableMapOf<String, Long>()
     private var scanJob: Job? = null
+    private var keepAliveJob: Job? = null
     private val dumpJobs = mutableListOf<Job>()
 
     private val _devices = MutableStateFlow<List<ScanResult>>(emptyList())
@@ -105,16 +107,18 @@ class BleDebugViewModel @Inject constructor(
         appendLog("Connecting ${device.label()}")
         viewModelScope.launch {
             try {
+                keepAliveJob?.cancel()
                 transport.connect(device.deviceId)
                 recorder.record(type = "gatt_ready", deviceId = device.deviceId, status = "connected")
                 appendLog("GATT ready")
                 appendLog(sessionLogger.boardMetadataLine())
                 recorder.record(type = "gemini_wait", deviceId = device.deviceId, status = "uart notification 5s")
                 appendLog("Gemini wait UART 5s")
-                val result = GeminiStrategy(
+                val strategy = GeminiStrategy(
                     debugRecorder = recorder,
                     debugDeviceId = { _selectedDevice.value?.deviceId },
-                ).unlock(transport)
+                )
+                val result = strategy.unlock(transport)
                 recorder.record(
                     type = "gemini_result",
                     deviceId = device.deviceId,
@@ -122,6 +126,7 @@ class BleDebugViewModel @Inject constructor(
                 )
                 appendLog("Unlock ${result.strategyName}: ${result.unlocked}")
                 if (result.unlocked) {
+                    startKeepAlive(strategy, device.deviceId)
                     appendLog("Connected")
                     startDumpJobs()
                 }
@@ -142,12 +147,53 @@ class BleDebugViewModel @Inject constructor(
 
     fun onDisconnectClicked() {
         scanJob?.cancel()
+        keepAliveJob?.cancel()
+        keepAliveJob = null
         dumpJobs.forEach(Job::cancel)
         dumpJobs.clear()
         recorder.record(type = "disconnect_requested", deviceId = _selectedDevice.value?.deviceId)
         viewModelScope.launch {
             runCatching { transport.disconnect() }
                 .onFailure { error -> appendLog("Disconnect failed: ${error.message}") }
+        }
+    }
+
+    private fun startKeepAlive(strategy: GeminiStrategy, deviceId: String) {
+        keepAliveJob?.cancel()
+        keepAliveJob = viewModelScope.launch {
+            strategy.keepAlive().collect { action ->
+                try {
+                    executeKeepAliveAction(action, deviceId)
+                } catch (error: Throwable) {
+                    if (error is CancellationException) throw error
+                    recordKeepAlive(action, deviceId, status = "error:${error.shortMessage()}")
+                    appendLog("Keep-alive failed: ${error.shortMessage()}")
+                    throw CancellationException("Gemini keep-alive failed", error)
+                }
+            }
+        }
+    }
+
+    private suspend fun executeKeepAliveAction(action: KeepAliveAction, deviceId: String) {
+        when (action) {
+            is KeepAliveAction.Write -> {
+                recordKeepAlive(action, deviceId, status = "before")
+                transport.write(action.characteristicId, action.value)
+                recordKeepAlive(action, deviceId, status = "after")
+            }
+        }
+    }
+
+    private fun recordKeepAlive(action: KeepAliveAction, deviceId: String, status: String) {
+        when (action) {
+            is KeepAliveAction.Write -> recorder.record(
+                type = "gemini_keep_alive_write",
+                deviceId = deviceId,
+                characteristicUuid = action.characteristicId.uuid.toString(),
+                characteristicName = action.characteristicId.debugName(),
+                rawValueHex = action.value.toRawHexString(),
+                status = status,
+            )
         }
     }
 

@@ -181,4 +181,10 @@ the gate spec is the source of truth for your task.
 - 2026-06-13: Phase 3 implementation complete. PRs #34 (P3b foreground service), #35 (P3c ride recording), #36 (P3d history UI) open and pending merge in chain order. Key design decisions: RideServiceRepository as StateFlow bridge between service and ViewModels; RideRecorder as pure-Kotlin state machine (no Android deps); NavHost introduced with dashboard/history/settings routes; ConnectionManager kept for scan/devices (scan not yet in service). POST_NOTIFICATIONS permission required for Android 13+ notification posting.
 - 2026-06-13: Phase 4 (Wear OS Data Layer) complete. P4a (#38): WearDataLayerRepository (phone-side) pushes BoardState + connectionState + isRiding + prefs to /zwheel/state DataItem; RideServiceRepository gains isRiding StateFlow. P4b (#40): Watch-side WearDataLayerRepository listens on DataItem, parses WatchPayload, exposes StateFlow; ZWheelWearScreen wired to real live data via MainViewModel. P4c (#41): DefaultTopSpeedTracker and DefaultRangeEstimator wired into RideForegroundService + WearDataLayerRepository — watch now shows real top speed and range. Known limitation: TopSpeedTracker does not reset between ride sessions within a single service lifetime (reset() is internal to core module; workaround is re-instantiation, deferred to m3-milestone or a core interface update).
 - 2026-06-13: M3 in-progress: battery optimization first-launch dialog (ADR-008 §6, PR #42 open), ride detail screen (gate spec written, Codex implementing), gate specs written for both.
+- 2026-06-14: XR 4209 capture `b60247b3c3838b77-zwheel-ble-3168329bc037bbfc.jsonl`
+  showed Gemini unlock success followed by a telemetry zero burst exactly ~20.041s after
+  live notifications began. OWCE confirms Gemini boards need a handshake keep-alive:
+  write the same firmware revision value back to `FIRMWARE_REVISION` immediately after
+  unlock and every 15s while connected. This is the same signed-off ADR-004 trigger path,
+  not a new writable UUID or firmware-update path.
 - (append discoveries here…)

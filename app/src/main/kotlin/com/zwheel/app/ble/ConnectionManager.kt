@@ -7,6 +7,8 @@ import com.zwheel.core.model.BoardState
 import com.zwheel.core.ports.Clock
 import com.zwheel.core.ports.ScanResult
 import com.zwheel.core.protocol.BoardTypeDetector
+import com.zwheel.core.protocol.GattCharacteristicId
+import com.zwheel.core.protocol.KeepAliveAction
 import com.zwheel.core.protocol.OwUuids
 import com.zwheel.core.protocol.Parsers
 import com.zwheel.core.protocol.debug.BleDebugRecorder
@@ -47,6 +49,7 @@ class ConnectionManager @Inject constructor(
     }
     private var scanJob: Job? = null
     private var stateMirrorJob: Job? = null
+    private var keepAliveJob: Job? = null
 
     val connectionState: StateFlow<ConnectionState> = transport.connectionState
 
@@ -96,9 +99,15 @@ class ConnectionManager @Inject constructor(
     suspend fun connect(deviceId: String) {
         stopScan()
         stateMirrorJob?.cancel()
+        keepAliveJob?.cancel()
         transport.connect(deviceId)
-        val unlockResult = GeminiStrategy().unlock(transport)
+        val handshakeStrategy = GeminiStrategy(
+            debugRecorder = recorder,
+            debugDeviceId = { deviceId },
+        )
+        val unlockResult = handshakeStrategy.unlock(transport)
         check(unlockResult.unlocked) { "Board unlock failed: ${unlockResult.strategyName}" }
+        startKeepAlive(handshakeStrategy, deviceId)
 
         val hwBytes = transport.read(OwUuids.HARDWARE_REVISION)
         val fwBytes = transport.read(OwUuids.FIRMWARE_REVISION)
@@ -139,10 +148,50 @@ class ConnectionManager @Inject constructor(
         stopScan()
         stateMirrorJob?.cancel()
         stateMirrorJob = null
+        keepAliveJob?.cancel()
+        keepAliveJob = null
         scope.coroutineContext.cancelChildren()
         _boardState.value = BoardState()
         scope.launch {
             runCatching { transport.disconnect() }
+        }
+    }
+
+    private fun startKeepAlive(strategy: GeminiStrategy, deviceId: String) {
+        keepAliveJob?.cancel()
+        keepAliveJob = scope.launch {
+            strategy.keepAlive().collect { action ->
+                try {
+                    executeKeepAliveAction(action, deviceId)
+                } catch (error: Throwable) {
+                    if (error is CancellationException) throw error
+                    recordKeepAlive(action, deviceId, status = "error:${error.shortMessage()}")
+                    throw CancellationException("Gemini keep-alive failed", error)
+                }
+            }
+        }
+    }
+
+    private suspend fun executeKeepAliveAction(action: KeepAliveAction, deviceId: String) {
+        when (action) {
+            is KeepAliveAction.Write -> {
+                recordKeepAlive(action, deviceId, status = "before")
+                transport.write(action.characteristicId, action.value)
+                recordKeepAlive(action, deviceId, status = "after")
+            }
+        }
+    }
+
+    private fun recordKeepAlive(action: KeepAliveAction, deviceId: String, status: String) {
+        when (action) {
+            is KeepAliveAction.Write -> recorder.record(
+                type = "gemini_keep_alive_write",
+                deviceId = deviceId,
+                characteristicUuid = action.characteristicId.uuid.toString(),
+                characteristicName = action.characteristicId.debugName(),
+                rawValueHex = action.value.toRawHexString(),
+                status = status,
+            )
         }
     }
 
@@ -173,4 +222,17 @@ class ConnectionManager @Inject constructor(
     }
 
     private fun ScanResult.deviceKey(): String = deviceId.lowercase()
+
+    private fun GattCharacteristicId.debugName(): String =
+        when (this) {
+            OwUuids.FIRMWARE_REVISION -> "firmware_revision"
+            OwUuids.UART_WRITE -> "uart_write"
+            else -> uuid.toString().substring(startIndex = 4, endIndex = 8)
+        }
+
+    private fun ByteArray.toRawHexString(): String =
+        joinToString(separator = "") { byte -> byte.toUByte().toString(radix = 16).padStart(2, '0') }
+
+    private fun Throwable.shortMessage(): String =
+        message ?: this::class.simpleName ?: "unknown"
 }

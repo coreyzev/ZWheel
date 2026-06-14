@@ -82,10 +82,40 @@ class ParsersTest {
     }
 
     @Test
-    fun `ride mode parses uint16 big endian M1 custom sample`() {
-        // Source: core/src/test/resources/xr4209-success-handshake-telemetry.jsonl,
-        // e659f302 ride_mode metadata_read rawValueHex 0000 from the M1 XR 4209 success capture.
-        assertEquals(RideMode.CUSTOM, Parsers.rideMode(hex("0000")))
+    fun `ride mode 0 maps to UNKNOWN for XR`() {
+        // Source: xr4209-success-handshake-telemetry.jsonl rawValueHex 0000.
+        // 0 = no active mode / board not riding. Corrects prior wrong CUSTOM mapping.
+        assertEquals(RideMode.UNKNOWN, Parsers.rideMode(hex("0000"), BoardType.XR))
+    }
+
+    @Test
+    fun `ride mode 9 maps to CUSTOM for XR`() {
+        assertEquals(RideMode.CUSTOM, Parsers.rideMode(hex("0009"), BoardType.XR))
+    }
+
+    @Test
+    fun `ride mode 8 maps to DELIRIUM for XR`() {
+        assertEquals(RideMode.DELIRIUM, Parsers.rideMode(hex("0008"), BoardType.XR))
+    }
+
+    @Test
+    fun `ride mode 6 maps to MISSION for XR`() {
+        assertEquals(RideMode.MISSION, Parsers.rideMode(hex("0006"), BoardType.XR))
+    }
+
+    @Test
+    fun `ride mode 5 maps to CRUZ for XR`() {
+        assertEquals(RideMode.CRUZ, Parsers.rideMode(hex("0005"), BoardType.XR))
+    }
+
+    @Test
+    fun `ride mode 4 maps to SEQUOIA for XR`() {
+        assertEquals(RideMode.SEQUOIA, Parsers.rideMode(hex("0004"), BoardType.XR))
+    }
+
+    @Test
+    fun `ride mode 1 maps to CLASSIC for V1`() {
+        assertEquals(RideMode.CLASSIC, Parsers.rideMode(hex("0001"), BoardType.ONEWHEEL_V1))
     }
 
     @Test

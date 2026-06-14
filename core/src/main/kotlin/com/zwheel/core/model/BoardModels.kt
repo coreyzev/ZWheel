@@ -26,12 +26,13 @@ enum class ConnectionState {
 
 enum class RideMode {
     CLASSIC,
-    EXTREME,
-    ELEVATED,
+    CRUZ,
+    CUSTOM,
     DELIRIUM,
+    ELEVATED,
+    EXTREME,
     MISSION,
     SEQUOIA,
-    CUSTOM,
     UNKNOWN,
 }
 

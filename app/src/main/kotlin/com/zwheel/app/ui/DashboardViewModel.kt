@@ -31,7 +31,8 @@ class DashboardViewModel @Inject constructor(
     val uiState: StateFlow<DashboardUiState> = combine(
         rideServiceRepository.boardState,
         settingsRepository.preferences,
-    ) { boardState, prefs ->
+        rideServiceRepository.tripDistanceMeters,
+    ) { boardState, prefs, tripDistanceMeters ->
         val correctedSpeed = boardState.speedMetersPerSecondCorrected
         topSpeedTracker.consume(correctedSpeed)
         val boardType = boardState.identity?.type ?: BoardType.XR
@@ -44,6 +45,7 @@ class DashboardViewModel @Inject constructor(
             prefs = prefs,
             topSpeedMetersPerSecond = topSpeedTracker.currentTripMaxMetersPerSecond,
             estimatedRangeKilometers = estimatedRange,
+            tripDistanceMeters = tripDistanceMeters,
         )
     }.stateIn(
         scope = viewModelScope,

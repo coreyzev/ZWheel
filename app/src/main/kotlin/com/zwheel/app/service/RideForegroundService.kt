@@ -154,6 +154,11 @@ class RideForegroundService : LifecycleService() {
                 recorder.onTick(rideServiceRepository.boardState.value)
             }
         }
+        lifecycleScope.launch {
+            recorder.tripDistanceMeters.collect { meters ->
+                rideServiceRepository.updateTripDistance(meters)
+            }
+        }
     }
 
     private fun updateWakelockState(speed: Double) {

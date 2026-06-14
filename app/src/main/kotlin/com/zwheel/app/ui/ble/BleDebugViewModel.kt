@@ -5,8 +5,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zwheel.app.ble.ConnectionState
 import com.zwheel.app.ble.KableBleTransport
+import com.zwheel.app.ble.deviceKey
+import com.zwheel.app.ble.launchGeminiKeepAlive
+import com.zwheel.app.ble.shortMessage
 import com.zwheel.core.ports.ScanResult
-import com.zwheel.core.protocol.KeepAliveAction
 import com.zwheel.core.protocol.debug.BleDebugRecorder
 import com.zwheel.core.protocol.handshake.GeminiStrategy
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -126,7 +128,13 @@ class BleDebugViewModel @Inject constructor(
                 )
                 appendLog("Unlock ${result.strategyName}: ${result.unlocked}")
                 if (result.unlocked) {
-                    startKeepAlive(strategy, device.deviceId)
+                    keepAliveJob = viewModelScope.launchGeminiKeepAlive(
+                        strategy,
+                        device.deviceId,
+                        transport,
+                        recorder,
+                        onError = { msg -> appendLog(msg) },
+                    )
                     appendLog("Connected")
                     startDumpJobs()
                 }
@@ -155,45 +163,6 @@ class BleDebugViewModel @Inject constructor(
         viewModelScope.launch {
             runCatching { transport.disconnect() }
                 .onFailure { error -> appendLog("Disconnect failed: ${error.message}") }
-        }
-    }
-
-    private fun startKeepAlive(strategy: GeminiStrategy, deviceId: String) {
-        keepAliveJob?.cancel()
-        keepAliveJob = viewModelScope.launch {
-            strategy.keepAlive().collect { action ->
-                try {
-                    executeKeepAliveAction(action, deviceId)
-                } catch (error: Throwable) {
-                    if (error is CancellationException) throw error
-                    recordKeepAlive(action, deviceId, status = "error:${error.shortMessage()}")
-                    appendLog("Keep-alive failed: ${error.shortMessage()}")
-                    throw CancellationException("Gemini keep-alive failed", error)
-                }
-            }
-        }
-    }
-
-    private suspend fun executeKeepAliveAction(action: KeepAliveAction, deviceId: String) {
-        when (action) {
-            is KeepAliveAction.Write -> {
-                recordKeepAlive(action, deviceId, status = "before")
-                transport.write(action.characteristicId, action.value)
-                recordKeepAlive(action, deviceId, status = "after")
-            }
-        }
-    }
-
-    private fun recordKeepAlive(action: KeepAliveAction, deviceId: String, status: String) {
-        when (action) {
-            is KeepAliveAction.Write -> recorder.record(
-                type = "gemini_keep_alive_write",
-                deviceId = deviceId,
-                characteristicUuid = action.characteristicId.uuid.toString(),
-                characteristicName = action.characteristicId.debugName(),
-                rawValueHex = action.value.toRawHexString(),
-                status = status,
-            )
         }
     }
 

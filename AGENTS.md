@@ -80,6 +80,48 @@ the gate spec is the source of truth for your task.
   violations, ADR authorship, or any task requiring cross-file design judgment.
   Everything else goes to Codex.
 
+### Architect-Loop Dispatch Protocol (how Claude orchestrates Codex)
+
+Source: https://github.com/DanMcInerney/architect-loop
+
+**Roles are absolute:**
+- Claude (this agent) = architect only. Specs, gates, review, judgment. Never writes
+  implementation code, never commits feature work.
+- Codex = builder. All feature code, tests, UI, mechanical tasks. Runs in an isolated
+  git worktree via `codex exec --worktree`.
+
+**The loop — one work block:**
+1. **Gate spec first, always.** Commit the gate file to `docs/gates/` before any Codex
+   dispatch. A builder that edits its own gate file automatically fails review.
+2. **Fan out to parallel lanes.** Split the slice into 1–4 lanes whose file sets are
+   non-overlapping. Each lane gets its own `codex exec` invocation in a fresh worktree.
+3. **Tight Codex prompt — no preamble.** The prompt must be exactly:
+   ```
+   Read ONLY docs/gates/<gate-file>.md. Do NOT read any other files first.
+   Write the files. Compile. Commit.
+   ```
+   Do NOT tell Codex to read AGENTS.md, 01_PROJECT_BRIEF.md, or 02_ARCHITECTURE.md —
+   those exhaust Codex's context before it writes a single file (confirmed 2026-06-13).
+4. **Claude judges, never trusts.** Run the gate verification commands yourself.
+   Builder claims ("tests pass", "it compiled") are hearsay until you run them.
+5. **Repo is the only memory.** `docs/gates/`, `docs/lanes/`, git history. Not in the
+   repo = didn't happen.
+
+**Over-dispatch Codex aggressively.** Codex finishes a lane with 70% of its context
+window to spare while Claude's is maxed. The scarce resource is Claude-time, not
+Codex-time. Four lanes where two might suffice is correct allocation, not waste. Last
+session: Claude ran out of context while Codex had been burning only 30% per run.
+
+**Dispatch command:**
+```bash
+git worktree add /tmp/zwheel-codex-<lane> fix/gemini-keepalive
+codex exec --worktree /tmp/zwheel-codex-<lane> \
+  "Read ONLY docs/gates/<gate-file>.md. Do NOT read any other files first. Write the files. Compile. Commit."
+```
+
+**Stall triage:** If Codex has not committed after 10 min, check `ps aux | grep codex`.
+If blocked on Gradle daemon: `rm -rf /tmp/gradle-home && GRADLE_USER_HOME=/tmp/gradle-home ./gradlew`.
+
 ## 6. Memory (append-only; agent maintains)
 - 2026-06: Project initialized from Fable design package. Reference protocol sources:
   ponewheel issue #86 (Gemini unlock), UWP-Onewheel docs, OWCE legacy OWBoard.cs,
@@ -183,8 +225,17 @@ the gate spec is the source of truth for your task.
 - 2026-06-13: M3 in-progress: battery optimization first-launch dialog (ADR-008 §6, PR #42 open), ride detail screen (gate spec written, Codex implementing), gate specs written for both.
 - 2026-06-14: XR 4209 capture `b60247b3c3838b77-zwheel-ble-3168329bc037bbfc.jsonl`
   showed Gemini unlock success followed by a telemetry zero burst exactly ~20.041s after
-  live notifications began. OWCE confirms Gemini boards need a handshake keep-alive:
-  write the same firmware revision value back to `FIRMWARE_REVISION` immediately after
-  unlock and every 15s while connected. This is the same signed-off ADR-004 trigger path,
-  not a new writable UUID or firmware-update path.
+  live notifications began. Root cause confirmed by Corey: board drops telemetry ~20s
+  after unlock every time without fail. OWCE confirms Gemini boards need a handshake
+  keep-alive: write the same firmware revision value back to `FIRMWARE_REVISION`
+  immediately after unlock and every 15s while connected. This is the same signed-off
+  ADR-004 trigger path, not a new writable UUID or firmware-update path. Fix landed in
+  PR #49.
+- 2026-06-14: PR #49 code review found 3 issues dispatched to Codex via architect-loop:
+  (1) triple duplication of debugName/toRawHexString/shortMessage across KableBleTransport,
+  ConnectionManager, and BleDebugFormat — fix: consolidate to BleFormatExtensions.kt in
+  com.zwheel.app.ble; (2) 60+ lines of keep-alive logic copy-pasted between
+  ConnectionManager and BleDebugViewModel — fix: shared GeminiKeepAliveRunner.kt;
+  (3) startKeepAlive called before post-unlock GATT reads (race) — fix: move to after
+  connection setup. Gate: docs/gates/gate-pr49-keepalive-cleanup.md.
 - (append discoveries here…)

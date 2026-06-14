@@ -438,6 +438,20 @@ private fun TripStatsCard(state: DashboardUiState) {
             SmallStat("USED", "%.2f AH".format(state.tripAmpHours))
             SmallStat("REGEN", "%.2f AH".format(state.regenAmpHours))
         }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            val gpsColor = if (state.gpsLocked) Color(0xff007a3d) else Color(0xffb45309)
+            Text(
+                text = if (state.gpsLocked) "GPS LOCKED" else "GPS SEARCHING",
+                color = gpsColor,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 0.sp,
+            )
+        }
     }
 }
 

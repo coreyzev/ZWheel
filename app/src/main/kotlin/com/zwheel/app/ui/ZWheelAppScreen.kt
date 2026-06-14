@@ -48,6 +48,7 @@ import com.zwheel.app.ui.ble.BleDebugScreen
 import com.zwheel.app.ui.onboarding.OemBatteryAdviceScreen
 import com.zwheel.app.ui.onboarding.batteryAdviceForManufacturer
 import com.zwheel.app.ui.ble.bleScanPermissions
+import com.zwheel.app.ui.history.MapFullScreenScreen
 import com.zwheel.app.ui.history.RideDetailScreen
 import com.zwheel.app.ui.history.RideHistoryScreen
 import com.zwheel.app.ui.settings.SettingsScreen
@@ -74,7 +75,14 @@ fun ZWheelAppScreen() {
             )
         }
         composable("rideDetail/{sessionId}") {
-            RideDetailScreen(onBack = { navController.popBackStack() })
+            val sessionId = it.arguments?.getString("sessionId") ?: return@composable
+            RideDetailScreen(
+                onBack = { navController.popBackStack() },
+                onOpenMap = { navController.navigate("mapFullScreen/$sessionId") },
+            )
+        }
+        composable("mapFullScreen/{sessionId}") {
+            MapFullScreenScreen(onBack = { navController.popBackStack() })
         }
         composable("settings") { SettingsScreen() }
         composable("battery") {

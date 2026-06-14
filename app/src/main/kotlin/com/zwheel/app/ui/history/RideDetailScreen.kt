@@ -1,5 +1,6 @@
 package com.zwheel.app.ui.history
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,6 +39,7 @@ import org.osmdroid.views.overlay.Polyline
 fun RideDetailScreen(
     viewModel: RideDetailViewModel = hiltViewModel(),
     onBack: () -> Unit = {},
+    onOpenMap: () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
@@ -121,7 +123,8 @@ fun RideDetailScreen(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(300.dp),
+                    .height(300.dp)
+                    .clickable { onOpenMap() },
             )
         } else {
             Text(

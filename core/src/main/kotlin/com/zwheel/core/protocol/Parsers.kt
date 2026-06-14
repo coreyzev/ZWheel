@@ -44,9 +44,32 @@ object Parsers {
 
     fun batteryPercent(value: ByteArray): Int = value.uint16BigEndian().coerceIn(0, 100)
 
-    fun rideMode(value: ByteArray): RideMode = when (value.uint16BigEndian()) {
-        0 -> RideMode.CUSTOM
-        else -> RideMode.UNKNOWN
+    fun rideMode(value: ByteArray, boardType: BoardType): RideMode {
+        return when (boardType) {
+            BoardType.ONEWHEEL_V1 -> when (value.uint16BigEndian()) {
+                1 -> RideMode.CLASSIC
+                2 -> RideMode.EXTREME
+                3 -> RideMode.ELEVATED
+                else -> RideMode.UNKNOWN
+            }
+            BoardType.PLUS, BoardType.XR -> when (value.uint16BigEndian()) {
+                4 -> RideMode.SEQUOIA
+                5 -> RideMode.CRUZ
+                6 -> RideMode.MISSION
+                7 -> RideMode.ELEVATED
+                8 -> RideMode.DELIRIUM
+                9 -> RideMode.CUSTOM
+                else -> RideMode.UNKNOWN
+            }
+            BoardType.PINT, BoardType.PINT_X -> when (value.uint16BigEndian()) {
+                5 -> RideMode.SEQUOIA // Redwood on Pint - closest enum
+                6 -> RideMode.MISSION // Pacific - closest enum
+                7 -> RideMode.ELEVATED
+                8 -> RideMode.CUSTOM // Skyline - closest enum
+                else -> RideMode.UNKNOWN
+            }
+            BoardType.UNKNOWN -> RideMode.UNKNOWN
+        }
     }
 
     fun unsignedInt16(value: ByteArray): Int = value.uint16BigEndian()

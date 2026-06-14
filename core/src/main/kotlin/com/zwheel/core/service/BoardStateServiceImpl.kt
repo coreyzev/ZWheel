@@ -121,7 +121,7 @@ class BoardStateServiceImpl(
     private suspend fun collectRideMode() {
         transport.notifications(OwUuids.RIDE_MODE).collect { bytes ->
             try {
-                _state.update { it.copy(rideMode = Parsers.rideMode(bytes)) }
+                _state.update { it.copy(rideMode = Parsers.rideMode(bytes, boardType)) }
             } catch (e: IllegalArgumentException) {
                 println("[BoardStateServiceImpl] RIDE_MODE: ${e.message}")
             }

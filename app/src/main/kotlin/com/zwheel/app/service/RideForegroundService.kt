@@ -64,6 +64,7 @@ class RideForegroundService : LifecycleService() {
         startRideRecorderTicker()
         wearDataLayerRepository.startSync(lifecycleScope)
         startLocationUpdates()
+        startHomeAssistantSync()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -203,6 +204,24 @@ class RideForegroundService : LifecycleService() {
             )
         } catch (e: SecurityException) {
             // ACCESS_FINE_LOCATION not granted; GPS remains null.
+        }
+    }
+
+    private fun startHomeAssistantSync() {
+        lifecycleScope.launch {
+            var lastPushedPercent: Int? = null
+            kotlinx.coroutines.flow.combine(
+                settingsRepository.preferences,
+                rideServiceRepository.boardState,
+            ) { prefs, boardState -> Pair(prefs, boardState) }
+                .collect { (prefs, boardState) ->
+                    val url = prefs.haUrl.takeIf { it.isNotBlank() } ?: return@collect
+                    val token = prefs.haToken.takeIf { it.isNotBlank() } ?: return@collect
+                    val pct = boardState.batteryPercent ?: return@collect
+                    if (pct == lastPushedPercent) return@collect
+                    lastPushedPercent = pct
+                    HomeAssistantPusher.push(url, token, pct)
+                }
         }
     }
 

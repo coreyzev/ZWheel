@@ -20,6 +20,16 @@ object Parsers {
         return value.int16BigEndian() * scale
     }
 
+    fun tripAmpHours(value: ByteArray, boardType: BoardType): Double {
+        val scale = if (boardType == BoardType.ONEWHEEL_V1) 0.00009 else 0.00018
+        return value.uint16BigEndian() * scale
+    }
+
+    fun tripRegenAmpHours(value: ByteArray, boardType: BoardType): Double {
+        val scale = if (boardType == BoardType.ONEWHEEL_V1) 0.00009 else 0.00018
+        return value.uint16BigEndian() * scale
+    }
+
     fun packVoltage(value: ByteArray): Double = value.uint16BigEndian() / 10.0
 
     // TODO(m3): implement e659f31b cell voltage parsing after a dedicated capture session.

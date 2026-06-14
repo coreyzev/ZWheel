@@ -2,12 +2,20 @@ package com.zwheel.core.protocol.handshake
 
 import com.zwheel.core.ports.GattIo
 import com.zwheel.core.protocol.GattCharacteristicId
+import com.zwheel.core.protocol.KeepAliveAction
 import com.zwheel.core.protocol.OwUuids
 import com.zwheel.core.protocol.debug.BleDebugRecorder
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -121,6 +129,47 @@ class GeminiStrategyTest {
             debugEvents.single { event -> event.type == "gemini_challenge_assembled" }.rawValueHex,
         )
     }
+
+    @Test
+    fun `keepAlive is empty before unlock succeeds`() = runTest {
+        val actions = GeminiStrategy().keepAlive().toList()
+
+        assertEquals(emptyList<KeepAliveAction>(), actions)
+    }
+
+    @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun `keepAlive emits immediate and periodic firmware revision write actions after unlock`() = runTest {
+        val firmwareRevision = byteArrayOf(0x10, 0x71)
+        val challenge = "43:52:58:7f:9e:5c:14:df:42:e2:62:82:62:62:62:62:62:77:f6:9c".strategyHexBytes()
+        val io = FakeGattIo(
+            reads = mapOf(OwUuids.FIRMWARE_REVISION to firmwareRevision),
+            notifications = mapOf(OwUuids.UART_READ to listOf(challenge)),
+        )
+        val strategy = GeminiStrategy()
+
+        strategy.unlock(io)
+        firmwareRevision[0] = 0x00
+
+        val actions = mutableListOf<KeepAliveAction>()
+        val job = launch {
+            strategy.keepAlive().take(2).toList(actions)
+        }
+
+        runCurrent()
+        assertEquals(1, actions.size)
+        assertFirmwareKeepAlive("10:71", actions.single())
+
+        advanceTimeBy(14_999)
+        runCurrent()
+        assertEquals(1, actions.size)
+
+        advanceTimeBy(1)
+        runCurrent()
+        assertEquals(2, actions.size)
+        actions.forEach { action -> assertFirmwareKeepAlive("10:71", action) }
+        job.cancel()
+    }
 }
 
 private class FakeGattIo(
@@ -158,6 +207,12 @@ private data class WriteRecord(
     val characteristicId: GattCharacteristicId,
     val value: ByteArray,
 )
+
+private fun assertFirmwareKeepAlive(expectedHex: String, action: KeepAliveAction) {
+    val write = action as KeepAliveAction.Write
+    assertEquals(OwUuids.FIRMWARE_REVISION, write.characteristicId)
+    assertEquals(expectedHex, write.value.toHexString())
+}
 
 private fun String.strategyHexBytes(): ByteArray =
     split(":")

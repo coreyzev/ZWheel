@@ -10,8 +10,10 @@ import java.security.MessageDigest
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onEach
@@ -20,6 +22,7 @@ import kotlinx.coroutines.withTimeout
 
 private const val CHALLENGE_TIMEOUT_MS = 5_000L
 private const val CHALLENGE_BYTES = 20
+private const val GEMINI_KEEP_ALIVE_INTERVAL_MS = 15_000L
 
 class NoneStrategy : HandshakeStrategy {
     override suspend fun unlock(io: GattIo): HandshakeResult =
@@ -36,6 +39,8 @@ class GeminiStrategy(
     private val debugRecorder: BleDebugRecorder? = null,
     private val debugDeviceId: () -> String? = { null },
 ) : HandshakeStrategy {
+    private var keepAliveFirmwareRevision: ByteArray? = null
+
     override suspend fun unlock(io: GattIo): HandshakeResult = coroutineScope {
         // Launch collection before the trigger write. Kable's observe() is a cold flow —
         // the GATT CCCD write (enabling notifications) only happens when the flow is collected,
@@ -61,6 +66,7 @@ class GeminiStrategy(
             // Read firmware revision and write it back unchanged; the board uses this write event
             // as a trigger to emit the Gemini challenge on UART_READ. The value itself is ignored.
             val firmwareRevision = io.read(OwUuids.FIRMWARE_REVISION)
+            keepAliveFirmwareRevision = firmwareRevision.copyOf()
             recordTriggerWrite(status = "before", firmwareRevision = firmwareRevision)
             io.write(OwUuids.FIRMWARE_REVISION, firmwareRevision)
             recordTriggerWrite(status = "after", firmwareRevision = firmwareRevision)
@@ -76,7 +82,20 @@ class GeminiStrategy(
         )
     }
 
-    override fun keepAlive(): Flow<KeepAliveAction> = emptyFlow()
+    override fun keepAlive(): Flow<KeepAliveAction> {
+        val firmwareRevision = keepAliveFirmwareRevision?.copyOf() ?: return emptyFlow()
+        return flow {
+            while (true) {
+                emit(
+                    KeepAliveAction.Write(
+                        characteristicId = OwUuids.FIRMWARE_REVISION,
+                        value = firmwareRevision.copyOf(),
+                    ),
+                )
+                delay(GEMINI_KEEP_ALIVE_INTERVAL_MS)
+            }
+        }
+    }
 
     private fun recordRawNotification(value: ByteArray) {
         debugRecorder?.record(

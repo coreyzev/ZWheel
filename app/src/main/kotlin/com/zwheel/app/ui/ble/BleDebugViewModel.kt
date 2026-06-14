@@ -5,6 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zwheel.app.ble.ConnectionState
 import com.zwheel.app.ble.KableBleTransport
+import com.zwheel.app.ble.deviceKey
+import com.zwheel.app.ble.launchGeminiKeepAlive
+import com.zwheel.app.ble.shortMessage
 import com.zwheel.core.ports.ScanResult
 import com.zwheel.core.protocol.debug.BleDebugRecorder
 import com.zwheel.core.protocol.handshake.GeminiStrategy
@@ -31,6 +34,7 @@ class BleDebugViewModel @Inject constructor(
 ) : ViewModel() {
     private val deviceLastSeen = mutableMapOf<String, Long>()
     private var scanJob: Job? = null
+    private var keepAliveJob: Job? = null
     private val dumpJobs = mutableListOf<Job>()
 
     private val _devices = MutableStateFlow<List<ScanResult>>(emptyList())
@@ -105,16 +109,18 @@ class BleDebugViewModel @Inject constructor(
         appendLog("Connecting ${device.label()}")
         viewModelScope.launch {
             try {
+                keepAliveJob?.cancel()
                 transport.connect(device.deviceId)
                 recorder.record(type = "gatt_ready", deviceId = device.deviceId, status = "connected")
                 appendLog("GATT ready")
                 appendLog(sessionLogger.boardMetadataLine())
                 recorder.record(type = "gemini_wait", deviceId = device.deviceId, status = "uart notification 5s")
                 appendLog("Gemini wait UART 5s")
-                val result = GeminiStrategy(
+                val strategy = GeminiStrategy(
                     debugRecorder = recorder,
                     debugDeviceId = { _selectedDevice.value?.deviceId },
-                ).unlock(transport)
+                )
+                val result = strategy.unlock(transport)
                 recorder.record(
                     type = "gemini_result",
                     deviceId = device.deviceId,
@@ -122,6 +128,13 @@ class BleDebugViewModel @Inject constructor(
                 )
                 appendLog("Unlock ${result.strategyName}: ${result.unlocked}")
                 if (result.unlocked) {
+                    keepAliveJob = viewModelScope.launchGeminiKeepAlive(
+                        strategy,
+                        device.deviceId,
+                        transport,
+                        recorder,
+                        onError = { msg -> appendLog(msg) },
+                    )
                     appendLog("Connected")
                     startDumpJobs()
                 }
@@ -142,6 +155,8 @@ class BleDebugViewModel @Inject constructor(
 
     fun onDisconnectClicked() {
         scanJob?.cancel()
+        keepAliveJob?.cancel()
+        keepAliveJob = null
         dumpJobs.forEach(Job::cancel)
         dumpJobs.clear()
         recorder.record(type = "disconnect_requested", deviceId = _selectedDevice.value?.deviceId)

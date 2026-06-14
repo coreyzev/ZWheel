@@ -47,6 +47,7 @@ class ConnectionManager @Inject constructor(
     }
     private var scanJob: Job? = null
     private var stateMirrorJob: Job? = null
+    private var keepAliveJob: Job? = null
 
     val connectionState: StateFlow<ConnectionState> = transport.connectionState
 
@@ -96,8 +97,13 @@ class ConnectionManager @Inject constructor(
     suspend fun connect(deviceId: String) {
         stopScan()
         stateMirrorJob?.cancel()
+        keepAliveJob?.cancel()
         transport.connect(deviceId)
-        val unlockResult = GeminiStrategy().unlock(transport)
+        val handshakeStrategy = GeminiStrategy(
+            debugRecorder = recorder,
+            debugDeviceId = { deviceId },
+        )
+        val unlockResult = handshakeStrategy.unlock(transport)
         check(unlockResult.unlocked) { "Board unlock failed: ${unlockResult.strategyName}" }
 
         val hwBytes = transport.read(OwUuids.HARDWARE_REVISION)
@@ -133,17 +139,25 @@ class ConnectionManager @Inject constructor(
                 _boardState.value = state
             }
         }
+        startKeepAlive(handshakeStrategy, deviceId)
     }
 
     fun disconnect() {
         stopScan()
         stateMirrorJob?.cancel()
         stateMirrorJob = null
+        keepAliveJob?.cancel()
+        keepAliveJob = null
         scope.coroutineContext.cancelChildren()
         _boardState.value = BoardState()
         scope.launch {
             runCatching { transport.disconnect() }
         }
+    }
+
+    private fun startKeepAlive(strategy: GeminiStrategy, deviceId: String) {
+        keepAliveJob?.cancel()
+        keepAliveJob = scope.launchGeminiKeepAlive(strategy, deviceId, transport, recorder)
     }
 
     private fun onScanResult(result: ScanResult) {
@@ -171,6 +185,4 @@ class ConnectionManager @Inject constructor(
         deviceLastSeen.keys.removeAll(staleDeviceKeys)
         _devices.value = _devices.value.filterNot { result -> result.deviceKey() in staleDeviceKeys }
     }
-
-    private fun ScanResult.deviceKey(): String = deviceId.lowercase()
 }

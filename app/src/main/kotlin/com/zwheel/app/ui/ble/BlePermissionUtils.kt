@@ -17,6 +17,7 @@ internal fun bleScanPermissions(): List<String> =
         listOf(
             Manifest.permission.BLUETOOTH_SCAN,
             Manifest.permission.BLUETOOTH_CONNECT,
+            Manifest.permission.ACCESS_FINE_LOCATION,
         )
     } else {
         listOf(Manifest.permission.ACCESS_FINE_LOCATION)

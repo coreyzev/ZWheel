@@ -112,6 +112,12 @@ fun RideDetailScreen(
                     .fillMaxWidth()
                     .height(300.dp),
             )
+        } else {
+            Text(
+                text = "No GPS data recorded for this ride",
+                fontSize = 13.sp,
+                color = Color(0xff888888),
+            )
         }
     }
 }

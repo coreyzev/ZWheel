@@ -27,6 +27,7 @@ data class RideDetailUiState(
     val distanceLabel: String,
     val topSpeedLabel: String,
     val avgSpeedLabel: String,
+    val gpsPoints: List<Pair<Double, Double>> = emptyList(),
 )
 
 @HiltViewModel
@@ -45,11 +46,20 @@ class RideDetailViewModel @Inject constructor(
         viewModelScope.launch {
             val session = repository.getSession(sessionId) ?: return@launch
             val speedUnit = prefs.preferences.first().speedUnit
-            _state.value = session.toUiState(speedUnit)
+            val points = repository.getPointsForSession(sessionId).first()
+            val gpsPoints = points.mapNotNull { p ->
+                val lat = p.latitude ?: return@mapNotNull null
+                val lon = p.longitude ?: return@mapNotNull null
+                Pair(lat, lon)
+            }
+            _state.value = session.toUiState(speedUnit, gpsPoints)
         }
     }
 
-    private fun RideSession.toUiState(speedUnit: SpeedUnit): RideDetailUiState {
+    private fun RideSession.toUiState(
+        speedUnit: SpeedUnit,
+        gpsPoints: List<Pair<Double, Double>> = emptyList(),
+    ): RideDetailUiState {
         val isMph = speedUnit == SpeedUnit.MPH
         val distanceLabel = if (isMph) {
             "%.2f mi".format(UnitConversions.metersToMiles(distanceMetersCorrected))
@@ -85,6 +95,7 @@ class RideDetailViewModel @Inject constructor(
             distanceLabel = distanceLabel,
             topSpeedLabel = topSpeedLabel,
             avgSpeedLabel = avgSpeedLabel,
+            gpsPoints = gpsPoints,
         )
     }
 }

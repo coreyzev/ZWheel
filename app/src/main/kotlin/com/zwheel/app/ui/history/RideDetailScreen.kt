@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -14,15 +15,24 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.osmdroid.config.Configuration
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.Polyline
 
 @Composable
 fun RideDetailScreen(
@@ -70,6 +80,39 @@ fun RideDetailScreen(
         DetailRow(label = "Duration", value = s.durationLabel)
         DetailRow(label = "Top Speed", value = s.topSpeedLabel)
         DetailRow(label = "Avg Speed", value = s.avgSpeedLabel)
+
+        if (s.gpsPoints.isNotEmpty()) {
+            val context = LocalContext.current
+            val geoPoints = remember(s.gpsPoints) {
+                s.gpsPoints.map { (lat, lon) -> GeoPoint(lat, lon) }
+            }
+            val mapView = remember {
+                MapView(context).apply {
+                    Configuration.getInstance().userAgentValue = context.packageName
+                    setTileSource(TileSourceFactory.MAPNIK)
+                    setMultiTouchControls(true)
+                    isClickable = true
+                }
+            }
+            DisposableEffect(Unit) {
+                mapView.onResume()
+                onDispose { mapView.onPause() }
+            }
+            AndroidView(
+                factory = { mapView },
+                update = { mv ->
+                    mv.overlays.clear()
+                    val polyline = Polyline().apply { setPoints(geoPoints) }
+                    mv.overlays.add(polyline)
+                    val midpoint = geoPoints[geoPoints.size / 2]
+                    mv.controller.setZoom(15.5)
+                    mv.controller.setCenter(midpoint)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(300.dp),
+            )
+        }
     }
 }
 

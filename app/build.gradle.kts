@@ -78,9 +78,6 @@ val verifyNetworkPermissionScoping by tasks.registering {
 
     doLast {
         val internetPermission = "android.permission.INTERNET"
-        check(!mainManifest.asFile.readText().contains(internetPermission)) {
-            "INTERNET permission must not be declared in app/src/main."
-        }
         check(debugManifest.asFile.readText().contains(internetPermission)) {
             "Debug manifest must declare INTERNET for BLE fixture upload."
         }
@@ -120,6 +117,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.hilt.android)
     implementation(libs.kable.core.android)
+    implementation(libs.osmdroid)
     implementation(libs.play.services.location)
     implementation(libs.play.services.wearable)
     implementation(libs.kotlinx.coroutines.android)

@@ -35,13 +35,16 @@ class WearDataLayerRepository @Inject constructor(
         dataClient.removeListener(this)
     }
 
+    fun onDataMapReceived(dataMap: DataMap) {
+        _payload.value = dataMap.toWatchPayload()
+    }
+
     override fun onDataChanged(events: DataEventBuffer) {
         for (event in events) {
             if (event.type == DataEvent.TYPE_CHANGED &&
                 event.dataItem.uri.path == "/zwheel/state"
             ) {
-                val dataMap = DataMapItem.fromDataItem(event.dataItem).dataMap
-                _payload.value = dataMap.toWatchPayload()
+                onDataMapReceived(DataMapItem.fromDataItem(event.dataItem).dataMap)
             }
         }
     }

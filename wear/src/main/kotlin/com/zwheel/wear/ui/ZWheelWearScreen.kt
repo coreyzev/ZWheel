@@ -33,13 +33,22 @@ private const val METERS_TO_MILES = 0.000621371
 private const val METERS_TO_KM = 0.001
 
 @Composable
-fun ZWheelWearScreen(payload: WatchPayload?) {
+fun ZWheelWearScreen(payload: WatchPayload?, isAmbient: Boolean = false) {
     val state = payload?.toUiState() ?: WearDashboardUiState.empty()
-    WearDashboard(state = state)
+    WearDashboard(state = state, isAmbient = isAmbient)
 }
 
 @Composable
-private fun WearDashboard(state: WearDashboardUiState) {
+private fun WearDashboard(state: WearDashboardUiState, isAmbient: Boolean = false) {
+    if (isAmbient) {
+        AmbientDashboard(state)
+    } else {
+        InteractiveDashboard(state)
+    }
+}
+
+@Composable
+private fun InteractiveDashboard(state: WearDashboardUiState) {
     MaterialTheme {
         Box(
             modifier = Modifier
@@ -86,6 +95,46 @@ private fun WearDashboard(state: WearDashboardUiState) {
                 text = state.connectionLabel,
                 color = Color(0xff00d8ff),
                 fontSize = 11.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 0.sp,
+            )
+        }
+    }
+}
+
+@Composable
+private fun AmbientDashboard(state: WearDashboardUiState) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .padding(14.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text = state.speedDisplay,
+                color = Color.White,
+                fontSize = 52.sp,
+                fontWeight = FontWeight.Black,
+                textAlign = TextAlign.Center,
+                letterSpacing = 0.sp,
+                lineHeight = 52.sp,
+            )
+            Text(
+                text = state.speedUnitLabel,
+                color = Color.White,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 0.sp,
+            )
+            Text(
+                text = state.batteryDisplay,
+                color = Color.White,
+                fontSize = 18.sp,
                 fontWeight = FontWeight.Black,
                 letterSpacing = 0.sp,
             )

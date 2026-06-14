@@ -7,7 +7,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.zwheel.wear.ui.ZWheelWearScreen
 
 @Composable
-fun MainScreen(viewModel: MainViewModel = hiltViewModel()) {
+fun MainScreen(
+    viewModel: MainViewModel = hiltViewModel(),
+    isAmbient: Boolean = false,
+) {
     val payload by viewModel.payload.collectAsStateWithLifecycle()
-    ZWheelWearScreen(payload = payload)
+    ZWheelWearScreen(payload = payload, isAmbient = isAmbient)
 }

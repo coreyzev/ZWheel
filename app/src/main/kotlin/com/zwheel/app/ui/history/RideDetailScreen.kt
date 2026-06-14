@@ -80,11 +80,14 @@ fun RideDetailScreen(
         DetailRow(label = "Duration", value = s.durationLabel)
         DetailRow(label = "Top Speed", value = s.topSpeedLabel)
         DetailRow(label = "Avg Speed", value = s.avgSpeedLabel)
+        if (s.gpsDistanceLabel != "--") {
+            DetailRow(label = "GPS Distance", value = s.gpsDistanceLabel)
+        }
 
         if (s.gpsPoints.isNotEmpty()) {
             val context = LocalContext.current
             val geoPoints = remember(s.gpsPoints) {
-                s.gpsPoints.map { (lat, lon) -> GeoPoint(lat, lon) }
+                s.gpsPoints.map { (lat, lon, _) -> GeoPoint(lat, lon) }
             }
             val mapView = remember {
                 MapView(context).apply {
@@ -102,8 +105,16 @@ fun RideDetailScreen(
                 factory = { mapView },
                 update = { mv ->
                     mv.overlays.clear()
-                    val polyline = Polyline().apply { setPoints(geoPoints) }
-                    mv.overlays.add(polyline)
+                    for (i in 0 until s.gpsPoints.size - 1) {
+                        val (lat1, lon1, spd) = s.gpsPoints[i]
+                        val (lat2, lon2, _) = s.gpsPoints[i + 1]
+                        val segment = Polyline().apply {
+                            setPoints(listOf(GeoPoint(lat1, lon1), GeoPoint(lat2, lon2)))
+                            outlinePaint.color = speedColor(spd)
+                            outlinePaint.strokeWidth = 10f
+                        }
+                        mv.overlays.add(segment)
+                    }
                     val midpoint = geoPoints[geoPoints.size / 2]
                     mv.controller.setZoom(15.5)
                     mv.controller.setCenter(midpoint)
@@ -131,5 +142,15 @@ private fun DetailRow(label: String, value: String) {
     ) {
         Text(text = label, fontSize = 15.sp, color = Color(0xffbbbbbb))
         Text(text = value, fontSize = 16.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.sp)
+    }
+}
+
+private fun speedColor(speedMps: Double?): Int {
+    val s = speedMps ?: return android.graphics.Color.LTGRAY
+    return when {
+        s < 2.0 -> android.graphics.Color.rgb(80, 120, 220)
+        s < 5.0 -> android.graphics.Color.rgb(50, 190, 80)
+        s < 8.0 -> android.graphics.Color.rgb(255, 160, 20)
+        else -> android.graphics.Color.rgb(220, 50, 50)
     }
 }

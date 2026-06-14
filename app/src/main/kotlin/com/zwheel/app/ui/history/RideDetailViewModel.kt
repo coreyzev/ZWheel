@@ -27,7 +27,8 @@ data class RideDetailUiState(
     val distanceLabel: String,
     val topSpeedLabel: String,
     val avgSpeedLabel: String,
-    val gpsPoints: List<Pair<Double, Double>> = emptyList(),
+    val gpsPoints: List<Triple<Double, Double, Double?>> = emptyList(),
+    val gpsDistanceLabel: String = "--",
 )
 
 @HiltViewModel
@@ -50,15 +51,29 @@ class RideDetailViewModel @Inject constructor(
             val gpsPoints = points.mapNotNull { p ->
                 val lat = p.latitude ?: return@mapNotNull null
                 val lon = p.longitude ?: return@mapNotNull null
-                Pair(lat, lon)
+                Triple(lat, lon, p.speedMetersPerSecondCorrected)
             }
-            _state.value = session.toUiState(speedUnit, gpsPoints)
+            var gpsMeters = 0.0
+            for (i in 0 until gpsPoints.size - 1) {
+                val (lat1, lon1, _) = gpsPoints[i]
+                val (lat2, lon2, _) = gpsPoints[i + 1]
+                gpsMeters += haversineMeters(lat1, lon1, lat2, lon2)
+            }
+            val gpsDistanceLabel = if (gpsPoints.size < 2) {
+                "--"
+            } else if (speedUnit == SpeedUnit.MPH) {
+                "%.2f mi (GPS)".format(gpsMeters / 1_609.344)
+            } else {
+                "%.2f km (GPS)".format(gpsMeters / 1_000.0)
+            }
+            _state.value = session.toUiState(speedUnit, gpsPoints, gpsDistanceLabel)
         }
     }
 
     private fun RideSession.toUiState(
         speedUnit: SpeedUnit,
-        gpsPoints: List<Pair<Double, Double>> = emptyList(),
+        gpsPoints: List<Triple<Double, Double, Double?>> = emptyList(),
+        gpsDistanceLabel: String = "--",
     ): RideDetailUiState {
         val isMph = speedUnit == SpeedUnit.MPH
         val distanceLabel = if (isMph) {
@@ -96,6 +111,16 @@ class RideDetailViewModel @Inject constructor(
             topSpeedLabel = topSpeedLabel,
             avgSpeedLabel = avgSpeedLabel,
             gpsPoints = gpsPoints,
+            gpsDistanceLabel = gpsDistanceLabel,
         )
     }
+}
+
+private fun haversineMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+    val r = 6_371_000.0
+    val p1 = Math.toRadians(lat1); val p2 = Math.toRadians(lat2)
+    val dp = Math.toRadians(lat2 - lat1); val dl = Math.toRadians(lon2 - lon1)
+    val a = Math.sin(dp / 2) * Math.sin(dp / 2) +
+        Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) * Math.sin(dl / 2)
+    return r * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }

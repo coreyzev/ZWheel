@@ -54,6 +54,8 @@ data class BoardState(
     val packVoltage: Double? = null,
     val cellVoltages: List<Double> = emptyList(),
     val amps: Double? = null,
+    val tripAmpHours: Double? = null,
+    val tripRegenAmpHours: Double? = null,
     val pitchDegrees: Double? = null,
     val rollDegrees: Double? = null,
     val yawDegrees: Double? = null,

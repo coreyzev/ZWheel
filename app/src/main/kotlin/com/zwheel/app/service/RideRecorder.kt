@@ -8,9 +8,7 @@ import com.zwheel.core.ports.Clock
 import java.util.UUID
 
 private const val START_SPEED_THRESHOLD_METERS_PER_SECOND = 0.67
-private const val STOP_SPEED_THRESHOLD_METERS_PER_SECOND = 0.5
 private const val START_THRESHOLD_SECONDS = 3
-private const val STOP_THRESHOLD_SECONDS = 90
 
 internal class RideRecorder(
     private val repository: RideRepository,
@@ -21,7 +19,6 @@ internal class RideRecorder(
     private var currentSessionId: String? = null
     private var currentSession: RideSession? = null
     private var speedAboveThresholdCounterSeconds: Int = 0
-    private var speedBelowThresholdCounterSeconds: Int = 0
     private var maxSpeedMetersPerSecondCorrected: Double = 0.0
     private var distanceMetersCorrected: Double = 0.0
 
@@ -32,12 +29,6 @@ internal class RideRecorder(
             speedAboveThresholdCounterSeconds++
         } else {
             speedAboveThresholdCounterSeconds = 0
-        }
-
-        if (speedMetersPerSecond < STOP_SPEED_THRESHOLD_METERS_PER_SECOND) {
-            speedBelowThresholdCounterSeconds++
-        } else {
-            speedBelowThresholdCounterSeconds = 0
         }
 
         if (
@@ -73,13 +64,6 @@ internal class RideRecorder(
                 motorTempCelsius = state.motorTempCelsius,
             ),
         )
-
-        if (
-            speedBelowThresholdCounterSeconds >= STOP_THRESHOLD_SECONDS &&
-            currentSessionId != null
-        ) {
-            endCurrentSession()
-        }
     }
 
     suspend fun endCurrentSession() {
@@ -94,7 +78,6 @@ internal class RideRecorder(
         currentSessionId = null
         currentSession = null
         speedAboveThresholdCounterSeconds = 0
-        speedBelowThresholdCounterSeconds = 0
         maxSpeedMetersPerSecondCorrected = 0.0
         distanceMetersCorrected = 0.0
         onSessionChanged?.invoke(false)
@@ -109,7 +92,6 @@ internal class RideRecorder(
         repository.startSession(session)
         currentSessionId = session.id
         currentSession = session
-        speedBelowThresholdCounterSeconds = 0
         maxSpeedMetersPerSecondCorrected = 0.0
         distanceMetersCorrected = 0.0
         onSessionChanged?.invoke(true)

@@ -15,7 +15,6 @@ import com.zwheel.core.protocol.GattCharacteristicId
 import com.zwheel.core.protocol.OwUuids
 import com.zwheel.core.protocol.debug.BleDebugRecorder
 import java.util.UUID
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -55,22 +54,18 @@ class KableBleTransport : BleTransport, GattIo {
     }
 
     override suspend fun scan(): Flow<ScanResult> {
-        val primaryHadResults = AtomicBoolean(false)
         val primary = scanner(serviceUuid = OwUuids.ONEWHEEL_SERVICE)
             .advertisements
-            .onEach { primaryHadResults.set(true) }
             .map { advertisement -> advertisement.toScanResult() }
 
         val fallback = flow {
             delay(NAME_FALLBACK_DELAY_MS)
-            if (!primaryHadResults.get()) {
-                emitAll(
-                    scanner(serviceUuid = null)
-                        .advertisements
-                        .filter { advertisement -> advertisement.onewheelName() != null }
-                        .map { advertisement -> advertisement.toScanResult(displayName = advertisement.onewheelName()) },
-                )
-            }
+            emitAll(
+                scanner(serviceUuid = null)
+                    .advertisements
+                    .filter { advertisement -> advertisement.onewheelName() != null }
+                    .map { advertisement -> advertisement.toScanResult(displayName = advertisement.onewheelName()) },
+            )
         }
 
         return merge(primary, fallback)

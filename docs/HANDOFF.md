@@ -26,7 +26,8 @@ Updated 2026-06-13 (Phase 3 complete, Phase 4a merged, Phase 4b/4c in progress).
 
 **The app is M2-testable:**
 - Foreground service keeps BLE alive when screen is off / app killed
-- Rides auto-record to Room DB (auto-start at 1.5 mph / 3s, auto-end after 90s idle)
+- Rides auto-record to Room DB, but the current auto-end-after-idle behavior needs a
+  product correction: breaks should stay inside the same ride. Track this in #46.
 - History screen shows past rides with distance, speed, date, duration
 - Phone pushes live data to watch (P4a); watch receiving implementation in progress (P4b)
 
@@ -94,6 +95,10 @@ then the next will need a rebase/merge from the updated base. The CI will rerun.
 - Validate foreground service survives screen-off on Samsung S25 Ultra
 - Confirm ride sessions actually appear in history after a ride
 - Verify UNCORRECTED badge clears once corrected speed is active
+- Fix ride recording semantics (#46): auto-start when riding begins, but end only on
+  disconnect/manual stop so normal breaks do not split a ride.
+- Write the full Corey hardware validation runbook (#47) before asking Corey to do
+  extended M3/M4 testing.
 
 **Ready to implement (gate specs written):**
 - Battery optimization first-launch dialog (`docs/gates/gate-m3-battery-opt-dialog.md`)
@@ -116,8 +121,10 @@ then the next will need a rebase/merge from the updated base. The CI will rerun.
 3. **Scan → Connect** — confirm Gemini unlock, live telemetry, board name/type.
 4. Lock screen. Wait 2 minutes. Unlock — confirm BLE still connected and notification
    shows speed + battery (validates foreground service).
-5. Ride for >3 seconds at >1.5 mph. Stop for 90 seconds. Check **Ride History** screen
-   — a session should appear with correct distance, duration, top speed.
+5. Ride for >3 seconds at >1.5 mph. Take a normal break, then continue riding. After
+   #46 is fixed, this should remain one ride session until disconnect/manual stop.
+   Check **Ride History** — a session should appear with correct distance, duration,
+   and top speed.
 6. Validate corrected speed matches GPS reference (~2 mile loop, expect ≤2% error).
 
 ---

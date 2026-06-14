@@ -48,6 +48,8 @@ class RideForegroundService : LifecycleService() {
     private var rideRecorder: RideRecorder? = null
     private var speedAboveThresholdTicks = 0
     private var speedBelowThresholdTicks = 0
+    @Volatile private var lastLatitude: Double? = null
+    @Volatile private var lastLongitude: Double? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -58,6 +60,7 @@ class RideForegroundService : LifecycleService() {
         mirrorBoardStateAndUpdateNotification()
         startRideRecorderTicker()
         wearDataLayerRepository.startSync(lifecycleScope)
+        startLocationUpdates()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -151,8 +154,33 @@ class RideForegroundService : LifecycleService() {
         lifecycleScope.launch {
             while (isActive) {
                 delay(1_000L)
-                recorder.onTick(rideServiceRepository.boardState.value)
+                recorder.onTick(rideServiceRepository.boardState.value, lastLatitude, lastLongitude)
             }
+        }
+    }
+
+    private fun startLocationUpdates() {
+        val fusedClient = com.google.android.gms.location.LocationServices
+            .getFusedLocationProviderClient(this)
+        val request = com.google.android.gms.location.LocationRequest.Builder(
+            com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY,
+            5_000L,
+        ).setMinUpdateIntervalMillis(2_000L).build()
+        val callback = object : com.google.android.gms.location.LocationCallback() {
+            override fun onLocationResult(result: com.google.android.gms.location.LocationResult) {
+                val loc = result.lastLocation ?: return
+                lastLatitude = loc.latitude
+                lastLongitude = loc.longitude
+            }
+        }
+        try {
+            fusedClient.requestLocationUpdates(
+                request,
+                callback,
+                android.os.Looper.getMainLooper(),
+            )
+        } catch (e: SecurityException) {
+            // ACCESS_FINE_LOCATION not granted; lat/lng remain null.
         }
     }
 

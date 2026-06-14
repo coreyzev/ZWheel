@@ -80,6 +80,7 @@ fun BoardState.toDashboardUiState(
     prefs: UserPreferences,
     topSpeedMetersPerSecond: Double?,
     estimatedRangeKilometers: Double?,
+    tripDistanceMeters: Double = 0.0,
 ): DashboardUiState {
     val isSpeedCorrected = speedMetersPerSecondCorrected != null
     val displaySpeedMetersPerSecond = speedMetersPerSecondCorrected
@@ -111,7 +112,10 @@ fun BoardState.toDashboardUiState(
         cellVoltages = cellVoltages.mapIndexed { index, volts ->
             CellVoltageUiState(label = "C${index + 1}", volts = volts, isLow = volts < 3.9)
         },
-        tripMiles = 0.0,
+        tripMiles = when (prefs.speedUnit) {
+            SpeedUnit.MPH -> tripDistanceMeters / 1_609.344
+            SpeedUnit.KPH -> tripDistanceMeters / 1_000.0
+        },
         tripAmpHours = 0.0,
         regenAmpHours = 0.0,
         rideMode = rideMode.name,

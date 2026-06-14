@@ -157,6 +157,11 @@ class RideForegroundService : LifecycleService() {
                 recorder.onTick(rideServiceRepository.boardState.value, lastLatitude, lastLongitude)
             }
         }
+        lifecycleScope.launch {
+            recorder.tripDistanceMeters.collect { meters ->
+                rideServiceRepository.updateTripDistance(meters)
+            }
+        }
     }
 
     private fun startLocationUpdates() {

@@ -38,6 +38,7 @@ dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.wear)
     implementation(libs.androidx.wear.compose.material)
     implementation(libs.hilt.android)
     implementation(libs.kotlinx.coroutines.core)

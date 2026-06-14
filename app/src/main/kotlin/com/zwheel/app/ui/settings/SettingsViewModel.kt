@@ -40,4 +40,16 @@ class SettingsViewModel @Inject constructor(
             repo.setTireDiameterInches(value)
         }
     }
+
+    fun setHaUrl(url: String) {
+        viewModelScope.launch {
+            repo.setHaUrl(url)
+        }
+    }
+
+    fun setHaToken(token: String) {
+        viewModelScope.launch {
+            repo.setHaToken(token)
+        }
+    }
 }

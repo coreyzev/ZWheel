@@ -36,6 +36,8 @@ fun SettingsScreen(
         onSpeedUnitSelected = viewModel::setSpeedUnit,
         onTemperatureUnitSelected = viewModel::setTemperatureUnit,
         onTireDiameterChanged = viewModel::setTireDiameter,
+        onHaUrlChanged = viewModel::setHaUrl,
+        onHaTokenChanged = viewModel::setHaToken,
     )
 }
 
@@ -45,6 +47,8 @@ private fun SettingsContent(
     onSpeedUnitSelected: (SpeedUnit) -> Unit,
     onTemperatureUnitSelected: (TemperatureUnit) -> Unit,
     onTireDiameterChanged: (Double) -> Unit,
+    onHaUrlChanged: (String) -> Unit,
+    onHaTokenChanged: (String) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -70,6 +74,12 @@ private fun SettingsContent(
         TireDiameterControl(
             diameterInches = preferences.tireDiameterInches,
             onDiameterChanged = onTireDiameterChanged,
+        )
+        HomeAssistantSection(
+            haUrl = preferences.haUrl,
+            haToken = preferences.haToken,
+            onUrlChanged = onHaUrlChanged,
+            onTokenChanged = onHaTokenChanged,
         )
     }
 }
@@ -138,6 +148,38 @@ private fun TireDiameterControl(
             value = diameterInches.toFloat(),
             onValueChange = { onDiameterChanged(it.toDouble()) },
             valueRange = 8f..16f,
+        )
+    }
+}
+
+@Composable
+private fun HomeAssistantSection(
+    haUrl: String,
+    haToken: String,
+    onUrlChanged: (String) -> Unit,
+    onTokenChanged: (String) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionLabel("HOME ASSISTANT")
+        androidx.compose.material3.OutlinedTextField(
+            value = haUrl,
+            onValueChange = onUrlChanged,
+            label = { Text("Server URL") },
+            placeholder = { Text("http://homeassistant.local:8123") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+        )
+        androidx.compose.material3.OutlinedTextField(
+            value = haToken,
+            onValueChange = onTokenChanged,
+            label = { Text("Long-lived access token") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+        )
+        Text(
+            text = "When configured, battery % is pushed to HA as sensor.onewheel_battery while connected.",
+            style = MaterialTheme.typography.bodySmall,
+            color = Color(0xff777777),
         )
     }
 }

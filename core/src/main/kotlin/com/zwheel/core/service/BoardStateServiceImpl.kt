@@ -31,6 +31,8 @@ class BoardStateServiceImpl(
     suspend fun start(scope: CoroutineScope) {
         _state.update { it.copy(identity = boardIdentity) }
         scope.launch { collectAmps() }
+        scope.launch { collectTripAmpHours() }
+        scope.launch { collectTripRegenAmpHours() }
         scope.launch { collectPackVoltage() }
         scope.launch { collectBatteryPercent() }
         scope.launch { collectTemperature() }
@@ -65,6 +67,26 @@ class BoardStateServiceImpl(
                 _state.update { it.copy(amps = Parsers.amps(bytes, boardType)) }
             } catch (e: IllegalArgumentException) {
                 println("[BoardStateServiceImpl] AMPS: ${e.message}")
+            }
+        }
+    }
+
+    private suspend fun collectTripAmpHours() {
+        transport.notifications(OwUuids.TRIP_TOTAL_AMP_HOURS).collect { bytes ->
+            try {
+                _state.update { it.copy(tripAmpHours = Parsers.tripAmpHours(bytes, boardType)) }
+            } catch (e: IllegalArgumentException) {
+                println("[BoardStateServiceImpl] TRIP_AMP_HOURS: ${e.message}")
+            }
+        }
+    }
+
+    private suspend fun collectTripRegenAmpHours() {
+        transport.notifications(OwUuids.TRIP_REGEN_AMP_HOURS).collect { bytes ->
+            try {
+                _state.update { it.copy(tripRegenAmpHours = Parsers.tripRegenAmpHours(bytes, boardType)) }
+            } catch (e: IllegalArgumentException) {
+                println("[BoardStateServiceImpl] TRIP_REGEN_AMP_HOURS: ${e.message}")
             }
         }
     }

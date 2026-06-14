@@ -28,7 +28,12 @@ internal class RideRecorder(
     private var maxSpeedMetersPerSecondCorrected: Double = 0.0
     private var distanceMetersCorrected: Double = 0.0
 
-    suspend fun onTick(state: BoardState, latitude: Double? = null, longitude: Double? = null) {
+    suspend fun onTick(
+        state: BoardState,
+        latitude: Double? = null,
+        longitude: Double? = null,
+        altitude: Double? = null,
+    ) {
         val speedMetersPerSecond = state.speedMetersPerSecondCorrected ?: 0.0
 
         if (speedMetersPerSecond > START_SPEED_THRESHOLD_METERS_PER_SECOND) {
@@ -63,6 +68,7 @@ internal class RideRecorder(
                 batteryPercent = state.batteryPercent,
                 latitude = latitude,
                 longitude = longitude,
+                altitude = altitude,
                 amps = state.amps,
                 pitchDegrees = state.pitchDegrees,
                 rollDegrees = state.rollDegrees,

@@ -50,6 +50,9 @@ class RideForegroundService : LifecycleService() {
     private var speedBelowThresholdTicks = 0
     @Volatile private var lastLatitude: Double? = null
     @Volatile private var lastLongitude: Double? = null
+    @Volatile private var lastAltitude: Double? = null
+    private var fusedLocationClient: com.google.android.gms.location.FusedLocationProviderClient? = null
+    private var locationCallback: com.google.android.gms.location.LocationCallback? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -96,6 +99,7 @@ class RideForegroundService : LifecycleService() {
         runBlocking {
             rideRecorder?.endCurrentSession()
         }
+        locationCallback?.let { fusedLocationClient?.removeLocationUpdates(it) }
         connectionManager.disconnect()
         wakelock?.takeIf { it.isHeld }?.release()
         super.onDestroy()
@@ -154,7 +158,12 @@ class RideForegroundService : LifecycleService() {
         lifecycleScope.launch {
             while (isActive) {
                 delay(1_000L)
-                recorder.onTick(rideServiceRepository.boardState.value, lastLatitude, lastLongitude)
+                recorder.onTick(
+                    rideServiceRepository.boardState.value,
+                    lastLatitude,
+                    lastLongitude,
+                    lastAltitude,
+                )
             }
         }
         lifecycleScope.launch {
@@ -165,8 +174,9 @@ class RideForegroundService : LifecycleService() {
     }
 
     private fun startLocationUpdates() {
-        val fusedClient = com.google.android.gms.location.LocationServices
+        val client = com.google.android.gms.location.LocationServices
             .getFusedLocationProviderClient(this)
+        fusedLocationClient = client
         val request = com.google.android.gms.location.LocationRequest.Builder(
             com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY,
             5_000L,
@@ -174,18 +184,21 @@ class RideForegroundService : LifecycleService() {
         val callback = object : com.google.android.gms.location.LocationCallback() {
             override fun onLocationResult(result: com.google.android.gms.location.LocationResult) {
                 val loc = result.lastLocation ?: return
+                if (loc.accuracy > 30f) return
                 lastLatitude = loc.latitude
                 lastLongitude = loc.longitude
+                lastAltitude = loc.altitude
             }
         }
+        locationCallback = callback
         try {
-            fusedClient.requestLocationUpdates(
+            client.requestLocationUpdates(
                 request,
                 callback,
                 android.os.Looper.getMainLooper(),
             )
         } catch (e: SecurityException) {
-            // ACCESS_FINE_LOCATION not granted; lat/lng remain null.
+            // ACCESS_FINE_LOCATION not granted; GPS remains null.
         }
     }
 

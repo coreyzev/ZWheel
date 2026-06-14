@@ -187,8 +187,9 @@ private fun ZWheelDashboard(
     onOpenBatteryAdvice: () -> Unit = {},
     batteryOptimized: Boolean = false,
 ) {
-    var showDebug by remember { mutableStateOf(false) }
-    val debugVisible = showDebug || !permissionsGranted
+    // null = auto (open when permissions missing), true/false = explicit user choice
+    var showDebugOverride by remember { mutableStateOf<Boolean?>(null) }
+    val debugVisible = showDebugOverride ?: !permissionsGranted
 
     Column(
         modifier = Modifier
@@ -211,7 +212,7 @@ private fun ZWheelDashboard(
         )
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             // Keep this debug/log panel reachable until the app is ready to publish.
-            TextButton(onClick = { showDebug = !showDebug }) {
+            TextButton(onClick = { showDebugOverride = !debugVisible }) {
                 Text(if (debugVisible) "Hide BLE debug" else "Show BLE debug")
             }
             Row {

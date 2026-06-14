@@ -19,6 +19,9 @@ class RideServiceRepository @Inject constructor() {
     private val _isRiding = MutableStateFlow(false)
     val isRiding: StateFlow<Boolean> = _isRiding.asStateFlow()
 
+    private val _tripDistanceMeters = MutableStateFlow(0.0)
+    val tripDistanceMeters: StateFlow<Double> = _tripDistanceMeters.asStateFlow()
+
     private val _topSpeedMetersPerSecond = MutableStateFlow(0.0)
     val topSpeedMetersPerSecond: StateFlow<Double> = _topSpeedMetersPerSecond.asStateFlow()
 
@@ -36,5 +39,9 @@ class RideServiceRepository @Inject constructor() {
 
     internal fun updateIsRiding(riding: Boolean) {
         _isRiding.value = riding
+    }
+
+    internal fun updateTripDistance(meters: Double) {
+        _tripDistanceMeters.value = meters
     }
 }

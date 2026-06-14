@@ -6,6 +6,9 @@ import com.zwheel.core.model.RideDataPoint
 import com.zwheel.core.model.RideSession
 import com.zwheel.core.ports.Clock
 import java.util.UUID
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 private const val START_SPEED_THRESHOLD_METERS_PER_SECOND = 0.67
 private const val START_THRESHOLD_SECONDS = 3
@@ -15,6 +18,9 @@ internal class RideRecorder(
     private val clock: Clock,
 ) {
     var onSessionChanged: ((Boolean) -> Unit)? = null
+
+    private val _tripDistanceMeters = MutableStateFlow(0.0)
+    val tripDistanceMeters: StateFlow<Double> = _tripDistanceMeters.asStateFlow()
 
     private var currentSessionId: String? = null
     private var currentSession: RideSession? = null
@@ -41,6 +47,7 @@ internal class RideRecorder(
         val sessionId = currentSessionId ?: return
         val correctedSpeed = state.speedMetersPerSecondCorrected
         distanceMetersCorrected += (correctedSpeed ?: 0.0) * 1.0
+        _tripDistanceMeters.value = distanceMetersCorrected
         maxSpeedMetersPerSecondCorrected = maxOf(
             maxSpeedMetersPerSecondCorrected,
             correctedSpeed ?: 0.0,
@@ -79,6 +86,7 @@ internal class RideRecorder(
         speedAboveThresholdCounterSeconds = 0
         maxSpeedMetersPerSecondCorrected = 0.0
         distanceMetersCorrected = 0.0
+        _tripDistanceMeters.value = 0.0
         onSessionChanged?.invoke(false)
     }
 
@@ -93,6 +101,7 @@ internal class RideRecorder(
         currentSession = session
         maxSpeedMetersPerSecondCorrected = 0.0
         distanceMetersCorrected = 0.0
+        _tripDistanceMeters.value = 0.0
         onSessionChanged?.invoke(true)
     }
 }

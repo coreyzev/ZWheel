@@ -119,8 +119,8 @@ fun BoardState.toDashboardUiState(
             SpeedUnit.MPH -> tripDistanceMeters / 1_609.344
             SpeedUnit.KPH -> tripDistanceMeters / 1_000.0
         },
-        tripAmpHours = 0.0,
-        regenAmpHours = 0.0,
+        tripAmpHours = tripAmpHours ?: 0.0,
+        regenAmpHours = tripRegenAmpHours ?: 0.0,
         gpsLocked = gpsLocked,
         rideMode = rideMode.name,
         lightsLabel = when (lightsOn) {

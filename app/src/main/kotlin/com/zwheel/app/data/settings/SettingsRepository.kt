@@ -1,11 +1,15 @@
 package com.zwheel.app.data.settings
 
+import android.content.Context
+import android.content.SharedPreferences
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKeys
 import com.zwheel.core.model.SpeedUnit
 import com.zwheel.core.model.TemperatureUnit
 import kotlinx.coroutines.flow.Flow
@@ -13,16 +17,33 @@ import kotlinx.coroutines.flow.map
 
 class SettingsRepository(
     private val dataStore: DataStore<Preferences>,
+    private val context: Context,
 ) {
-    val preferences: Flow<UserPreferences> = dataStore.data.map { preferences ->
+    private val encryptedPrefs: SharedPreferences by lazy {
+        val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
+        EncryptedSharedPreferences.create(
+            "zwheel_secure_prefs",
+            masterKeyAlias,
+            context,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+        )
+    }
+
+    val preferences: Flow<UserPreferences> = dataStore.data.map { prefs ->
+        val legacyToken = prefs[HA_TOKEN]
+        // Prefer encrypted store; fall back to legacy plaintext key for pre-upgrade installs.
+        val token = encryptedPrefs.getString(KEY_HA_TOKEN_SECURE, null)?.takeIf { it.isNotEmpty() }
+            ?: legacyToken?.trim()
+            ?: ""
         UserPreferences(
-            speedUnit = preferences[SPEED_UNIT].toEnumOrDefault(SpeedUnit.MPH),
-            temperatureUnit = preferences[TEMPERATURE_UNIT].toEnumOrDefault(TemperatureUnit.FAHRENHEIT),
-            tireDiameterInches = preferences[TIRE_DIAMETER]?.coerceIn(TIRE_DIAMETER_RANGE) ?: DEFAULT_TIRE_DIAMETER,
-            lastConnectedDeviceId = preferences[LAST_DEVICE_ID],
-            hasRequestedBatteryOptimization = preferences[HAS_REQUESTED_BATTERY_OPT] ?: false,
-            haUrl = preferences[HA_URL] ?: "",
-            haToken = preferences[HA_TOKEN] ?: "",
+            speedUnit = prefs[SPEED_UNIT].toEnumOrDefault(SpeedUnit.MPH),
+            temperatureUnit = prefs[TEMPERATURE_UNIT].toEnumOrDefault(TemperatureUnit.FAHRENHEIT),
+            tireDiameterInches = prefs[TIRE_DIAMETER]?.coerceIn(TIRE_DIAMETER_RANGE) ?: DEFAULT_TIRE_DIAMETER,
+            lastConnectedDeviceId = prefs[LAST_DEVICE_ID],
+            hasRequestedBatteryOptimization = prefs[HAS_REQUESTED_BATTERY_OPT] ?: false,
+            haUrl = prefs[HA_URL] ?: "",
+            haToken = token,
         )
     }
 
@@ -51,8 +72,10 @@ class SettingsRepository(
     }
 
     suspend fun setHaToken(token: String) {
+        encryptedPrefs.edit().putString(KEY_HA_TOKEN_SECURE, token.trim()).apply()
+        // Clear any legacy plaintext token from DataStore.
         dataStore.edit { preferences ->
-            preferences[HA_TOKEN] = token.trim()
+            preferences.remove(HA_TOKEN)
         }
     }
 
@@ -78,6 +101,7 @@ class SettingsRepository(
         val HAS_REQUESTED_BATTERY_OPT = booleanPreferencesKey("has_requested_battery_opt")
         val HA_URL = stringPreferencesKey("ha_url")
         val HA_TOKEN = stringPreferencesKey("ha_token")
+        const val KEY_HA_TOKEN_SECURE = "ha_token_secure"
         val TIRE_DIAMETER_RANGE = 8.0..16.0
         const val DEFAULT_TIRE_DIAMETER = 11.5
     }

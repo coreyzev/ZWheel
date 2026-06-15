@@ -26,11 +26,11 @@ internal class RideNotifications(private val context: Context) {
         nm().createNotificationChannel(channel)
     }
 
-    fun notify(content: String) {
-        nm().notify(RIDE_NOTIFICATION_ID, build(content))
+    fun notify(content: String, batteryPercent: Int?) {
+        nm().notify(RIDE_NOTIFICATION_ID, build(content, batteryPercent))
     }
 
-    fun build(content: String): Notification {
+    fun build(content: String, batteryPercent: Int?): Notification {
         val tapIntent = PendingIntent.getActivity(
             context,
             0,
@@ -50,6 +50,7 @@ internal class RideNotifications(private val context: Context) {
             .setContentIntent(tapIntent)
             .setOngoing(true)
             .setSilent(true)
+            .setProgress(100, batteryPercent ?: 0, batteryPercent == null)
             .addAction(0, "Disconnect", disconnectIntent)
             .build()
     }

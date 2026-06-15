@@ -69,7 +69,7 @@ class RideForegroundService : LifecycleService() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
-        startForeground(RIDE_NOTIFICATION_ID, notifications.build("ZWheel · Connecting…"))
+        startForeground(RIDE_NOTIFICATION_ID, notifications.build("ZWheel · Connecting…", null))
         lifecycleScope.launch {
             val prefs = settingsRepository.preferences.first()
             if (!prefs.hasRequestedBatteryOptimization) {
@@ -130,7 +130,7 @@ class RideForegroundService : LifecycleService() {
                     battery != null -> "%d%%".format(battery)
                     else -> "ZWheel · Connected"
                 }
-                notifications.notify(content)
+                notifications.notify(content, battery)
             }
         }
     }

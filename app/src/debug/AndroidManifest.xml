@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <application android:networkSecurityConfig="@xml/debug_network_security_config">
+    <application>
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.files"

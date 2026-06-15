@@ -1,14 +1,12 @@
 # ZWheel — Solo Handoff Guide
 
-Updated 2026-06-15 (post-Sonnet sprint). Supersedes the previous handoff.
+Updated 2026-06-15 (post-stability-review sprint). Supersedes the previous handoff.
 
 ---
 
 ## 1. Where the project is right now
 
-All P0/P1/P2 issues from the 2026-06-15 codebase review are **done or in PR**.
-
-**Completed this sprint (merged to main):**
+**Completed previous sprint (merged to main):**
 - #79 — GPS fine-location request (PR #87)
 - #80 — HA token encrypted at rest with EncryptedSharedPreferences (PR #88)
 - #81 — HA push cleartext + validation + Settings test action (PR #89)
@@ -16,40 +14,66 @@ All P0/P1/P2 issues from the 2026-06-15 codebase review are **done or in PR**.
 - #84 — Closed as mooted by #86
 - #82 — Split ZWheelAppScreen.kt under 500 lines (PR #91)
 - #78 — Replace vacuous network guard with ADR-010 policy enforcement (PR #92)
-- #85 Part A — ADR-011: ConnectionManager is single source of truth (commit 3742c99)
-- BLE debug panel fix (commit efae4ac)
+- #85 — ADR-011: ConnectionManager single source of truth + service decomposition (PR #93)
+- #96 — Fix GPS banner flicker (PR #98)
+- #95 — Fix GPS permanently-denied flow (PR #96)
+- #97 — Catch connect() exceptions (PR #97)
 
-**In PR pending CI:**
-- #85 Part B — Service decomposition (PR #93): extract HomeAssistantSync, LocationTracker,
-  RideNotifications; drop board/connection state mirror; repoint DashboardViewModel +
-  WearDataLayerRepository at ConnectionManager directly; RideForegroundService: 302 → 198 lines
+**Active known crash:** App crashes on device select (build 122). Root cause diagnosed in the
+2026-06-15 stability review. Fixes tracked in issues #99–#107 below.
 
 **Gemini-OK tasks were dispatched via:** `GEMINI_CLI_TRUST_WORKSPACE=true gemini -p "$(cat /path/to/gate.md)" --yolo`
 run from the worktree directory.
 
 ---
 
-## 2. Agent division (IMPORTANT)
+## 2. Issue ordering — 2026-06-15 stability review
 
-**Codex** was unavailable this sprint (credits depleted until 2026-06-18). Claude (Sonnet)
-implemented everything directly. Gemini handled two Gemini-OK tasks (#86, #82) via headless
-dispatch.
+All issues below are from the full architecture review on 2026-06-15. Sonnet can implement
+all of them. Codex returns 2026-06-18. Hardware (board) not available until Thursday.
 
-Going forward: **Codex-first** per AGENTS.md when available. Claude reviews/specs;
-Codex implements; Gemini for trivial mechanical tasks with explicit "Gemini-OK" gate label.
+### Wave 1 — no board needed, do first, can run in parallel
+
+| Issue | Title | Notes |
+|-------|-------|-------|
+| **#107** | CI: releases on workflow_dispatch only | One-line YAML change. Do first — stops release noise immediately. |
+| **#99** | CRASH: ticker/onDestroy/WearRepo runCatching | 3 small wrapping changes in 2 files. P0. |
+| **#100** | CRASH: API 34 SecurityException / location type | Touches Manifest + UI permission gate. P0. Can be verified on emulator. |
+| **#103** | Remove stale topSpeed mirror from DashboardViewModel | Small: remove one field and its usages. P2. |
+| **#105** | Wakelock object leak + move acquire after startForeground | Small: single-file refactor. P2. |
+| **#106** | HA token active migration + Keystore init protection | SettingsRepository only. P2. |
+
+### Wave 2 — also no board needed, but depend on Wave 1 being stable
+
+| Issue | Title | Notes |
+|-------|-------|-------|
+| **#101** | BLE concurrent connect race + stale sharedFlows | ConnectionManager + KableBleTransport. P1. |
+| **#104** | Test coverage: ConnectionManager, RideDao, SettingsRepository, WearRepo | P2. Can start Gap 2 (RideDaoTest) independently of #102. |
+
+### Wave 3 — implement now, verify with board Thursday
+
+| Issue | Title | Notes |
+|-------|-------|-------|
+| **#102** | Orphan session recovery on START_STICKY restart | Needs board to verify end-to-end. Implement now; test Thursday. |
+
+### Parallel to everything
+
+Issue **#104** test gaps can be implemented in parallel with any wave — they have no runtime
+dependencies on each other or on the other fixes.
+
+### Not yet scheduled (parked)
+
+- **#74** battery progress in expanded notification — Gemini-OK, small
+- **#48** Live Updates / Samsung Now Bar — medium feature
+- **#26 / #17 / #14** — blocked on hardware telemetry capture
 
 ---
 
-## 3. Remaining backlog
+## 3. Agent division (IMPORTANT)
 
-### P3 — pre-existing (independent of the review)
-- **#74** battery progress bar in the expanded notification — small, Gemini-OK
-- **#48** surface active ride via Android Live Updates / Samsung Now Bar — medium
-- **#26 / #17 / #14** research items — **blocked on hardware capture** (Corey). Leave parked.
-
-### Technical debt
-- `#83` — Wear round-trip + HA push tests (Claude). Easier now that #80/#81 are settled.
-  Closes the Rule 9 (tests required) gap for service and HA features.
+**Codex** returns 2026-06-18. Until then, Claude (Sonnet) implements directly.
+Going forward: **Codex-first** per AGENTS.md when available. Claude reviews/specs;
+Codex implements; Gemini for trivial mechanical tasks with explicit "Gemini-OK" gate label.
 
 ---
 

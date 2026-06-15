@@ -1,31 +1,26 @@
 # Codebase review — 2026-06-15
 
-Full-codebase review against `AGENTS.md` (the 12 Rules + §3 safety rules). Seven
-issues filed (#78–#84). This doc captures the **overarching themes** that no single
-issue fully owns, plus the state of the safety-critical invariants.
+Full-codebase review against `AGENTS.md` (the 12 Rules + §3 safety rules). Eight issues
+filed (#78–#85). This doc captures the **overarching themes** and the state of the
+safety-critical invariants.
 
-## The one theme that matters: the offline contract silently broke
+## Networking posture — resolved (see ADR-010)
 
-The biggest finding is not any single bug — it's that **the project's stated
-identity diverged from what it ships, and the guard that was supposed to catch that
-went blind at the same time.**
+The review's headline finding was that the original "fully offline / no INTERNET"
+stance had diverged from what ships (INTERNET is now in `src/main` for maps + Home
+Assistant) while the `verifyNetworkPermissionScoping` guard had gone vacuous. **This is
+now resolved at the policy level:** the networking posture was a proxy for ZWheel's
+actual identity — a user-owned, offline-first telemetry companion with no
+manufacturer/vendor cloud, no firmware modification, and no analytics. **ADR-010
+(Accepted)** documents the connected-app scope (egress limited to OpenStreetMap tiles +
+the user-configured Home Assistant URL), and `AGENTS.md` §3 was reworded to state that
+intent.
 
-`AGENTS.md` §3 still says "fully offline … no INTERNET permission in v1 — this is a
-feature." Reality: the app declares INTERNET in `src/main` (for OSMDroid maps + Home
-Assistant push), so every release ships online. The `verifyNetworkPermissionScoping`
-Gradle guard only inspects a release **overlay** manifest that doesn't exist, so it
-passes vacuously while the real permission lives in `src/main`. CI is green and wrong.
+What remains is mechanical, tracked in the issues: make the build guard honest (#78),
+and build the rails the connected features need (#79/#80/#81). The *decision* is done;
+those are *execution*.
 
-This is the pattern to watch for going forward: **when a feature crosses a line the
-docs drew, the line moved in code but not in the docs, and the enforcement moved with
-neither.** Issues #78 (the ADR + honest guard), #80 (token at rest), and #81 (HA push
-robustness) are all downstream of the same unmanaged shift to a connected app. They
-should land together and be governed by one decision — **ADR-010** — not piecemeal.
-
-Recommendation: treat #78 as a gating decision for Corey *before* dispatching #80/#81.
-Once the connected-app posture is explicit and signed off, the rest are ordinary work.
-
-## Secondary theme: features merged faster than their safety rails
+## The theme worth carrying forward: features merged faster than their safety rails
 
 GPS, Home Assistant, and Wear all shipped functionally but skipped the
 non-functional half:
@@ -44,6 +39,16 @@ is the specific rule bent, but the broader habit worth correcting is **treating 
 compiles and demos" as done** when the feature has a permission, a secret, a network
 hop, or a cross-process contract.
 
+## Structural smell: state ownership + a god-service (#85)
+
+Board/connection state has two holders — `ConnectionManager` (the true BLE source) and
+`RideServiceRepository` (a mirror the foreground service populates by collecting
+ConnectionManager's flows). `DashboardViewModel` reads board/connection state from the
+mirror but `devices`/`scan()` from ConnectionManager directly, so live telemetry is
+gated on the service running while scanning is not. `RideForegroundService` (~302 lines)
+compounds this by owning six responsibilities. Issue #85 splits this into a design
+decision (the ownership model) and a mechanical extraction (service collaborators).
+
 ## What's healthy (verified, not assumed)
 
 The safety-critical core held up — these were checked, not taken on faith:
@@ -54,27 +59,25 @@ The safety-critical core held up — these were checked, not taken on faith:
 - **Rules 3/4** (no `GlobalScope`, no mutable-`var` singletons): clean; state is in
   Hilt-scoped classes exposing `StateFlow`.
 - The earlier OWCE parser concerns from `AGENTS.md` §6 (amps board-type scaling, cell
-  voltage firmware-dependence) are **resolved** in `Parsers.kt` — those memory notes
-  can be considered closed.
+  voltage firmware-dependence) are **resolved** in `Parsers.kt`.
 
 The no-firmware-modification invariant — the one rule that actually protects the
-rider's board — is solid. The divergences above are about connectivity, permissions,
-and hygiene, not about the board-safety boundary.
+rider's board — is solid.
 
 ## Filed issues
 
 | # | Title | Theme |
 |---|-------|-------|
-| 78 | Offline guarantee reversed without ADR; network guard is a no-op | connected-app decision |
+| 78 | Replace vacuous network guard with an ADR-010 policy guard | execution (decision done) |
 | 79 | ACCESS_FINE_LOCATION never requested on Android 12+ | feature unreachable |
 | 80 | HA token stored in plaintext DataStore | secret handling |
 | 81 | HA push fails silently on release (cleartext + no validation) | failure surface |
 | 82 | ZWheelAppScreen.kt 501 lines — over 500 hard limit (Rule 5) | hygiene |
 | 83 | Missing Wear round-trip + HA push tests (Rule 9) | contract tests |
 | 84 | Bundled wear versionCode hardcoded to 1 | release hygiene |
+| 85 | State-ownership mirror + RideForegroundService god object | architecture |
 
-Each issue body embeds a self-contained gate spec (issue bodies can't be edited after
-creation, so the gate is frozen inline) ready to drop into `docs/gates/` and dispatch
-to Codex per the architect-loop. Suggested order: **#78 first (decision), then
-#80 + #81 + #79 together (connected-app rails), then #82/#83/#84 (cleanup) in
-parallel.**
+Each issue body embeds a self-contained gate spec (issue bodies are frozen at creation,
+so the gate is inline) ready to drop into `docs/gates/` and dispatch. Suggested order:
+**#78 + #79 + #80 + #81 together** (the connected-app rails), then **#82/#83/#84** in
+parallel, with **#85** gated behind its own ownership-model decision.

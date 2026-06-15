@@ -47,10 +47,12 @@ the gate spec is the source of truth for your task.
 - Speed/battery/range shown to a rider are safety-relevant. The diameter correction and
   range estimate must fail conservative: if calibration data is missing, show raw value
   with an "uncorrected" badge rather than a guess.
-- **Never contact a Future Motion endpoint, and never modify board firmware.** No FM
-  cloud/OTA/firmware services, no OTA UUIDs, no firmware download/flash code anywhere.
-  This is the real point of the old "offline" rule: keep FM (or anyone) from reaching
-  the board to force an update. (Rule 6 / `OwUuidsTest` enforce the BLE write allowlist.)
+- **Never contact a manufacturer/vendor cloud service, and never modify board
+  firmware.** No OEM cloud/OTA/firmware endpoints, no OTA UUIDs, no firmware
+  download/flash code anywhere. ZWheel is a user-owned, offline-first telemetry
+  companion: it reads from the board and shows the rider their own data, nothing more.
+  This is the real point of the old "offline" rule. (Rule 6 / `OwUuidsTest` enforce the
+  BLE write allowlist.)
 - No analytics, telemetry, crash reporting, or ad/tracking SDKs. ZWheel transmits no
   user/board data anywhere except the owner's own configured Home Assistant instance.
 - Runtime network egress is limited by policy to OpenStreetMap tiles and the
@@ -256,10 +258,10 @@ If blocked on Gradle daemon: `rm -rf /tmp/gradle-home && GRADLE_USER_HOME=/tmp/g
 - 2026-06-15: Codebase review (issues #78–#84). Overarching finding: the "fully
   offline / no INTERNET" rule had silently reversed (INTERNET now in src/main for maps
   + Home Assistant) while `verifyNetworkPermissionScoping` went vacuous. Corey chose
-  Option A: the rule's real intent was only ever "block FM from reaching the board to
-  force a firmware update," not blanket offline. ADR-010 (Accepted) now governs runtime
-  networking; §3 reworded to state intent (no FM/OTA, no firmware mod, no analytics;
-  egress limited to OSM tiles + user HA URL). Follow-ups: #79 (fine-location never
+  Option A: the rule's real intent was only ever no-vendor-cloud + no-firmware-
+  modification (a user-owned offline-first posture), not blanket offline. ADR-010
+  (Accepted) now governs runtime networking; §3 reworded to state intent (no OEM/OTA
+  cloud, no firmware mod, no analytics; egress limited to OSM tiles + user HA URL). Follow-ups: #79 (fine-location never
   requested on API 31+, GPS silently dead), #80 (HA token plaintext), #81 (HA push
   fails silently/cleartext), #82 (ZWheelAppScreen 501 lines), #83 (Wear/HA test gap),
   #84 (wear versionCode hardcoded). Review doc: docs/reviews/2026-06-15-codebase-review.md.
@@ -271,4 +273,10 @@ If blocked on Gradle daemon: `rm -rf /tmp/gradle-home && GRADLE_USER_HOME=/tmp/g
   gated on the service running while scanning is not. Works today; flagged as a
   state-ownership smell + god-service concern (RideForegroundService = 6 responsibilities)
   in issue #85.
+- 2026-06-15: Execution mode — Codex out of credits until Thu 2026-06-18, so Claude
+  (Sonnet) is the sole implementer in the interim (documented exception to the
+  "Claude-implements-is-last-resort" rule; reverts when Codex returns). Gemini only for
+  trivial mechanical tasks flagged "Gemini-OK" in a gate. Active backlog and priority
+  order for the review issues (#78–#85) live in docs/HANDOFF.md §2a:
+  **#79 → #80 → #81 → #78, then #84/#82/#83 parallel, then #85 (decision-gated).**
 - (append discoveries here…)

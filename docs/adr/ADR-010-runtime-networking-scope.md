@@ -8,11 +8,12 @@ ZWheel shipped its first phases under a blanket rule (AGENTS.md §3): *"Never co
 any network endpoint at runtime. The app is fully offline … no INTERNET permission in
 v1 — this is a feature."*
 
-That rule was always a **proxy for the real concern**, which Corey has now stated
-explicitly: the danger is **Future Motion (or any third party) reaching the board to
-force a firmware update or otherwise alter it.** The blanket "no INTERNET ever" framing
-was a conservative way to guarantee that, but it is broader than the actual threat
-model and it now conflicts with two features the owner wants:
+That rule was always a **proxy for the real posture**: ZWheel is a user-owned,
+offline-first telemetry companion. It performs **no firmware modification** and
+contacts **no manufacturer/vendor cloud services** — it only reads from the board and
+shows the rider their own data. The blanket "no INTERNET ever" framing was a
+conservative way to guarantee that, but it is broader than necessary and now conflicts
+with two features the owner wants:
 
 - **OpenStreetMap tiles** (OSMDroid) for the ride route map.
 - **Home Assistant battery push** so the owner can automate charging (e.g. cut a smart
@@ -36,20 +37,21 @@ INTERNET is an **accepted, shipped permission** in v1. Runtime network egress is
 The following remain **absolute and non-negotiable**, and are the real point of the
 original rule:
 
-- **No Future Motion endpoints.** The app never contacts any FM cloud/OTA/firmware
-  service. Ever.
+- **No manufacturer/vendor cloud services.** The app contacts no OEM cloud, OTA, or
+  firmware endpoints of any kind.
 - **No board firmware modification.** No OTA UUIDs, no firmware download/flash code
   (AGENTS.md §3 + Rule 6 / `OwUuidsTest` still enforce the BLE write allowlist).
 - **No analytics, telemetry, crash reporting, or ad/tracking SDKs.** ZWheel sends no
   data about the user or the board anywhere except the owner's own HA instance.
 
-In short: the threat the offline rule guarded against (FM touching the board) is
+In short: the firmware-safety and no-vendor-cloud posture the offline rule guarded is
 preserved word-for-word; the over-broad "no INTERNET at all" clause is retired.
 
 ## Consequences
 
-- AGENTS.md §3 is reworded to state the *intent* (no FM/OTA endpoints, no
-  firmware modification, no analytics) rather than "fully offline / no INTERNET."
+- AGENTS.md §3 is reworded to state the *intent* (no vendor/OEM cloud or OTA
+  endpoints, no firmware modification, no analytics) rather than "fully offline / no
+  INTERNET."
 - `verifyNetworkPermissionScoping` is replaced by a guard that enforces *this* policy
   (no hardcoded non-OSM hosts; no analytics dependencies) instead of a vacuous
   release-overlay check. (Issue #78.)
@@ -65,4 +67,4 @@ preserved word-for-word; the over-broad "no INTERNET at all" clause is retired.
 - **Keep fully offline; move maps + HA to a debug-only flavor.** Rejected: maps and HA
   are core owner-facing value, not debug tooling. Forcing them into debug would make the
   shipping app strictly worse to preserve a rule whose actual intent is already met by
-  the FM/OTA prohibitions.
+  the no-vendor-cloud and no-firmware-modification prohibitions.

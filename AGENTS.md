@@ -47,8 +47,15 @@ the gate spec is the source of truth for your task.
 - Speed/battery/range shown to a rider are safety-relevant. The diameter correction and
   range estimate must fail conservative: if calibration data is missing, show raw value
   with an "uncorrected" badge rather than a guess.
-- Never contact any network endpoint at runtime. The app is fully offline. CI may use
-  the network; the APK may not (no INTERNET permission in v1 — this is a feature).
+- **Never contact a Future Motion endpoint, and never modify board firmware.** No FM
+  cloud/OTA/firmware services, no OTA UUIDs, no firmware download/flash code anywhere.
+  This is the real point of the old "offline" rule: keep FM (or anyone) from reaching
+  the board to force an update. (Rule 6 / `OwUuidsTest` enforce the BLE write allowlist.)
+- No analytics, telemetry, crash reporting, or ad/tracking SDKs. ZWheel transmits no
+  user/board data anywhere except the owner's own configured Home Assistant instance.
+- Runtime network egress is limited by policy to OpenStreetMap tiles and the
+  user-configured Home Assistant URL only. See ADR-010. (Supersedes the original
+  "fully offline / no INTERNET in v1" clause; INTERNET is now a shipped permission.)
 
 ## 4. Licensing
 - Project license: GPLv3.
@@ -246,4 +253,22 @@ If blocked on Gradle daemon: `rm -rf /tmp/gradle-home && GRADLE_USER_HOME=/tmp/g
   ConnectionManager and BleDebugViewModel — fix: shared GeminiKeepAliveRunner.kt;
   (3) startKeepAlive called before post-unlock GATT reads (race) — fix: move to after
   connection setup. Gate: docs/gates/gate-pr49-keepalive-cleanup.md.
+- 2026-06-15: Codebase review (issues #78–#84). Overarching finding: the "fully
+  offline / no INTERNET" rule had silently reversed (INTERNET now in src/main for maps
+  + Home Assistant) while `verifyNetworkPermissionScoping` went vacuous. Corey chose
+  Option A: the rule's real intent was only ever "block FM from reaching the board to
+  force a firmware update," not blanket offline. ADR-010 (Accepted) now governs runtime
+  networking; §3 reworded to state intent (no FM/OTA, no firmware mod, no analytics;
+  egress limited to OSM tiles + user HA URL). Follow-ups: #79 (fine-location never
+  requested on API 31+, GPS silently dead), #80 (HA token plaintext), #81 (HA push
+  fails silently/cleartext), #82 (ZWheelAppScreen 501 lines), #83 (Wear/HA test gap),
+  #84 (wear versionCode hardcoded). Review doc: docs/reviews/2026-06-15-codebase-review.md.
+- 2026-06-15: Architecture note — board/connection state has two holders:
+  ConnectionManager (true BLE source, @Singleton with a process-lifetime root scope)
+  and RideServiceRepository (a mirror the foreground service populates by collecting
+  ConnectionManager flows). DashboardViewModel reads board/connection state from the
+  mirror but devices/scan() directly from ConnectionManager — so live telemetry is
+  gated on the service running while scanning is not. Works today; flagged as a
+  state-ownership smell + god-service concern (RideForegroundService = 6 responsibilities)
+  in issue #85.
 - (append discoveries here…)

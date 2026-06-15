@@ -3,6 +3,7 @@ package com.zwheel.app.wear
 import android.content.Context
 import com.google.android.gms.wearable.PutDataMapRequest
 import com.google.android.gms.wearable.Wearable
+import com.zwheel.app.ble.ConnectionManager
 import com.zwheel.app.ble.ConnectionState
 import com.zwheel.app.data.settings.SettingsRepository
 import com.zwheel.app.service.RideServiceRepository
@@ -23,6 +24,7 @@ private const val DATA_PATH = "/zwheel/state"
 @Singleton
 class WearDataLayerRepository @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val connectionManager: ConnectionManager,
     private val rideServiceRepository: RideServiceRepository,
     private val settingsRepository: SettingsRepository,
 ) {
@@ -32,8 +34,8 @@ class WearDataLayerRepository @Inject constructor(
     fun startSync(scope: CoroutineScope) {
         scope.launch {
             combine(
-                rideServiceRepository.boardState,
-                rideServiceRepository.connectionState,
+                connectionManager.boardState,
+                connectionManager.connectionState,
                 rideServiceRepository.isRiding,
                 settingsRepository.preferences,
                 rideServiceRepository.topSpeedMetersPerSecond,

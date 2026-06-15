@@ -1,15 +1,9 @@
 package com.zwheel.app.service
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
 import android.content.Intent
 import android.os.PowerManager
-import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
-import com.zwheel.app.MainActivity
-import com.zwheel.app.R
 import com.zwheel.app.ble.ConnectionManager
 import com.zwheel.app.data.ride.RideRepository
 import com.zwheel.app.data.settings.SettingsRepository
@@ -20,13 +14,11 @@ import com.zwheel.core.ports.Clock
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
-private const val CHANNEL_ID = "zwheel_ride"
-private const val NOTIFICATION_ID = 1
 private const val WAKELOCK_TAG = "zwheel:ride"
 private const val SPEED_ON_THRESHOLD = 0.5
 private const val WAKELOCK_ACQUIRE_TICKS = 3
@@ -42,6 +34,17 @@ class RideForegroundService : LifecycleService() {
     @Inject lateinit var clock: Clock
     @Inject lateinit var wearDataLayerRepository: WearDataLayerRepository
 
+    private val notifications by lazy { RideNotifications(this) }
+    private val locationTracker by lazy {
+        LocationTracker(
+            context = this,
+            onGpsLocked = { locked -> rideServiceRepository.updateGpsLock(locked) },
+            onLocation = { lat, lon, alt ->
+                lastLatitude = lat; lastLongitude = lon; lastAltitude = alt
+            },
+        )
+    }
+
     private var topSpeedTracker = DefaultTopSpeedTracker()
     private var notificationSpeedUnit = SpeedUnit.MPH
     private var wakelock: PowerManager.WakeLock? = null
@@ -51,25 +54,22 @@ class RideForegroundService : LifecycleService() {
     @Volatile private var lastLatitude: Double? = null
     @Volatile private var lastLongitude: Double? = null
     @Volatile private var lastAltitude: Double? = null
-    private var fusedLocationClient: com.google.android.gms.location.FusedLocationProviderClient? = null
-    private var locationCallback: com.google.android.gms.location.LocationCallback? = null
 
     override fun onCreate() {
         super.onCreate()
-        createNotificationChannel()
+        notifications.createChannel()
         acquireWakelockIfNeeded()
         trackSpeedUnitPreference()
-        mirrorConnectionState()
-        mirrorBoardStateAndUpdateNotification()
+        observeBoardForNotificationAndWakelock()
         startRideRecorderTicker()
         wearDataLayerRepository.startSync(lifecycleScope)
-        startLocationUpdates()
-        startHomeAssistantSync()
+        locationTracker.start()
+        HomeAssistantSync(settingsRepository, connectionManager.boardState).start(lifecycleScope)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
-        startForeground(NOTIFICATION_ID, buildNotification("ZWheel · Connecting…"))
+        startForeground(RIDE_NOTIFICATION_ID, notifications.build("ZWheel · Connecting…"))
         lifecycleScope.launch {
             val prefs = settingsRepository.preferences.first()
             if (!prefs.hasRequestedBatteryOptimization) {
@@ -97,10 +97,8 @@ class RideForegroundService : LifecycleService() {
     }
 
     override fun onDestroy() {
-        runBlocking {
-            rideRecorder?.endCurrentSession()
-        }
-        locationCallback?.let { fusedLocationClient?.removeLocationUpdates(it) }
+        runBlocking { rideRecorder?.endCurrentSession() }
+        locationTracker.stop()
         connectionManager.disconnect()
         wakelock?.takeIf { it.isHeld }?.release()
         super.onDestroy()
@@ -114,18 +112,9 @@ class RideForegroundService : LifecycleService() {
         }
     }
 
-    private fun mirrorConnectionState() {
-        lifecycleScope.launch {
-            connectionManager.connectionState.collect { state ->
-                rideServiceRepository.updateConnectionState(state)
-            }
-        }
-    }
-
-    private fun mirrorBoardStateAndUpdateNotification() {
+    private fun observeBoardForNotificationAndWakelock() {
         lifecycleScope.launch {
             connectionManager.boardState.collect { state ->
-                rideServiceRepository.updateBoardState(state)
                 topSpeedTracker.consume(state.speedMetersPerSecondCorrected)
                 rideServiceRepository.updateTopSpeed(topSpeedTracker.currentTripMaxMetersPerSecond ?: 0.0)
                 updateWakelockState(state.speedMetersPerSecondCorrected ?: 0.0)
@@ -141,7 +130,7 @@ class RideForegroundService : LifecycleService() {
                     battery != null -> "%d%%".format(battery)
                     else -> "ZWheel · Connected"
                 }
-                notify(content)
+                notifications.notify(content)
             }
         }
     }
@@ -160,7 +149,7 @@ class RideForegroundService : LifecycleService() {
             while (isActive) {
                 delay(1_000L)
                 recorder.onTick(
-                    rideServiceRepository.boardState.value,
+                    connectionManager.boardState.value,
                     lastLatitude,
                     lastLongitude,
                     lastAltitude,
@@ -171,57 +160,6 @@ class RideForegroundService : LifecycleService() {
             recorder.tripDistanceMeters.collect { meters ->
                 rideServiceRepository.updateTripDistance(meters)
             }
-        }
-    }
-
-    private fun startLocationUpdates() {
-        val client = com.google.android.gms.location.LocationServices
-            .getFusedLocationProviderClient(this)
-        fusedLocationClient = client
-        val request = com.google.android.gms.location.LocationRequest.Builder(
-            com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY,
-            5_000L,
-        ).setMinUpdateIntervalMillis(2_000L).build()
-        val callback = object : com.google.android.gms.location.LocationCallback() {
-            override fun onLocationResult(result: com.google.android.gms.location.LocationResult) {
-                val loc = result.lastLocation ?: return
-                if (loc.accuracy > 30f) {
-                    rideServiceRepository.updateGpsLock(false)
-                    return
-                }
-                lastLatitude = loc.latitude
-                lastLongitude = loc.longitude
-                lastAltitude = loc.altitude
-                rideServiceRepository.updateGpsLock(true)
-            }
-        }
-        locationCallback = callback
-        try {
-            client.requestLocationUpdates(
-                request,
-                callback,
-                android.os.Looper.getMainLooper(),
-            )
-        } catch (e: SecurityException) {
-            // ACCESS_FINE_LOCATION not granted; GPS remains null.
-        }
-    }
-
-    private fun startHomeAssistantSync() {
-        lifecycleScope.launch {
-            var lastPushedPercent: Int? = null
-            kotlinx.coroutines.flow.combine(
-                settingsRepository.preferences,
-                rideServiceRepository.boardState,
-            ) { prefs, boardState -> Pair(prefs, boardState) }
-                .collect { (prefs, boardState) ->
-                    val url = prefs.haUrl.takeIf { it.isNotBlank() } ?: return@collect
-                    val token = prefs.haToken.takeIf { it.isNotBlank() } ?: return@collect
-                    val pct = boardState.batteryPercent ?: return@collect
-                    if (pct == lastPushedPercent) return@collect
-                    lastPushedPercent = pct
-                    HomeAssistantPusher.push(url, token, pct)
-                }
         }
     }
 
@@ -245,9 +183,7 @@ class RideForegroundService : LifecycleService() {
             val intent = Intent(
                 android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
                 android.net.Uri.parse("package:$packageName"),
-            ).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            }
+            ).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK }
             startActivity(intent)
         }
     }
@@ -258,45 +194,5 @@ class RideForegroundService : LifecycleService() {
         wakelock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKELOCK_TAG).apply {
             acquire(10 * 60 * 1000L)
         }
-    }
-
-    private fun notify(content: String) {
-        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        nm.notify(NOTIFICATION_ID, buildNotification(content))
-    }
-
-    private fun buildNotification(content: String) = run {
-        val tapIntent = PendingIntent.getActivity(
-            this,
-            0,
-            Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
-        val disconnectIntent = PendingIntent.getService(
-            this,
-            1,
-            Intent(this, RideForegroundService::class.java).apply { action = "DISCONNECT" },
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
-        NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("ZWheel")
-            .setContentText(content)
-            .setContentIntent(tapIntent)
-            .setOngoing(true)
-            .setSilent(true)
-            .addAction(0, "Disconnect", disconnectIntent)
-            .build()
-    }
-
-    private fun createNotificationChannel() {
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            "Ride",
-            NotificationManager.IMPORTANCE_LOW,
-        ).apply {
-            description = "Active ride status"
-        }
-        (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(channel)
     }
 }

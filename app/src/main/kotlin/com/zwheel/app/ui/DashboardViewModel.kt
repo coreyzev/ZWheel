@@ -29,7 +29,7 @@ class DashboardViewModel @Inject constructor(
     private val topSpeedTracker = DefaultTopSpeedTracker()
 
     val uiState: StateFlow<DashboardUiState> = combine(
-        rideServiceRepository.boardState,
+        connectionManager.boardState,
         settingsRepository.preferences,
         rideServiceRepository.tripDistanceMeters,
         rideServiceRepository.gpsLocked,
@@ -55,7 +55,7 @@ class DashboardViewModel @Inject constructor(
         initialValue = emptyDashboardState(),
     )
 
-    val connectionState: StateFlow<ConnectionState> = rideServiceRepository.connectionState
+    val connectionState: StateFlow<ConnectionState> = connectionManager.connectionState
 
     // Scan is still UI-driven; scan results come from ConnectionManager until scan
     // is moved into the service in a future gate.

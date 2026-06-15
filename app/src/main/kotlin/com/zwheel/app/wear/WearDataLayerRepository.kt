@@ -54,7 +54,7 @@ class WearDataLayerRepository @Inject constructor(
                 toWatchPayload(boardState, connectionState, isRiding, prefs.speedUnit, topSpeedMps, estimatedRangeMeters)
             }.collect { payload ->
                 if (payload != lastSentPayload) {
-                    putPayload(payload)
+                    runCatching { putPayload(payload) }
                     lastSentPayload = payload
                 }
             }

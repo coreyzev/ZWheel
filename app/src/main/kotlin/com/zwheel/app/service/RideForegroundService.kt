@@ -17,7 +17,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 
 private const val WAKELOCK_TAG = "zwheel:ride"
 private const val SPEED_ON_THRESHOLD = 0.5
@@ -100,8 +99,14 @@ class RideForegroundService : LifecycleService() {
         return START_STICKY
     }
 
+    @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
     override fun onDestroy() {
-        runBlocking { rideRecorder?.endCurrentSession() }
+        val latch = java.util.concurrent.CountDownLatch(1)
+        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching { rideRecorder?.endCurrentSession() }
+            latch.countDown()
+        }
+        latch.await(2, java.util.concurrent.TimeUnit.SECONDS)
         locationTracker.stop()
         connectionManager.disconnect()
         wakelock?.takeIf { it.isHeld }?.release()
@@ -152,12 +157,14 @@ class RideForegroundService : LifecycleService() {
         lifecycleScope.launch {
             while (isActive) {
                 delay(1_000L)
-                recorder.onTick(
-                    connectionManager.boardState.value,
-                    lastLatitude,
-                    lastLongitude,
-                    lastAltitude,
-                )
+                runCatching {
+                    recorder.onTick(
+                        connectionManager.boardState.value,
+                        lastLatitude,
+                        lastLongitude,
+                        lastAltitude,
+                    )
+                }
             }
         }
         lifecycleScope.launch {

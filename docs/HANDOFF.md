@@ -44,6 +44,11 @@ all of them. Codex returns 2026-06-18. Hardware (board) not available until Thur
 | **#106** | HA token active migration + Keystore init protection | SettingsRepository only. P2. |
 | **#110** | HA cleartext HTTP warning in Settings UI | One conditional Text composable. P3. |
 | **#112** | ADR-007 data-path diagram update | Docs only, no code. P3. |
+| **#113** | Fix tripAmpHours/regenAmpHours always 0.0 — missing mapping in toDashboardUiState() | 2-line fix + 1 new test. P1. HIGH: trip energy display permanently broken. |
+| **#114** | HA token shown in plaintext — add PasswordVisualTransformation | Single-field change + show/hide toggle icon. P2. |
+| **#115** | BoardStateServiceImpl collectors catch only IAE — widen to all exceptions | Core-only change. P2. Prevents silent BLE stream death on transport errors. |
+| **#118** | wear/build.gradle.kts: hardcoded versionCode/versionName | One-line YAML + Gradle change. P3. |
+| **#119** | Dashboard RSSI always shows "0 dBm" | Design decision required — see issue. P3. |
 
 ### Wave 2 — no board needed, but depend on Wave 1 being stable
 
@@ -52,12 +57,14 @@ all of them. Codex returns 2026-06-18. Hardware (board) not available until Thur
 | **#101** | BLE concurrent connect race + stale sharedFlows | ConnectionManager + KableBleTransport. P1. Includes `advertisements` map clear. |
 | **#104** | Test coverage: ConnectionManager, RideDao, SettingsRepository, WearRepo, RideForegroundService | P2. RideDao and SettingsRepository gaps can start independently. **Do #99/#101/#105 first** so service tests reflect fixed behavior. |
 | **#111** | Permission: openAppSettings before requestAttempted is set | Small UI fix in ZWheelAppScreen.kt. P3. |
+| **#116** | Tire diameter equality check bug + dead RideStorage port | ConnectionManager + UserPreferences + Ports.kt. P3. Correctness bug for users who set 11.5" exactly. |
+| **#117** | Enable Room exportSchema + wire Robolectric JUnit5 for RideDaoTest | Gradle + ZWheelDatabase config. P3. Prevents silent migration bugs. |
 
 ### Wave 3 — implement now, verify with board Thursday
 
 | Issue | Title | Notes |
 |-------|-------|-------|
-| **#102** | Orphan session recovery on START_STICKY restart | Implement now; test with board Thursday. |
+| **#102** | Orphan session recovery on START_STICKY restart | Implement now; test with board Thursday. **Note:** fix must close ALL open sessions (LIMIT 1 in getOpenSession only returns one). |
 | **#109** | BLE reconnect on unexpected disconnection | Depends on #101 (connectJob guard). Implement now; test with board Thursday. |
 
 ### Parallel to everything
@@ -65,6 +72,8 @@ all of them. Codex returns 2026-06-18. Hardware (board) not available until Thur
 Issue **#104** test gaps can be implemented in parallel with any wave — they have no runtime
 dependencies on each other or on the other fixes. The `RideForegroundService` gap within #104
 should wait until #99, #101, and #105 are merged so tests reflect the fixed behavior.
+
+Issue **#113** (tripAmpHours) is a 2-line fix — do it in Wave 1 alongside #103.
 
 ### Not yet scheduled (parked)
 

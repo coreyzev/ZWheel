@@ -3,14 +3,25 @@ package com.zwheel.app.service
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
+import java.net.MalformedURLException
 import java.net.URL
+
+sealed interface HaPushResult {
+    data object Success : HaPushResult
+    data object AuthFailed : HaPushResult
+    data object Unreachable : HaPushResult
+    data object BadUrl : HaPushResult
+}
 
 internal object HomeAssistantPusher {
 
-    suspend fun push(haUrl: String, haToken: String, batteryPercent: Int) {
+    suspend fun push(haUrl: String, haToken: String, batteryPercent: Int): HaPushResult {
         val url = haUrl.trimEnd('/')
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            return HaPushResult.BadUrl
+        }
         val body = """{"state":"$batteryPercent","attributes":{"unit_of_measurement":"%","device_class":"battery","friendly_name":"Onewheel Battery"}}"""
-        withContext(Dispatchers.IO) {
+        return withContext(Dispatchers.IO) {
             try {
                 val connection = URL("$url/api/states/sensor.onewheel_battery")
                     .openConnection() as HttpURLConnection
@@ -21,10 +32,17 @@ internal object HomeAssistantPusher {
                 connection.connectTimeout = 5_000
                 connection.readTimeout = 5_000
                 connection.outputStream.use { it.write(body.toByteArray()) }
-                connection.responseCode
+                val code = connection.responseCode
                 connection.disconnect()
+                when {
+                    code in 200..299 -> HaPushResult.Success
+                    code == 401 || code == 403 -> HaPushResult.AuthFailed
+                    else -> HaPushResult.Unreachable
+                }
+            } catch (_: MalformedURLException) {
+                HaPushResult.BadUrl
             } catch (_: Exception) {
-                // HA unreachable; retry on next battery percentage change.
+                HaPushResult.Unreachable
             }
         }
     }

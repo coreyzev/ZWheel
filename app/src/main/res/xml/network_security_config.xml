@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Cleartext HTTP is permitted globally so users can reach Home Assistant on a
+    typical LAN (http://homeassistant.local:8123, http://192.168.x.x:8123, etc.).
+    Android blocks cleartext by default on targetSdk 28+; this restores it
+    deliberately for the offline-first, user-owned companion use-case.
+
+    ADR-010 documents the networking scope: egress is limited to OSM tile downloads
+    and the user-configured HA URL. No vendor/OEM cloud, no analytics.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

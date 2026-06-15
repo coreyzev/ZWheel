@@ -11,7 +11,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.zwheel.app"
+        applicationId = "com.zwheel"
         minSdk = 30
         targetSdk = 35
         versionCode = 1

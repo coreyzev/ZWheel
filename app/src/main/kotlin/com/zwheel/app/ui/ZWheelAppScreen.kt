@@ -131,6 +131,7 @@ private fun ZWheelDashboardScreen(
     val locationLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
     ) { results ->
+        locationRequestAttempted = true
         locationGranted = locationPermissions.all { results[it] == true || hasPermission(context, it) }
         locationPermanentlyDenied = !locationGranted && hasPermanentlyDeniedPermission(
             context = context,

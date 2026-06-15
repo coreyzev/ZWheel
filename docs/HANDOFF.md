@@ -42,24 +42,29 @@ all of them. Codex returns 2026-06-18. Hardware (board) not available until Thur
 | **#103** | Remove stale topSpeed mirror from DashboardViewModel | Small: remove one field and its usages. P2. |
 | **#105** | Wakelock object leak + move acquire after startForeground | Small: single-file refactor. P2. |
 | **#106** | HA token active migration + Keystore init protection | SettingsRepository only. P2. |
+| **#110** | HA cleartext HTTP warning in Settings UI | One conditional Text composable. P3. |
+| **#112** | ADR-007 data-path diagram update | Docs only, no code. P3. |
 
-### Wave 2 — also no board needed, but depend on Wave 1 being stable
+### Wave 2 — no board needed, but depend on Wave 1 being stable
 
 | Issue | Title | Notes |
 |-------|-------|-------|
-| **#101** | BLE concurrent connect race + stale sharedFlows | ConnectionManager + KableBleTransport. P1. |
-| **#104** | Test coverage: ConnectionManager, RideDao, SettingsRepository, WearRepo | P2. Can start Gap 2 (RideDaoTest) independently of #102. |
+| **#101** | BLE concurrent connect race + stale sharedFlows | ConnectionManager + KableBleTransport. P1. Includes `advertisements` map clear. |
+| **#104** | Test coverage: ConnectionManager, RideDao, SettingsRepository, WearRepo, RideForegroundService | P2. RideDao and SettingsRepository gaps can start independently. **Do #99/#101/#105 first** so service tests reflect fixed behavior. |
+| **#111** | Permission: openAppSettings before requestAttempted is set | Small UI fix in ZWheelAppScreen.kt. P3. |
 
 ### Wave 3 — implement now, verify with board Thursday
 
 | Issue | Title | Notes |
 |-------|-------|-------|
-| **#102** | Orphan session recovery on START_STICKY restart | Needs board to verify end-to-end. Implement now; test Thursday. |
+| **#102** | Orphan session recovery on START_STICKY restart | Implement now; test with board Thursday. |
+| **#109** | BLE reconnect on unexpected disconnection | Depends on #101 (connectJob guard). Implement now; test with board Thursday. |
 
 ### Parallel to everything
 
 Issue **#104** test gaps can be implemented in parallel with any wave — they have no runtime
-dependencies on each other or on the other fixes.
+dependencies on each other or on the other fixes. The `RideForegroundService` gap within #104
+should wait until #99, #101, and #105 are merged so tests reflect the fixed behavior.
 
 ### Not yet scheduled (parked)
 

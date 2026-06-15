@@ -10,6 +10,13 @@ import com.zwheel.app.service.RideServiceRepository
 import com.zwheel.core.calc.DefaultRangeEstimator
 import com.zwheel.core.model.BoardState
 import com.zwheel.core.model.BoardType
+import com.zwheel.core.model.KEY_BATTERY_PCT
+import com.zwheel.core.model.KEY_CONNECTION_STATE
+import com.zwheel.core.model.KEY_ESTIMATED_RANGE_M
+import com.zwheel.core.model.KEY_IS_RIDING
+import com.zwheel.core.model.KEY_SPEED_MPS_CORRECTED
+import com.zwheel.core.model.KEY_SPEED_UNIT
+import com.zwheel.core.model.KEY_TOP_SPEED_MPS
 import com.zwheel.core.model.SpeedUnit
 import com.zwheel.core.model.WatchPayload
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -56,23 +63,27 @@ class WearDataLayerRepository @Inject constructor(
 
     private fun putPayload(payload: WatchPayload) {
         val request = PutDataMapRequest.create(DATA_PATH).apply {
-            dataMap.putFloat(
-                "speed_mps_corrected",
-                payload.speedMetersPerSecondCorrected?.toFloat() ?: -1f,
-            )
-            dataMap.putFloat("top_speed_mps", payload.topSpeedMetersPerSecond.toFloat())
-            dataMap.putInt("battery_pct", payload.batteryPercent ?: -1)
-            dataMap.putFloat(
-                "estimated_range_m",
-                payload.estimatedRangeMeters?.toFloat() ?: -1f,
-            )
-            dataMap.putString("speed_unit", payload.speedUnit.name)
-            dataMap.putBoolean("is_riding", payload.isRiding)
-            dataMap.putString("connection_state", payload.connectionState.name)
+            dataMap.putFloat(KEY_SPEED_MPS_CORRECTED, payload.speedMetersPerSecondCorrected?.toFloat() ?: -1f)
+            dataMap.putFloat(KEY_TOP_SPEED_MPS, payload.topSpeedMetersPerSecond.toFloat())
+            dataMap.putInt(KEY_BATTERY_PCT, payload.batteryPercent ?: -1)
+            dataMap.putFloat(KEY_ESTIMATED_RANGE_M, payload.estimatedRangeMeters?.toFloat() ?: -1f)
+            dataMap.putString(KEY_SPEED_UNIT, payload.speedUnit.name)
+            dataMap.putBoolean(KEY_IS_RIDING, payload.isRiding)
+            dataMap.putString(KEY_CONNECTION_STATE, payload.connectionState.name)
         }.asPutDataRequest().setUrgent()
         dataClient.putDataItem(request)
     }
 }
+
+internal fun WatchPayload.toDataEntries(): Map<String, Any> = mapOf(
+    KEY_SPEED_MPS_CORRECTED to (speedMetersPerSecondCorrected?.toFloat() ?: -1f),
+    KEY_TOP_SPEED_MPS to topSpeedMetersPerSecond.toFloat(),
+    KEY_BATTERY_PCT to (batteryPercent ?: -1),
+    KEY_ESTIMATED_RANGE_M to (estimatedRangeMeters?.toFloat() ?: -1f),
+    KEY_SPEED_UNIT to speedUnit.name,
+    KEY_IS_RIDING to isRiding,
+    KEY_CONNECTION_STATE to connectionState.name,
+)
 
 private fun toWatchPayload(
     boardState: BoardState,

@@ -103,8 +103,8 @@ val enforceAdr010NetworkPolicy by tasks.registering {
         val violations = mutableListOf<String>()
 
         sourceRoots.forEach { srcDir ->
-            // Exclude debug source sets — debug-only fixture URLs are acceptable.
-            fileTree(srcDir) { include("**/*.kt"); exclude("**/debug/**") }.forEach { file ->
+            // Exclude debug and test source sets — fixture/test URLs are acceptable.
+            fileTree(srcDir) { include("**/*.kt"); exclude("**/debug/**", "**/test/**") }.forEach { file ->
                 val text = file.readText()
                 urlPattern.findAll(text).forEach { match ->
                     val host = match.groupValues[1]

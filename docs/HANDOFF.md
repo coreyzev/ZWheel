@@ -18,7 +18,7 @@ The app is **feature-complete for the connected-companion vision** and CI-green 
   companion; no OEM/vendor cloud, no firmware modification, no analytics; runtime egress
   limited to OpenStreetMap tiles + the user-configured Home Assistant URL.
 
-What's left is the **review backlog**: 8 issues (#78–#85) from the 2026-06-15 codebase
+What's left is the **review backlog**: issues #78–#86 from the 2026-06-15 codebase
 review (`docs/reviews/2026-06-15-codebase-review.md`), plus pre-existing feature/research
 issues (#74, #48, #26, #17, #14).
 
@@ -36,7 +36,7 @@ issue's gate explicitly says "Gemini OK." Do not give Gemini security-sensitive 
 (crypto, tokens, the BLE write allowlist), architecture decisions, or anything needing
 cross-file judgment.
 
-Each issue body (#78–#85) contains a self-contained gate spec **and** a suitability line
+Each issue body (#78–#86) contains a self-contained gate spec **and** a suitability line
 (Claude / Gemini-OK / not-Gemini). The matrix:
 
 | # | What | Suitability | Depends on |
@@ -47,8 +47,14 @@ Each issue body (#78–#85) contains a self-contained gate spec **and** a suitab
 | 81 | HA push: cleartext + validation + test action | Claude (network + security) | land with/after #78 |
 | 82 | Split ZWheelAppScreen.kt under 500 lines | Gemini-OK (pure extraction) | — |
 | 83 | Wear round-trip + HA push tests | Claude (test design + refactor) | easier after #80/#81 |
-| 84 | Version the bundled wear app with the phone | Gemini-OK (one-line build edit) | — |
-| 85 | State-ownership model + service decomposition | **Claude only** for Part A (ADR); Part B mechanical | Part A decision first |
+| 84 | Version the bundled wear app with the phone | Gemini-OK | **moot if #86 removes wearApp()** |
+| 85 | Service decomposition (Part B) | Claude (Part A decided — ADR-011) | ADR-011 ✅ done |
+| 86 | Watch app never appears — drop embedded wearApp() delivery | Claude or Gemini-OK | — |
+
+**Already resolved this session (no action needed):** #85 Part A (ownership model) is
+decided in **ADR-011** — `ConnectionManager` is the single source of truth; only Part B
+(the mechanical service split) remains. The BLE debug panel auto-show bug is **fixed on
+main** (commit efae4ac — decoupled from permission state, now an explicit toggle).
 
 ---
 
@@ -66,23 +72,27 @@ Each issue body (#78–#85) contains a self-contained gate spec **and** a suitab
    cheap and the ADR is already done, so close it out in the same P0 sweep.
 
 **P1 — hygiene & hardening (after P0, parallelizable).**
-5. **#84 — version the bundled wear app.** One-line build edit. Gemini-OK. Do before any
-   signed release.
+5. **#86 — drop embedded `wearApp()` delivery + fix watch install docs.** The watch app
+   does not appear on Wear OS 3+ because embedded delivery is dead there; remove the
+   coupling, document adb (dev) + Play (prod). **Do this before #84** — it makes #84
+   moot (close #84 once `wearApp()` is gone).
 6. **#82 — split ZWheelAppScreen.kt under 500 lines.** Mechanical extraction. Gemini-OK.
 7. **#83 — Wear round-trip + HA push tests.** Easier once #80/#81 have settled the HA
    surface; closes the Rule 9 gap.
 
-**P2 — architecture (needs a decision first; don't rush).**
-8. **#85 — state-ownership model + service decomposition.** Part A is a design decision
-   (Corey + Claude, an ADR); Part B (service split) only after Part A is Accepted. Do
-   not start the refactor before the ownership model is chosen.
+**P2 — architecture (decision done; safe to execute).**
+8. **#85 Part B — service decomposition.** Part A is **decided (ADR-011)**:
+   `ConnectionManager` is the single source of truth, `RideServiceRepository` keeps only
+   service-derived state. The remaining work is the mechanical split (extract HA sync,
+   location, notifications) **plus** dropping the board/connection mirror collectors and
+   repointing `DashboardViewModel` at `ConnectionManager`. See ADR-011.
 
 **P3 — pre-existing backlog (independent of the review).**
 9. **#74** (notification battery bar), then **#48** (Live Updates/Now Bar).
 10. **#26 / #17 / #14** research — parked, blocked on hardware capture (Corey).
 
-One-line summary: **#79 → #80 → #81 → #78, then #84/#82/#83 in parallel, then #85
-(decision-gated), then #74/#48.**
+One-line summary: **#79 → #80 → #81 → #78 (P0 rails), then #86 → #82/#83 in parallel
+(#86 moots #84 — close it), then #85 Part B, then #74/#48.**
 
 ---
 

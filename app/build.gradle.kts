@@ -120,6 +120,7 @@ dependencies {
     implementation(libs.osmdroid)
     implementation(libs.play.services.location)
     implementation(libs.play.services.wearable)
+    wearApp(project(":wear"))
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.core)
     testImplementation(libs.androidx.test.core)

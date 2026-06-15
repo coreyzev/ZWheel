@@ -24,20 +24,20 @@ Core protocol model     [##################..]  90%  UUID map, ports, parser har
 BLE library / transport [##############......]  70%  Kable transport exists; hardware gate open
 Gemini handshake        [################....]  80%  Fixture tests pass; board unlock unverified
 Debug screen            [##############......]  70%  Scan -> connect -> unlock -> dump path
-Android permissions     [####################] 100%  Android 12+ BLE runtime flow added
-Dashboard UI            [#####...............]  25%  Compose shell/cards only
-Ride data / service     [##..................]  10%  Architecture only; no recorder yet
-Wear OS                 [###.................]  15%  Shell app only
+Android permissions     [####################] 100%  Android 12+ BLE + location runtime flow
+Dashboard UI            [##############......]  70%  Live speed/battery/temp/GPS, ride history
+Ride data / service     [##################..]  90%  Session recorder, GPS, HA push, foreground service
+Wear OS                 [##################..]  90%  Full dashboard, ambient mode, auto-installs with phone app
 CI / release            [##################..]  90%  CI, APK artifact, latest debug release
 Distribution            [####................]  20%  Debug APK only; no signed v1 release
-Overall                 [######..............] ~30%  Buildable, not hardware-proven
+Overall                 [##############......]  70%  Feature-complete; awaiting hardware verification
 ```
 
-What "30%" means in practice: the Kotlin/Compose project is scaffolded, CI is
-green, a debug APK is generated, Kable was selected in ADR-003, and the Gemini
-challenge/response transform has unit coverage from known fixtures. The next
-important milestone is Corey's physical XR 4029 test: connect, unlock, and keep
-telemetry flowing for 10+ minutes.
+What "70%" means in practice: the full ride-companion feature set is implemented
+(BLE, live dashboard, GPS tracking, ride history with maps, Wear OS companion,
+Home Assistant battery push). The remaining gap is physical hardware
+verification — the M1 gate (real-board connect + 10-minute telemetry soak) has
+not been passed yet.
 
 ---
 
@@ -50,7 +50,7 @@ telemetry flowing for 10+ minutes.
 - Trip top speed and lifetime top speed.
 - Per-board tire diameter correction for speed, distance, and range.
 - Local ride recording to SQLite with GPS and telemetry. No cloud.
-- Wear OS companion for speed, top speed, battery, and estimated range.
+- Wear OS companion: speed, top speed, battery, estimated range, ambient always-on mode.
 - Samsung-aware battery optimization onboarding for reliable background rides.
 - GitHub Releases with sideloadable Android debug APKs during development.
 
@@ -72,7 +72,7 @@ other Onewheel companion apps.
 - No firmware/OTA UUIDs are defined in the codebase.
 - Writable BLE operations are limited to unlock, ride mode, and lights.
 - A unit test guards the writable UUID allowlist.
-- The APK is intended to have no `INTERNET` permission in v1.
+- `INTERNET` permission is granted solely for OSMDroid map tiles and optional Home Assistant push; no analytics, no accounts, no cloud sync.
 - Speed, distance, and range features must fail conservatively when calibration
   data is missing.
 
@@ -121,7 +121,13 @@ Completed locally:
 - Gemini fixture tests without hardware.
 - Minimal debug screen for scan, connect, unlock, and characteristic dump.
 - Samsung battery advice UI.
-- Android 12+ BLE runtime permission request flow.
+- Android 12+ BLE + location runtime permission request flow.
+- Live dashboard: speed, battery, cell voltage, temperatures, pitch/roll/yaw.
+- Foreground ride service with GPS capture, session recording, and top speed.
+- Ride history list and detail screen with speed-colored GPS map overlay.
+- Full-screen map tap-through from ride detail.
+- Home Assistant battery push via REST API (no custom component).
+- Wear OS companion with ambient always-on mode and automatic phone-bundled install.
 
 Still required for M1:
 
@@ -164,51 +170,53 @@ app/build/outputs/apk/debug/app-debug.apk
 
 ---
 
-## Wear OS Install
+## Wear OS
 
-The watch app lives in the `:wear` module. It receives live board state (speed,
-battery, top speed, estimated range, connection status) from the phone app over
-the Wearable Data Layer — no BLE on the watch side.
+The watch app shows speed, battery, top speed, and estimated range. It stays
+on-screen in ambient mode (dimmed, black-and-white) when the wrist drops, so
+raise-to-wake always shows ZWheel instead of the watch face.
 
-### Prerequisites
+### Automatic install (recommended)
 
-- Wear OS 3+ watch paired to your phone via the Wear OS companion app
+The wear APK is bundled inside the phone APK via `wearApp(project(":wear"))`.
+When you install the phone app on a device paired with a Wear OS watch, Android
+automatically pushes the watch app — no separate step needed.
+
+For the debug APK from CI: install `zwheel-debug.apk` on your phone normally.
+The Wear OS system detects the embedded watch app and installs it within a few
+minutes. Check **Play Store → My apps** on the watch to trigger it immediately.
+
+### Manual sideload (dev / re-install)
+
+If you need to push directly to the watch (e.g. iterating on watch UI):
+
+**Prerequisites:**
 - Developer options enabled on the watch (tap **Build number** 7× in
   Settings → System → About)
-- ADB debugging enabled on the watch
+- ADB debugging enabled
 
-### Connect ADB to the watch
+**Connect ADB — WiFi (Wear OS 3+)**
+```bash
+# On the watch: Settings → Developer options → Wireless debugging → Pair new device
+adb pair <watch-ip>:<pair-port>   # enter pairing code when prompted
+adb connect <watch-ip>:5555
+```
 
-**WiFi (Wear OS 3+, recommended)**
+**Connect ADB — Bluetooth (older Wear OS)**
+```bash
+# On phone: Wear OS app → Advanced Settings → enable Bluetooth debugging
+adb forward tcp:4444 localabstract:/adb-hub
+adb connect localhost:4444
+```
 
-1. On the watch: Settings → Developer options → **Wireless debugging** → enable
-2. Tap **Pair new device** and note the pairing code + port
-3. On your computer:
-   ```bash
-   adb pair <watch-ip>:<pair-port>   # enter the pairing code when prompted
-   adb connect <watch-ip>:5555
-   ```
-
-**Bluetooth (older Wear OS)**
-
-1. On your phone: open the Wear OS app → Advanced Settings → enable
-   **Bluetooth debugging**
-2. On your computer:
-   ```bash
-   adb forward tcp:4444 localabstract:/adb-hub
-   adb connect localhost:4444
-   ```
-
-### Build and install
-
+**Build and install**
 ```bash
 ./gradlew :wear:assembleDebug
 adb -s <watch-device-id> install wear/build/outputs/apk/debug/wear-debug.apk
 ```
 
-Confirm the device ID with `adb devices` after connecting. The ZWheel watch app
-will appear in the app drawer. It shows live data whenever the phone app's
-foreground service is running (i.e. while connected to your board).
+The app appears in the watch app drawer and shows live data whenever the phone
+app's foreground service is running (i.e. while connected to your board).
 
 ---
 

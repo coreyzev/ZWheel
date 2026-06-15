@@ -13,6 +13,12 @@ sealed interface HaPushResult {
     data object BadUrl : HaPushResult
 }
 
+internal fun haBody(pct: Int): String =
+    """{"state":"$pct","attributes":{"unit_of_measurement":"%","device_class":"battery","friendly_name":"Onewheel Battery"}}"""
+
+internal fun haEndpoint(baseUrl: String): String =
+    "${baseUrl.trimEnd('/')}/api/states/sensor.onewheel_battery"
+
 internal object HomeAssistantPusher {
 
     suspend fun push(haUrl: String, haToken: String, batteryPercent: Int): HaPushResult {
@@ -20,10 +26,10 @@ internal object HomeAssistantPusher {
         if (!url.startsWith("http://") && !url.startsWith("https://")) {
             return HaPushResult.BadUrl
         }
-        val body = """{"state":"$batteryPercent","attributes":{"unit_of_measurement":"%","device_class":"battery","friendly_name":"Onewheel Battery"}}"""
+        val body = haBody(batteryPercent)
         return withContext(Dispatchers.IO) {
             try {
-                val connection = URL("$url/api/states/sensor.onewheel_battery")
+                val connection = URL(haEndpoint(url))
                     .openConnection() as HttpURLConnection
                 connection.requestMethod = "POST"
                 connection.setRequestProperty("Authorization", "Bearer $haToken")

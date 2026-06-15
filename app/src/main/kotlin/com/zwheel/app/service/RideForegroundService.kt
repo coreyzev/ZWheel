@@ -85,12 +85,16 @@ class RideForegroundService : LifecycleService() {
         if (deviceId != null) {
             lifecycleScope.launch {
                 settingsRepository.saveLastConnectedDeviceId(deviceId)
-                connectionManager.connect(deviceId)
+                runCatching { connectionManager.connect(deviceId) }
+                    .onFailure { notifications.notify("Connection failed", null) }
             }
         } else {
             lifecycleScope.launch {
                 val lastId = settingsRepository.preferences.first().lastConnectedDeviceId
-                if (lastId != null) connectionManager.connect(lastId)
+                if (lastId != null) {
+                    runCatching { connectionManager.connect(lastId) }
+                        .onFailure { notifications.notify("Connection failed", null) }
+                }
             }
         }
         return START_STICKY

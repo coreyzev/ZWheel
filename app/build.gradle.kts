@@ -57,40 +57,83 @@ kotlin {
     jvmToolchain(17)
 }
 
-val verifyNetworkPermissionScoping by tasks.registering {
+// ADR-010 policy guard: ZWheel is a user-owned, offline-first companion. Runtime egress
+// is limited to OpenStreetMap/OSMDroid tile servers and the user-configured Home Assistant
+// URL (which is never hardcoded). No OEM/vendor cloud, no analytics, no firmware endpoints.
+val enforceAdr010NetworkPolicy by tasks.registering {
     group = "verification"
-    description = "Fails if runtime network permission is not scoped to debug builds."
+    description = "ADR-010: fail if any hardcoded non-OSM host or analytics dependency is found."
 
-    val mainManifest = layout.projectDirectory.file("src/main/AndroidManifest.xml")
-    val debugManifest = layout.projectDirectory.file("src/debug/AndroidManifest.xml")
-    val releaseManifest = layout.projectDirectory.file("src/release/AndroidManifest.xml")
+    val sourceRoots = listOf(
+        layout.projectDirectory.dir("src"),
+        layout.projectDirectory.dir("../core/src"),
+        layout.projectDirectory.dir("../wear/src"),
+    )
 
-    inputs.files(mainManifest, debugManifest)
     inputs.files(
         provider {
-            if (releaseManifest.asFile.exists()) {
-                listOf(releaseManifest.asFile)
-            } else {
-                emptyList()
+            sourceRoots.flatMap { dir ->
+                fileTree(dir) { include("**/*.kt") }.files
             }
         },
     )
+    inputs.file(layout.projectDirectory.file("build.gradle.kts"))
 
     doLast {
-        val internetPermission = "android.permission.INTERNET"
-        check(debugManifest.asFile.readText().contains(internetPermission)) {
-            "Debug manifest must declare INTERNET for BLE fixture upload."
-        }
-        if (releaseManifest.asFile.exists()) {
-            check(!releaseManifest.asFile.readText().contains(internetPermission)) {
-                "INTERNET permission must not be declared in app/src/release."
+        // Hosts permitted by ADR-010: OSM/OSMDroid tile servers and the well-known
+        // mDNS hostname for Home Assistant (used only as a placeholder example in the UI).
+        val allowedHosts = setOf(
+            "tile.openstreetmap.org",
+            "a.tile.openstreetmap.org",
+            "b.tile.openstreetmap.org",
+            "c.tile.openstreetmap.org",
+            "osmdroid.github.io",
+            "homeassistant.local",
+        )
+
+        // Analytics/crash/ads SDKs banned by ADR-010.
+        val bannedDeps = listOf(
+            "firebase-analytics", "firebase-crashlytics", "google-analytics",
+            "appcenter", "sentry", "bugsnag", "amplitude", "mixpanel",
+            "facebook-core", "adjust", "branch", "flurry",
+        )
+
+        val urlPattern = Regex("""https?://([a-zA-Z0-9.\-]+)""")
+
+        val violations = mutableListOf<String>()
+
+        sourceRoots.forEach { srcDir ->
+            // Exclude debug source sets — debug-only fixture URLs are acceptable.
+            fileTree(srcDir) { include("**/*.kt"); exclude("**/debug/**") }.forEach { file ->
+                val text = file.readText()
+                urlPattern.findAll(text).forEach { match ->
+                    val host = match.groupValues[1]
+                    if (host !in allowedHosts) {
+                        violations += "${file.relativeTo(rootDir)}: hardcoded URL ${match.value}"
+                    }
+                }
             }
+        }
+
+        // Check the version catalog (all deps are declared there).
+        val versionCatalog = layout.projectDirectory.file("../gradle/libs.versions.toml").asFile
+        if (versionCatalog.exists()) {
+            val catalogText = versionCatalog.readText()
+            bannedDeps.forEach { dep ->
+                if (dep in catalogText) {
+                    violations += "libs.versions.toml: banned analytics/ads dependency '$dep'"
+                }
+            }
+        }
+
+        check(violations.isEmpty()) {
+            "ADR-010 network policy violation(s):\n" + violations.joinToString("\n")
         }
     }
 }
 
 tasks.check {
-    dependsOn(verifyNetworkPermissionScoping)
+    dependsOn(enforceAdr010NetworkPolicy)
 }
 
 tasks.withType<Test>().configureEach {

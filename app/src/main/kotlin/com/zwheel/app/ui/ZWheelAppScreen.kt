@@ -113,6 +113,7 @@ private fun ZWheelDashboardScreen(
     val locationPermissions = remember { rideLocationPermissions() }
     var locationGranted by remember { mutableStateOf(hasLocationPermission(context)) }
     var locationRequestAttempted by remember { mutableStateOf(false) }
+    var locationPermanentlyDenied by remember { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
@@ -131,6 +132,11 @@ private fun ZWheelDashboardScreen(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
     ) { results ->
         locationGranted = locationPermissions.all { results[it] == true || hasPermission(context, it) }
+        locationPermanentlyDenied = !locationGranted && hasPermanentlyDeniedPermission(
+            context = context,
+            permissions = locationPermissions,
+            requestAttempted = locationRequestAttempted,
+        )
     }
 
     fun requestBlePermissions() {
@@ -139,6 +145,10 @@ private fun ZWheelDashboardScreen(
     }
 
     fun requestLocationPermission() {
+        if (locationPermanentlyDenied) {
+            context.openAppSettings()
+            return
+        }
         locationRequestAttempted = true
         locationLauncher.launch(locationPermissions.toTypedArray())
     }
@@ -147,6 +157,7 @@ private fun ZWheelDashboardScreen(
         permissionsGranted = hasAllRequiredPermissions(context, requiredPermissions)
         if (permissionsGranted) permanentlyDenied = false
         locationGranted = hasLocationPermission(context)
+        if (locationGranted) locationPermanentlyDenied = false
         val pm = context.getSystemService(android.content.Context.POWER_SERVICE) as PowerManager
         batteryOptimized = !pm.isIgnoringBatteryOptimizations(context.packageName)
     }
@@ -164,6 +175,7 @@ private fun ZWheelDashboardScreen(
         permissionsGranted = permissionsGranted,
         permanentlyDenied = permanentlyDenied,
         locationGranted = locationGranted,
+        locationPermanentlyDenied = locationPermanentlyDenied,
         onGrantPermissions = ::requestBlePermissions,
         onRequestLocation = ::requestLocationPermission,
         onOpenSettings = { context.openAppSettings() },
@@ -194,6 +206,7 @@ private fun ZWheelDashboard(
     permissionsGranted: Boolean = true,
     permanentlyDenied: Boolean = false,
     locationGranted: Boolean = true,
+    locationPermanentlyDenied: Boolean = false,
     onGrantPermissions: () -> Unit = {},
     onRequestLocation: () -> Unit = {},
     onOpenSettings: () -> Unit = {},
@@ -261,7 +274,12 @@ private fun ZWheelDashboard(
         SpeedCard(state)
         BatteryPackCard(state)
         CellVoltageCard(state.cellVoltages)
-        TripStatsCard(state, locationGranted = locationGranted, onRequestLocation = onRequestLocation)
+        TripStatsCard(
+            state,
+            locationGranted = locationGranted,
+            locationPermanentlyDenied = locationPermanentlyDenied,
+            onRequestLocation = onRequestLocation,
+        )
         RideModeCard(state)
     }
 }

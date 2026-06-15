@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
+import com.zwheel.core.model.ConnectionState
 import com.zwheel.core.model.SpeedUnit
 import com.zwheel.core.model.WatchPayload
 
@@ -236,6 +237,12 @@ private fun WatchPayload.toUiState(): WearDashboardUiState {
         batteryPercent = batPct,
         batteryDisplay = batStr,
         rangeDisplay = rangeStr,
-        connectionLabel = connectionState.name,
+        connectionLabel = when (connectionState) {
+            ConnectionState.SUBSCRIBED -> "CONNECTED"
+            ConnectionState.SCANNING -> "SCANNING"
+            ConnectionState.DISCONNECTED -> "DISCONNECTED"
+            ConnectionState.IDLE -> "DISCONNECTED"
+            else -> connectionState.name
+        },
     )
 }

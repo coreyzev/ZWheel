@@ -12,6 +12,12 @@ import android.provider.Settings
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
+internal fun rideLocationPermissions(): List<String> =
+    listOf(Manifest.permission.ACCESS_FINE_LOCATION)
+
+internal fun hasLocationPermission(context: Context): Boolean =
+    hasPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
+
 internal fun bleScanPermissions(): List<String> =
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         // BLUETOOTH_SCAN is declared neverForLocation in the manifest;

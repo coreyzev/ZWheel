@@ -48,6 +48,8 @@ import com.zwheel.app.ui.ble.BleDebugScreen
 import com.zwheel.app.ui.onboarding.OemBatteryAdviceScreen
 import com.zwheel.app.ui.onboarding.batteryAdviceForManufacturer
 import com.zwheel.app.ui.ble.bleScanPermissions
+import com.zwheel.app.ui.ble.hasLocationPermission
+import com.zwheel.app.ui.ble.rideLocationPermissions
 import com.zwheel.app.ui.history.MapFullScreenScreen
 import com.zwheel.app.ui.history.RideDetailScreen
 import com.zwheel.app.ui.history.RideHistoryScreen
@@ -115,6 +117,10 @@ private fun ZWheelDashboardScreen(
     var permanentlyDenied by remember { mutableStateOf(false) }
     var batteryOptimized by remember { mutableStateOf(false) }
 
+    val locationPermissions = remember { rideLocationPermissions() }
+    var locationGranted by remember { mutableStateOf(hasLocationPermission(context)) }
+    var locationRequestAttempted by remember { mutableStateOf(false) }
+
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
     ) { grantResults ->
@@ -128,14 +134,26 @@ private fun ZWheelDashboardScreen(
         )
     }
 
+    val locationLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
+    ) { results ->
+        locationGranted = locationPermissions.all { results[it] == true || hasPermission(context, it) }
+    }
+
     fun requestBlePermissions() {
         permissionRequestAttempted = true
         permissionLauncher.launch(requiredPermissions.toTypedArray())
     }
 
+    fun requestLocationPermission() {
+        locationRequestAttempted = true
+        locationLauncher.launch(locationPermissions.toTypedArray())
+    }
+
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         permissionsGranted = hasAllRequiredPermissions(context, requiredPermissions)
         if (permissionsGranted) permanentlyDenied = false
+        locationGranted = hasLocationPermission(context)
         val pm = context.getSystemService(android.content.Context.POWER_SERVICE) as PowerManager
         batteryOptimized = !pm.isIgnoringBatteryOptimizations(context.packageName)
     }
@@ -152,10 +170,15 @@ private fun ZWheelDashboardScreen(
         devices = devices,
         permissionsGranted = permissionsGranted,
         permanentlyDenied = permanentlyDenied,
+        locationGranted = locationGranted,
         onGrantPermissions = ::requestBlePermissions,
+        onRequestLocation = ::requestLocationPermission,
         onOpenSettings = { context.openAppSettings() },
         onScan = {
             if (permissionsGranted) {
+                if (!locationGranted && !locationRequestAttempted) {
+                    requestLocationPermission()
+                }
                 viewModel.scan()
             } else {
                 requestBlePermissions()
@@ -177,7 +200,9 @@ private fun ZWheelDashboard(
     devices: List<ScanResult> = emptyList(),
     permissionsGranted: Boolean = true,
     permanentlyDenied: Boolean = false,
+    locationGranted: Boolean = true,
     onGrantPermissions: () -> Unit = {},
+    onRequestLocation: () -> Unit = {},
     onOpenSettings: () -> Unit = {},
     onScan: () -> Unit = {},
     onConnect: (String) -> Unit = {},
@@ -243,7 +268,7 @@ private fun ZWheelDashboard(
         SpeedCard(state)
         BatteryPackCard(state)
         CellVoltageCard(state.cellVoltages)
-        TripStatsCard(state)
+        TripStatsCard(state, locationGranted = locationGranted, onRequestLocation = onRequestLocation)
         RideModeCard(state)
     }
 }
@@ -435,7 +460,11 @@ private fun CellVoltageCard(cells: List<CellVoltageUiState>) {
 }
 
 @Composable
-private fun TripStatsCard(state: DashboardUiState) {
+private fun TripStatsCard(
+    state: DashboardUiState,
+    locationGranted: Boolean = true,
+    onRequestLocation: () -> Unit = {},
+) {
     DashboardCard(color = Color(0xff00a7c8), contentColor = Color(0xff061016)) {
         Label("TRIP STATS")
         Row(
@@ -451,14 +480,26 @@ private fun TripStatsCard(state: DashboardUiState) {
             horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            val gpsColor = if (state.gpsLocked) Color(0xff007a3d) else Color(0xffb45309)
-            Text(
-                text = if (state.gpsLocked) "GPS LOCKED" else "GPS SEARCHING",
-                color = gpsColor,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 0.sp,
-            )
+            if (!locationGranted) {
+                TextButton(onClick = onRequestLocation) {
+                    Text(
+                        text = "GPS OFF — TAP TO ENABLE",
+                        color = Color(0xff9b1c1c),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 0.sp,
+                    )
+                }
+            } else {
+                val gpsColor = if (state.gpsLocked) Color(0xff007a3d) else Color(0xffb45309)
+                Text(
+                    text = if (state.gpsLocked) "GPS LOCKED" else "GPS SEARCHING",
+                    color = gpsColor,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 0.sp,
+                )
+            }
         }
     }
 }

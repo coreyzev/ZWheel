@@ -102,6 +102,30 @@ class BoardStateServiceImplTest {
     }
 
     @Test
+    fun `collector survives parse exception and processes subsequent notifications`() = runTest(UnconfinedTestDispatcher()) {
+        val transport = FakeBleTransport()
+        val clock = FakeClock()
+        val service = BoardStateServiceImpl(
+            transport = transport,
+            clock = clock,
+            boardType = BoardType.XR,
+            diameterInches = 11.5,
+            stockDiameterInches = 11.5,
+        )
+
+        service.start(backgroundScope)
+        // 1-byte payload → requireSize(2) throws; collector must survive
+        transport.emit(OwUuids.BATTERY_PERCENT, byteArrayOf(0x42))
+        runCurrent()
+        assertNull(service.state.value.batteryPercent)
+
+        // valid payload arrives next — stream must still be live
+        transport.emit(OwUuids.BATTERY_PERCENT, byteArrayOf(0x00, 0x60))
+        runCurrent()
+        assertEquals(96, service.state.value.batteryPercent)
+    }
+
+    @Test
     fun `odometer delta produces non-null raw speed`() = runTest(UnconfinedTestDispatcher()) {
         val transport = FakeBleTransport()
         val clock = FakeClock()

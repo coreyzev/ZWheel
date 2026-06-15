@@ -46,7 +46,11 @@ class RideForegroundService : LifecycleService() {
 
     private var topSpeedTracker = DefaultTopSpeedTracker()
     private var notificationSpeedUnit = SpeedUnit.MPH
-    private var wakelock: PowerManager.WakeLock? = null
+    private val wakelock: PowerManager.WakeLock by lazy {
+        (getSystemService(POWER_SERVICE) as PowerManager)
+            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKELOCK_TAG)
+            .apply { setReferenceCounted(false) }
+    }
     private var rideRecorder: RideRecorder? = null
     private var speedAboveThresholdTicks = 0
     private var speedBelowThresholdTicks = 0
@@ -57,7 +61,6 @@ class RideForegroundService : LifecycleService() {
     override fun onCreate() {
         super.onCreate()
         notifications.createChannel()
-        acquireWakelockIfNeeded()
         trackSpeedUnitPreference()
         observeBoardForNotificationAndWakelock()
         startRideRecorderTicker()
@@ -69,6 +72,7 @@ class RideForegroundService : LifecycleService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
         startForeground(RIDE_NOTIFICATION_ID, notifications.build("ZWheel · Connecting…", null))
+        acquireWakelockIfNeeded()
         lifecycleScope.launch {
             val prefs = settingsRepository.preferences.first()
             if (!prefs.hasRequestedBatteryOptimization) {
@@ -109,7 +113,7 @@ class RideForegroundService : LifecycleService() {
         latch.await(2, java.util.concurrent.TimeUnit.SECONDS)
         locationTracker.stop()
         connectionManager.disconnect()
-        wakelock?.takeIf { it.isHeld }?.release()
+        if (wakelock.isHeld) wakelock.release()
         super.onDestroy()
     }
 
@@ -183,7 +187,7 @@ class RideForegroundService : LifecycleService() {
             speedAboveThresholdTicks = 0
             speedBelowThresholdTicks++
             if (speedBelowThresholdTicks >= WAKELOCK_RELEASE_TICKS) {
-                wakelock?.takeIf { it.isHeld }?.release()
+                if (wakelock.isHeld) wakelock.release()
             }
         }
     }
@@ -200,10 +204,6 @@ class RideForegroundService : LifecycleService() {
     }
 
     private fun acquireWakelockIfNeeded() {
-        if (wakelock?.isHeld == true) return
-        val pm = getSystemService(POWER_SERVICE) as PowerManager
-        wakelock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKELOCK_TAG).apply {
-            acquire(10 * 60 * 1000L)
-        }
+        if (!wakelock.isHeld) wakelock.acquire(10 * 60 * 1000L)
     }
 }

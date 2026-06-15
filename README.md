@@ -27,7 +27,7 @@ Debug screen            [##############......]  70%  Scan -> connect -> unlock -
 Android permissions     [####################] 100%  Android 12+ BLE + location runtime flow
 Dashboard UI            [##############......]  70%  Live speed/battery/temp/GPS, ride history
 Ride data / service     [##################..]  90%  Session recorder, GPS, HA push, foreground service
-Wear OS                 [##################..]  90%  Full dashboard, ambient mode, auto-installs with phone app
+Wear OS                 [##################..]  90%  Full dashboard, ambient mode, standalone install
 CI / release            [##################..]  90%  CI, APK artifact, latest debug release
 Distribution            [####................]  20%  Debug APK only; no signed v1 release
 Overall                 [##############......]  70%  Feature-complete; awaiting hardware verification
@@ -127,7 +127,7 @@ Completed locally:
 - Ride history list and detail screen with speed-colored GPS map overlay.
 - Full-screen map tap-through from ride detail.
 - Home Assistant battery push via REST API (no custom component).
-- Wear OS companion with ambient always-on mode and automatic phone-bundled install.
+- Wear OS companion with ambient always-on mode and standalone distribution.
 
 Still required for M1:
 
@@ -176,19 +176,15 @@ The watch app shows speed, battery, top speed, and estimated range. It stays
 on-screen in ambient mode (dimmed, black-and-white) when the wrist drops, so
 raise-to-wake always shows ZWheel instead of the watch face.
 
-### Automatic install (recommended)
+### Installation
 
-The wear APK is bundled inside the phone APK via `wearApp(project(":wear"))`.
-When you install the phone app on a device paired with a Wear OS watch, Android
-automatically pushes the watch app — no separate step needed.
+ZWheel for Wear OS is a standalone app. It is NOT bundled with the phone APK.
 
-For the debug APK from CI: install `zwheel-debug.apk` on your phone normally.
-The Wear OS system detects the embedded watch app and installs it within a few
-minutes. Check **Play Store → My apps** on the watch to trigger it immediately.
+- **Production:** The app is published to the Google Play Store for independent
+  installation on the watch.
+- **Development / Sideload:** Use ADB to install the watch APK directly.
 
-### Manual sideload (dev / re-install)
-
-If you need to push directly to the watch (e.g. iterating on watch UI):
+#### Sideloading via ADB
 
 **Prerequisites:**
 - Developer options enabled on the watch (tap **Build number** 7× in

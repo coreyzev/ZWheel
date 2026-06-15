@@ -150,3 +150,13 @@ OS delivers it when reconnected. No special retry logic needed.
 - **P4a:** `WearDataLayerRepository` (phone) + `startSync()` in `RideForegroundService`
 - **P4b:** `WearDataLayerRepository` (watch) + `WatchFaceService` Compose rendering
 - **P4c:** Watch tile showing speed/battery
+
+## Delivery
+
+The Wear OS app is a standalone application (`standalone=true` in `AndroidManifest.xml`).
+It is distributed independently of the phone app:
+- **Production:** Published to the Google Play Store.
+- **Development:** Sideloaded via `adb`.
+
+Delivery via the legacy `wearApp()` micro-APK embedding is NOT used, as it is
+deprecated and unsupported on Wear OS 3+ (e.g., Galaxy Watch 7).

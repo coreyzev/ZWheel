@@ -142,6 +142,7 @@ internal fun CellVoltageCard(cells: List<CellVoltageUiState>) {
 internal fun TripStatsCard(
     state: DashboardUiState,
     locationGranted: Boolean = true,
+    locationPermanentlyDenied: Boolean = false,
     onRequestLocation: () -> Unit = {},
 ) {
     DashboardCard(color = Color(0xff00a7c8), contentColor = Color(0xff061016)) {
@@ -160,9 +161,10 @@ internal fun TripStatsCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (!locationGranted) {
+                val gpsLabel = if (locationPermanentlyDenied) "GPS DENIED — OPEN SETTINGS" else "GPS OFF — TAP TO ENABLE"
                 TextButton(onClick = onRequestLocation) {
                     Text(
-                        text = "GPS OFF — TAP TO ENABLE",
+                        text = gpsLabel,
                         color = Color(0xff9b1c1c),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Black,

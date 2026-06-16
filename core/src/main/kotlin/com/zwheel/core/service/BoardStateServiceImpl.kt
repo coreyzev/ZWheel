@@ -55,7 +55,7 @@ class BoardStateServiceImpl(
                 val rpm = Parsers.rpm(bytes).toDouble()
                 val speed = calculator.correctedMetersPerSecond(rpm, null, diameterInches)
                 _state.update { it.copy(rpm = rpm, speedMetersPerSecondCorrected = speed) }
-            } catch (e: IllegalArgumentException) {
+            } catch (e: Exception) {
                 println("[BoardStateServiceImpl] RPM: ${e.message}")
             }
         }
@@ -65,7 +65,7 @@ class BoardStateServiceImpl(
         transport.notifications(OwUuids.AMPS).collect { bytes ->
             try {
                 _state.update { it.copy(amps = Parsers.amps(bytes, boardType)) }
-            } catch (e: IllegalArgumentException) {
+            } catch (e: Exception) {
                 println("[BoardStateServiceImpl] AMPS: ${e.message}")
             }
         }
@@ -75,7 +75,7 @@ class BoardStateServiceImpl(
         transport.notifications(OwUuids.TRIP_TOTAL_AMP_HOURS).collect { bytes ->
             try {
                 _state.update { it.copy(tripAmpHours = Parsers.tripAmpHours(bytes, boardType)) }
-            } catch (e: IllegalArgumentException) {
+            } catch (e: Exception) {
                 println("[BoardStateServiceImpl] TRIP_AMP_HOURS: ${e.message}")
             }
         }
@@ -85,7 +85,7 @@ class BoardStateServiceImpl(
         transport.notifications(OwUuids.TRIP_REGEN_AMP_HOURS).collect { bytes ->
             try {
                 _state.update { it.copy(tripRegenAmpHours = Parsers.tripRegenAmpHours(bytes, boardType)) }
-            } catch (e: IllegalArgumentException) {
+            } catch (e: Exception) {
                 println("[BoardStateServiceImpl] TRIP_REGEN_AMP_HOURS: ${e.message}")
             }
         }
@@ -95,7 +95,7 @@ class BoardStateServiceImpl(
         transport.notifications(OwUuids.PACK_VOLTAGE).collect { bytes ->
             try {
                 _state.update { it.copy(packVoltage = Parsers.packVoltage(bytes)) }
-            } catch (e: IllegalArgumentException) {
+            } catch (e: Exception) {
                 println("[BoardStateServiceImpl] PACK_VOLTAGE: ${e.message}")
             }
         }
@@ -114,7 +114,7 @@ class BoardStateServiceImpl(
                         state.copy(cellVoltages = sorted)
                     }
                 }
-            } catch (e: IllegalArgumentException) {
+            } catch (e: Exception) {
                 println("[BoardStateServiceImpl] CELL_VOLTAGES: ${e.message}")
             }
         }
@@ -124,7 +124,7 @@ class BoardStateServiceImpl(
         transport.notifications(OwUuids.PITCH).collect { bytes ->
             try {
                 _state.update { it.copy(pitchDegrees = Parsers.pitch(bytes)) }
-            } catch (e: IllegalArgumentException) {
+            } catch (e: Exception) {
                 println("[BoardStateServiceImpl] PITCH: ${e.message}")
             }
         }
@@ -134,7 +134,7 @@ class BoardStateServiceImpl(
         transport.notifications(OwUuids.ROLL).collect { bytes ->
             try {
                 _state.update { it.copy(rollDegrees = Parsers.roll(bytes)) }
-            } catch (e: IllegalArgumentException) {
+            } catch (e: Exception) {
                 println("[BoardStateServiceImpl] ROLL: ${e.message}")
             }
         }
@@ -144,7 +144,7 @@ class BoardStateServiceImpl(
         transport.notifications(OwUuids.YAW).collect { bytes ->
             try {
                 _state.update { it.copy(yawDegrees = Parsers.yaw(bytes)) }
-            } catch (e: IllegalArgumentException) {
+            } catch (e: Exception) {
                 println("[BoardStateServiceImpl] YAW: ${e.message}")
             }
         }
@@ -154,7 +154,7 @@ class BoardStateServiceImpl(
         transport.notifications(OwUuids.BATTERY_PERCENT).collect { bytes ->
             try {
                 _state.update { it.copy(batteryPercent = Parsers.batteryPercent(bytes)) }
-            } catch (e: IllegalArgumentException) {
+            } catch (e: Exception) {
                 println("[BoardStateServiceImpl] BATTERY_PERCENT: ${e.message}")
             }
         }
@@ -170,7 +170,7 @@ class BoardStateServiceImpl(
                         motorTempCelsius = motor.toDouble(),
                     )
                 }
-            } catch (e: IllegalArgumentException) {
+            } catch (e: Exception) {
                 println("[BoardStateServiceImpl] TEMPERATURE: ${e.message}")
             }
         }
@@ -180,7 +180,7 @@ class BoardStateServiceImpl(
         transport.notifications(OwUuids.BATTERY_TEMPERATURE).collect { bytes ->
             try {
                 _state.update { it.copy(batteryTempCelsius = Parsers.batteryTemperature(bytes, boardType)) }
-            } catch (e: IllegalArgumentException) {
+            } catch (e: Exception) {
                 println("[BoardStateServiceImpl] BATTERY_TEMPERATURE: ${e.message}")
             }
         }
@@ -190,7 +190,7 @@ class BoardStateServiceImpl(
         transport.notifications(OwUuids.SAFETY_HEADROOM).collect { bytes ->
             try {
                 _state.update { it.copy(safetyHeadroom = Parsers.safetyHeadroom(bytes)) }
-            } catch (e: IllegalArgumentException) {
+            } catch (e: Exception) {
                 println("[BoardStateServiceImpl] SAFETY_HEADROOM: ${e.message}")
             }
         }
@@ -200,7 +200,7 @@ class BoardStateServiceImpl(
         transport.notifications(OwUuids.STATUS_ERROR).collect { bytes ->
             try {
                 _state.update { it.copy(statusError = Parsers.statusError(bytes)) }
-            } catch (e: IllegalArgumentException) {
+            } catch (e: Exception) {
                 println("[BoardStateServiceImpl] STATUS_ERROR: ${e.message}")
             }
         }
@@ -210,7 +210,7 @@ class BoardStateServiceImpl(
         transport.notifications(OwUuids.RIDE_MODE).collect { bytes ->
             try {
                 _state.update { it.copy(rideMode = Parsers.rideMode(bytes, boardType)) }
-            } catch (e: IllegalArgumentException) {
+            } catch (e: Exception) {
                 println("[BoardStateServiceImpl] RIDE_MODE: ${e.message}")
             }
         }
@@ -235,7 +235,7 @@ class BoardStateServiceImpl(
                 }
                 prevTicks = newTicks
                 prevMillis = newMillis
-            } catch (e: IllegalArgumentException) {
+            } catch (e: Exception) {
                 println("[BoardStateServiceImpl] ODOMETER: ${e.message}")
             }
         }

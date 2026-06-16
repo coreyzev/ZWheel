@@ -21,6 +21,12 @@ interface RideDao {
     @Query("SELECT * FROM ride_session WHERE endEpochMillis IS NULL LIMIT 1")
     suspend fun getOpenSession(): RideSessionEntity?
 
+    @Query("SELECT * FROM ride_session WHERE endEpochMillis IS NULL")
+    suspend fun getAllOpenSessions(): List<RideSessionEntity>
+
+    @Query("UPDATE ride_session SET endEpochMillis = :end WHERE id = :id")
+    suspend fun closeSession(id: String, end: Long)
+
     @Query("SELECT * FROM ride_session ORDER BY startEpochMillis DESC")
     fun getAllSessions(): Flow<List<RideSessionEntity>>
 

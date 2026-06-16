@@ -167,6 +167,13 @@ private class FakeRideDao : RideDao {
     override suspend fun getOpenSession(): RideSessionEntity? =
         openSession?.takeIf { it.endEpochMillis == null }
 
+    override suspend fun getAllOpenSessions(): List<RideSessionEntity> =
+        listOfNotNull(openSession?.takeIf { it.endEpochMillis == null })
+
+    override suspend fun closeSession(id: String, end: Long) {
+        if (openSession?.id == id) openSession = openSession?.copy(endEpochMillis = end)
+    }
+
     override fun getAllSessions(): Flow<List<RideSessionEntity>> =
         flowOf(listOfNotNull(openSession))
 

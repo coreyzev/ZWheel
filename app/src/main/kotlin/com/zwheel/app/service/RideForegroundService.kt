@@ -89,6 +89,7 @@ class RideForegroundService : LifecycleService() {
             stopSelf()
             return START_NOT_STICKY
         }
+        lifecycleScope.launch { closeOrphanedSessions() }
         val deviceId = intent?.getStringExtra("deviceId")
         if (deviceId != null) {
             lifecycleScope.launch {
@@ -234,5 +235,15 @@ class RideForegroundService : LifecycleService() {
                 }
             }
         }
+    }
+
+    // On START_STICKY restart, close any sessions left open by the previous process.
+    // Multiple orphans are possible if the process was killed more than once;
+    // getOpenSession() uses LIMIT 1 so we must use getAllOpenSessions() here.
+    private suspend fun closeOrphanedSessions() {
+        val orphans = rideRepository.getAllOpenSessions()
+        if (orphans.isEmpty()) return
+        val now = clock.nowEpochMillis()
+        orphans.forEach { session -> rideRepository.closeSession(session.id, now) }
     }
 }

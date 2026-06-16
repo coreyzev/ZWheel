@@ -5,6 +5,7 @@ import android.os.PowerManager
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import com.zwheel.app.ble.ConnectionManager
+import com.zwheel.app.ble.ConnectionState
 import com.zwheel.app.data.ride.RideRepository
 import com.zwheel.app.data.settings.SettingsRepository
 import com.zwheel.app.wear.WearDataLayerRepository
@@ -22,6 +23,8 @@ private const val WAKELOCK_TAG = "zwheel:ride"
 private const val SPEED_ON_THRESHOLD = 0.5
 private const val WAKELOCK_ACQUIRE_TICKS = 3
 private const val WAKELOCK_RELEASE_TICKS = 90
+private const val RECONNECT_INITIAL_DELAY_MS = 5_000L
+private const val RECONNECT_MAX_DELAY_MS = 60_000L
 
 @AndroidEntryPoint
 class RideForegroundService : LifecycleService() {
@@ -65,6 +68,7 @@ class RideForegroundService : LifecycleService() {
         trackSpeedUnitPreference()
         observeBoardForNotificationAndWakelock()
         startRideRecorderTicker()
+        observeUnexpectedDisconnect()
         wearDataLayerRepository.startSync(lifecycleScope)
         locationTracker.start()
         HomeAssistantSync(settingsRepository, connectionManager.boardState).start(lifecycleScope)
@@ -207,6 +211,30 @@ class RideForegroundService : LifecycleService() {
 
     private fun acquireWakelockIfNeeded() {
         if (!wakelock.isHeld) wakelock.acquire(10 * 60 * 1000L)
+    }
+
+    // Watches for unexpected BLE drops and reconnects with exponential backoff.
+    // lifecycleScope cancellation (service destroy) acts as the stop signal — no explicit flag needed.
+    private fun observeUnexpectedDisconnect() {
+        lifecycleScope.launch {
+            // Only activate after the first successful connection; don't reconnect on initial failure.
+            connectionManager.connectionState.first { it == ConnectionState.Connected }
+            var backoffMs = RECONNECT_INITIAL_DELAY_MS
+            while (isActive) {
+                connectionManager.connectionState.first { it == ConnectionState.Disconnected }
+                if (!isActive) break
+                val deviceId = settingsRepository.preferences.first().lastConnectedDeviceId ?: break
+                delay(backoffMs)
+                if (!isActive) break
+                backoffMs = minOf(backoffMs * 2, RECONNECT_MAX_DELAY_MS)
+                val reconnected = runCatching { connectionManager.connect(deviceId) }.isSuccess
+                if (!isActive) break
+                if (reconnected) {
+                    connectionManager.connectionState.first { it == ConnectionState.Connected }
+                    backoffMs = RECONNECT_INITIAL_DELAY_MS
+                }
+            }
+        }
     }
 
     // On START_STICKY restart, close any sessions left open by the previous process.

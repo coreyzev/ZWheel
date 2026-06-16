@@ -17,6 +17,7 @@ import com.zwheel.core.protocol.debug.BleDebugRecorder
 import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -34,6 +35,7 @@ import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.shareIn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 
 @OptIn(ObsoleteKableApi::class)
@@ -46,6 +48,7 @@ class KableBleTransport : BleTransport, GattIo {
 
     private val sharedFlows = mutableMapOf<GattCharacteristicId, Flow<ByteArray>>()
     private var debugRecorder: BleDebugRecorder? = null
+    private var stateObserverJob: Job? = null
 
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
 
@@ -107,6 +110,14 @@ class KableBleTransport : BleTransport, GattIo {
             currentPeripheral().connect()
             verifyOnewheelService()
             _connectionState.value = ConnectionState.Connected
+            stateObserverJob?.cancel()
+            stateObserverJob = scope.launch {
+                peripheral?.state?.collect { kableState ->
+                    if (kableState is com.juul.kable.State.Disconnected && activeDeviceId != null) {
+                        _connectionState.value = ConnectionState.Disconnected
+                    }
+                }
+            }
         } catch (error: Throwable) {
             disconnect()
             throw error
@@ -114,6 +125,8 @@ class KableBleTransport : BleTransport, GattIo {
     }
 
     override suspend fun disconnect() {
+        stateObserverJob?.cancel()
+        stateObserverJob = null
         synchronized(sharedFlows) {
             sharedFlows.clear()
         }

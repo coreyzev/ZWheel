@@ -19,6 +19,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlin.coroutines.coroutineContext
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,6 +47,7 @@ class ConnectionManager @Inject constructor(
     init {
         transport.setDebugRecorder(recorder)
     }
+    private var connectJob: Job? = null
     private var scanJob: Job? = null
     private var stateMirrorJob: Job? = null
     private var keepAliveJob: Job? = null
@@ -95,6 +98,8 @@ class ConnectionManager @Inject constructor(
     }
 
     suspend fun connect(deviceId: String) {
+        connectJob?.cancelAndJoin()
+        connectJob = coroutineContext[Job]
         stopScan()
         stateMirrorJob?.cancel()
         keepAliveJob?.cancel()

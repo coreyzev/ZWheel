@@ -14,7 +14,7 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
 @Database(
     entities = [RideSessionEntity::class, RideDataPointEntity::class],
     version = 2,
-    exportSchema = false,
+    exportSchema = true,
 )
 abstract class ZWheelDatabase : RoomDatabase() {
     abstract fun rideDao(): RideDao

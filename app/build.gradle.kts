@@ -57,6 +57,10 @@ kotlin {
     jvmToolchain(17)
 }
 
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 // ADR-010 policy guard: ZWheel is a user-owned, offline-first companion. Runtime egress
 // is limited to OpenStreetMap/OSMDroid tile servers and the user-configured Home Assistant
 // URL (which is never hardcoded). No OEM/vendor cloud, no analytics, no firmware endpoints.
@@ -169,5 +173,7 @@ dependencies {
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.robolectric)
+    testImplementation(libs.junit.junit4)
+    testRuntimeOnly(libs.junit.vintage.engine)
     ksp(libs.hilt.compiler)
 }

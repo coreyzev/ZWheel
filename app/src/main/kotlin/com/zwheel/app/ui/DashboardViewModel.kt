@@ -7,7 +7,6 @@ import com.zwheel.app.ble.ConnectionState
 import com.zwheel.app.data.settings.SettingsRepository
 import com.zwheel.app.service.RideServiceController
 import com.zwheel.app.service.RideServiceRepository
-import com.zwheel.core.calc.DefaultTopSpeedTracker
 import com.zwheel.core.calc.RangeEstimator
 import com.zwheel.core.model.BoardType
 import com.zwheel.core.ports.ScanResult
@@ -26,16 +25,13 @@ class DashboardViewModel @Inject constructor(
     settingsRepository: SettingsRepository,
     private val rangeEstimator: RangeEstimator,
 ) : ViewModel() {
-    private val topSpeedTracker = DefaultTopSpeedTracker()
-
     val uiState: StateFlow<DashboardUiState> = combine(
         connectionManager.boardState,
         settingsRepository.preferences,
         rideServiceRepository.tripDistanceMeters,
         rideServiceRepository.gpsLocked,
-    ) { boardState, prefs, tripDistanceMeters, gpsLocked ->
-        val correctedSpeed = boardState.speedMetersPerSecondCorrected
-        topSpeedTracker.consume(correctedSpeed)
+        rideServiceRepository.topSpeedMetersPerSecond,
+    ) { boardState, prefs, tripDistanceMeters, gpsLocked, topSpeedMps ->
         val boardType = boardState.identity?.type ?: BoardType.XR
         val estimatedRange = rangeEstimator.estimateKilometersRemaining(
             batteryPct = boardState.batteryPercent,
@@ -44,7 +40,7 @@ class DashboardViewModel @Inject constructor(
         )
         boardState.toDashboardUiState(
             prefs = prefs,
-            topSpeedMetersPerSecond = topSpeedTracker.currentTripMaxMetersPerSecond,
+            topSpeedMetersPerSecond = topSpeedMps,
             estimatedRangeKilometers = estimatedRange,
             tripDistanceMeters = tripDistanceMeters,
             gpsLocked = gpsLocked,

@@ -66,23 +66,11 @@ internal fun Context.openAppSettings() {
     )
 }
 
-// Opens the app's permissions list directly via the permission controller (API 23+).
-// Falls back to general app info if the permission controller is unavailable on the device.
-internal fun Context.openLocationPermissionSettings() {
-    val permissionsIntent = Intent("android.intent.action.MANAGE_APP_PERMISSIONS").apply {
-        putExtra(Intent.EXTRA_PACKAGE_NAME, packageName)
-    }
-    try {
-        startActivity(permissionsIntent)
-    } catch (_: android.content.ActivityNotFoundException) {
-        startActivity(
-            Intent(
-                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                Uri.fromParts("package", packageName, null),
-            ),
-        )
-    }
-}
+// Opens the app's details page in system Settings, which has a one-tap "Permissions" entry.
+// There is no reliable public intent to deep-link straight to the permissions list — the
+// internal MANAGE_APP_PERMISSIONS action is protected and throws on many devices — so this
+// uses ACTION_APPLICATION_DETAILS_SETTINGS, which is guaranteed to exist.
+internal fun Context.openLocationPermissionSettings() = openAppSettings()
 
 private fun Context.findActivity(): Activity? {
     var currentContext = this

@@ -37,7 +37,7 @@ internal fun Header(state: DashboardUiState) {
                 letterSpacing = 0.sp,
             )
             Text(
-                text = "${state.connectionLabel}  RSSI ${state.rssi} dBm",
+                text = "${state.connectionLabel}  RSSI ${state.rssi?.let { "$it dBm" } ?: "--"}",
                 color = Color(0xff555555),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,

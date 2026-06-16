@@ -45,6 +45,8 @@ class DashboardViewModel @Inject constructor(
             tripDistanceMeters = tripDistanceMeters,
             gpsLocked = gpsLocked,
         )
+    }.combine(connectionManager.rssi) { state, rssi ->
+        state.copy(rssi = rssi)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000L),

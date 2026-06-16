@@ -117,6 +117,7 @@ private fun ZWheelDashboardScreen(
     // shouldShowRequestPermissionRationale() returns false for both states; the only way
     // to tell them apart is whether a dialog attempt was already made.
     var locationDialogAttempted by remember { mutableStateOf(false) }
+    var pendingConnectDeviceId by remember { mutableStateOf<String?>(null) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
@@ -137,6 +138,10 @@ private fun ZWheelDashboardScreen(
         locationGranted = locationPermissions.all { results[it] == true || hasPermission(context, it) }
         // Mark that a real dialog attempt completed (success or denial).
         locationDialogAttempted = true
+        if (locationGranted) {
+            pendingConnectDeviceId?.let { viewModel.connect(it) }
+        }
+        pendingConnectDeviceId = null
     }
 
     fun requestBlePermissions() {
@@ -198,7 +203,14 @@ private fun ZWheelDashboardScreen(
                 requestBlePermissions()
             }
         },
-        onConnect = viewModel::connect,
+        onConnect = { deviceId ->
+            if (locationGranted) {
+                viewModel.connect(deviceId)
+            } else {
+                pendingConnectDeviceId = deviceId
+                requestLocationPermission()
+            }
+        },
         onDisconnect = viewModel::disconnect,
         onOpenHistory = onOpenHistory,
         onOpenSettingsScreen = onOpenSettings,

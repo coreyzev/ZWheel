@@ -19,21 +19,28 @@ class SettingsRepository(
     private val dataStore: DataStore<Preferences>,
     private val context: Context,
 ) {
-    private val encryptedPrefs: SharedPreferences by lazy {
-        val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
-        EncryptedSharedPreferences.create(
-            "zwheel_secure_prefs",
-            masterKeyAlias,
-            context,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-        )
+    // Nullable: Keystore may be unavailable on first boot, after factory reset, or on some
+    // OEM devices. Fall back gracefully rather than crashing on initialization.
+    private val encryptedPrefs: SharedPreferences? by lazy {
+        try {
+            val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
+            EncryptedSharedPreferences.create(
+                "zwheel_secure_prefs",
+                masterKeyAlias,
+                context,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+            )
+        } catch (e: Exception) {
+            null
+        }
     }
 
     val preferences: Flow<UserPreferences> = dataStore.data.map { prefs ->
         val legacyToken = prefs[HA_TOKEN]
-        // Prefer encrypted store; fall back to legacy plaintext key for pre-upgrade installs.
-        val token = encryptedPrefs.getString(KEY_HA_TOKEN_SECURE, null)?.takeIf { it.isNotEmpty() }
+        // Prefer encrypted store; fall back to legacy plaintext key when Keystore is
+        // unavailable or for pre-upgrade installs that haven't migrated yet.
+        val token = encryptedPrefs?.getString(KEY_HA_TOKEN_SECURE, null)?.takeIf { it.isNotEmpty() }
             ?: legacyToken?.trim()
             ?: ""
         UserPreferences(
@@ -72,10 +79,24 @@ class SettingsRepository(
     }
 
     suspend fun setHaToken(token: String) {
-        encryptedPrefs.edit().putString(KEY_HA_TOKEN_SECURE, token.trim()).apply()
+        encryptedPrefs?.edit()?.putString(KEY_HA_TOKEN_SECURE, token.trim())?.apply()
         // Clear any legacy plaintext token from DataStore.
         dataStore.edit { preferences ->
             preferences.remove(HA_TOKEN)
+        }
+    }
+
+    // Moves the legacy plaintext HA token from DataStore into EncryptedSharedPreferences.
+    // Idempotent: safe to call every startup. Skipped if Keystore is unavailable.
+    suspend fun migrateHaTokenIfNeeded() {
+        val prefs = encryptedPrefs ?: return
+        dataStore.edit { store ->
+            val legacy = store[HA_TOKEN]?.trim()?.takeIf { it.isNotEmpty() } ?: return@edit
+            val alreadySecured = prefs.getString(KEY_HA_TOKEN_SECURE, null)?.isNotEmpty() == true
+            if (!alreadySecured) {
+                prefs.edit().putString(KEY_HA_TOKEN_SECURE, legacy).apply()
+            }
+            store.remove(HA_TOKEN)
         }
     }
 

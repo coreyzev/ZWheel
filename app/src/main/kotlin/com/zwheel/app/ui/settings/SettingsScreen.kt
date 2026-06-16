@@ -181,6 +181,13 @@ private fun HomeAssistantSection(
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
         )
+        if (haUrl.startsWith("http://")) {
+            Text(
+                text = "Token sent over unencrypted HTTP. Use https:// if available.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
         androidx.compose.material3.OutlinedTextField(
             value = haToken,
             onValueChange = onTokenChanged,

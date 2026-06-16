@@ -17,6 +17,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -188,12 +193,19 @@ private fun HomeAssistantSection(
                 color = MaterialTheme.colorScheme.error,
             )
         }
+        var showToken by remember { mutableStateOf(false) }
         androidx.compose.material3.OutlinedTextField(
             value = haToken,
             onValueChange = onTokenChanged,
             label = { Text("Long-lived access token") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            visualTransformation = if (showToken) VisualTransformation.None else PasswordVisualTransformation(),
+            trailingIcon = {
+                androidx.compose.material3.TextButton(onClick = { showToken = !showToken }) {
+                    Text(if (showToken) "Hide" else "Show")
+                }
+            },
         )
         Row(
             modifier = Modifier.fillMaxWidth(),

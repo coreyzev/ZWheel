@@ -54,6 +54,7 @@ class KableBleTransport : BleTransport, GattIo {
     }
 
     override suspend fun scan(): Flow<ScanResult> {
+        advertisements.clear()
         val primary = scanner(serviceUuid = OwUuids.ONEWHEEL_SERVICE)
             .advertisements
             .map { advertisement -> advertisement.toScanResult() }
@@ -92,6 +93,9 @@ class KableBleTransport : BleTransport, GattIo {
     }
 
     override suspend fun connect(deviceId: String) {
+        synchronized(sharedFlows) {
+            sharedFlows.clear()
+        }
         val advertisement = advertisements[deviceId]
         activeDeviceId = deviceId
         peripheral = if (advertisement != null) {

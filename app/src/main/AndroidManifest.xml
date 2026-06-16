@@ -1,13 +1,21 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission
         android:name="android.permission.BLUETOOTH_SCAN"
         android:usesPermissionFlags="neverForLocation" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <!-- Required alongside FINE: on Android 12+ the runtime request is ignored
-         (no dialog shown) unless COARSE is requested in the same call. -->
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+         (no dialog shown) unless COARSE is requested in the same call.
+         tools:remove strips the maxSdkVersion="30" cap that the Kable BLE library
+         injects on these permissions during manifest merge; without this, both
+         location permissions are dropped on API 31+ and can never be granted. -->
+    <uses-permission
+        android:name="android.permission.ACCESS_FINE_LOCATION"
+        tools:remove="android:maxSdkVersion" />
+    <uses-permission
+        android:name="android.permission.ACCESS_COARSE_LOCATION"
+        tools:remove="android:maxSdkVersion" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />

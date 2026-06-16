@@ -1,28 +1,12 @@
 # ZWheel — Solo Handoff Guide
 
-Updated 2026-06-16 (all 2026-06-15 review Wave 1 issues merged). Supersedes the previous handoff.
+Updated 2026-06-16 (Wave 2 complete; release triggered after this update). Supersedes previous handoff.
 
 ---
 
 ## 1. Where the project is right now
 
-**Completed previous sprint (merged to main):**
-- #79 — GPS fine-location request (PR #87)
-- #80 — HA token encrypted at rest with EncryptedSharedPreferences (PR #88)
-- #81 — HA push cleartext + validation + Settings test action (PR #89)
-- #86 — Drop embedded wearApp() delivery; document adb + Play install paths (PR #90)
-- #84 — Closed as mooted by #86
-- #82 — Split ZWheelAppScreen.kt under 500 lines (PR #91)
-- #78 — Replace vacuous network guard with ADR-010 policy enforcement (PR #92)
-- #85 — ADR-011: ConnectionManager single source of truth + service decomposition (PR #93)
-- #96 — Fix GPS banner flicker (PR #98)
-- #95 — Fix GPS permanently-denied flow (PR #96)
-- #97 — Catch connect() exceptions (PR #97)
-
-**2026-06-16 status:** All Wave 1 issues from the stability review are merged to main.
-Crash from build 122 (#99 + #100) is fixed. No open PRs.
-
-**Completed 2026-06-15/16 sprint (merged to main):**
+**Completed Wave 1 (2026-06-15/16, all merged):**
 - #96 → GPS permission state flicker (PR #98)
 - #97 → Catch connect() exceptions (PR #97)
 - #99 → Service crash guards: runCatching in ticker, onDestroy, Wear (PR #124)
@@ -37,52 +21,39 @@ Crash from build 122 (#99 + #100) is fixed. No open PRs.
 - #114 → HA token shown in plaintext (PR #130)
 - #115 → BoardStateServiceImpl collectors catch only IAE (PR #128)
 - #118 → wear versionCode/versionName hardcoded (PR #122)
+- #106 → Keystore init protection + active HA token migration at startup (PR #134)
 
-**Gemini-OK tasks were dispatched via:** `GEMINI_CLI_TRUST_WORKSPACE=true gemini -p "$(cat /path/to/gate.md)" --yolo`
-run from the worktree directory.
+**Completed Wave 2 (2026-06-16, all merged):**
+- #101 → BLE concurrent connect race + stale sharedFlows on reconnect (PR #133)
+- #116 → Tire diameter equality check bug + remove dead RideStorage port (PR #135)
+- #117 → Room exportSchema + Robolectric JUnit5 for RideDaoTest (PR #136)
+- #119 → Dashboard RSSI always "0 dBm" — forward scan RSSI to state (PR #137)
+
+**2026-06-16 status:** All Wave 1 + Wave 2 issues merged. Release triggered post-merge.
+Codex returns 2026-06-18. Board hardware available 2026-06-19 (Thursday).
 
 ---
 
-## 2. Issue ordering — 2026-06-15 stability review
+## 2. Open issues — next priorities
 
-All issues below are from the full architecture review on 2026-06-15. Sonnet can implement
-all of them. Codex returns 2026-06-18. Hardware (board) not available until Thursday.
-
-### Wave 1 — DONE (all merged 2026-06-15/16)
-
-~~#99, #100, #103, #105, #107, #110, #111, #112, #113, #114, #115, #118~~ — all merged.
-
-**Remaining Wave 1 item:**
+### Wave 3 — implement now, verify with board 2026-06-19
 
 | Issue | Title | Notes |
 |-------|-------|-------|
-| **#106** | HA token active migration + Keystore init protection | SettingsRepository only. P2. |
-| **#119** | Dashboard RSSI always shows "0 dBm" | Design decision required — see issue. P3. |
+| **#102** | Orphan session recovery on START_STICKY restart | Fix must close ALL open sessions (LIMIT 1 in getOpenSession only returns one). |
+| **#109** | BLE reconnect on unexpected disconnection | Depends on #101 (connectJob guard, now merged). |
 
-### Wave 2 — no board needed, but depend on Wave 1 being stable
+### Test coverage (#104)
 
-| Issue | Title | Notes |
-|-------|-------|-------|
-| **#101** | BLE concurrent connect race + stale sharedFlows | ConnectionManager + KableBleTransport. P1. Includes `advertisements` map clear. |
-| **#104** | Test coverage: ConnectionManager, RideDao, SettingsRepository, WearRepo, RideForegroundService | P2. RideDao and SettingsRepository gaps can start independently. **Do #99/#101/#105 first** so service tests reflect fixed behavior. |
-| **#111** | Permission: openAppSettings before requestAttempted is set | Small UI fix in ZWheelAppScreen.kt. P3. |
-| **#116** | Tire diameter equality check bug + dead RideStorage port | ConnectionManager + UserPreferences + Ports.kt. P3. Correctness bug for users who set 11.5" exactly. |
-| **#117** | Enable Room exportSchema + wire Robolectric JUnit5 for RideDaoTest | Gradle + ZWheelDatabase config. P3. Prevents silent migration bugs. |
+Remaining gaps — can be done in parallel with any other work:
 
-### Wave 3 — implement now, verify with board Thursday
-
-| Issue | Title | Notes |
-|-------|-------|-------|
-| **#102** | Orphan session recovery on START_STICKY restart | Implement now; test with board Thursday. **Note:** fix must close ALL open sessions (LIMIT 1 in getOpenSession only returns one). |
-| **#109** | BLE reconnect on unexpected disconnection | Depends on #101 (connectJob guard). Implement now; test with board Thursday. |
-
-### Parallel to everything
-
-Issue **#104** test gaps can be implemented in parallel with any wave — they have no runtime
-dependencies on each other or on the other fixes. The `RideForegroundService` gap within #104
-should wait until #99, #101, and #105 are merged so tests reflect the fixed behavior.
-
-Issue **#113** (tripAmpHours) is a 2-line fix — do it in Wave 1 alongside #103.
+| Area | Status |
+|------|--------|
+| RideDao | **Done** (PR #136, 6 tests) |
+| SettingsRepository migration | Open — test `migrateHaTokenIfNeeded()` and Keystore-null fallback |
+| ConnectionManager | Open — test connect race guard, rssi capture, disconnect reset |
+| WearDataLayerRepository | Open |
+| RideForegroundService | Open — wait until #102/#109 land so tests reflect final service behavior |
 
 ### Not yet scheduled (parked)
 
@@ -102,7 +73,6 @@ Codex implements; Gemini for trivial mechanical tasks with explicit "Gemini-OK" 
 
 ## 4. Implementing directly (while Codex is down)
 
-See previous HANDOFF section. Short version:
 ```bash
 git checkout -b fix/<slug> origin/main
 # ... implement per gate ...
@@ -123,6 +93,13 @@ cd /tmp/zw-issue-<N> && GEMINI_CLI_TRUST_WORKSPACE=true gemini -p "$(cat /tmp/ga
 
 If /tmp fills up: `rm -rf /tmp/zwheel-gradle /tmp/gradle-home /tmp/gradle-wrapper-cache`
 frees ~2.5 GB.
+
+**Triggering a release:**
+```bash
+gh workflow run release.yml --repo coreyzev/ZWheel
+```
+Releases are `workflow_dispatch` only (PR #120). Each run produces `build-<run_number>` tag
+and a pre-release APK artifact.
 
 ---
 

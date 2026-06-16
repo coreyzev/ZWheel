@@ -1,6 +1,6 @@
 # ADR-005: Room Schema
 
-Status: Draft
+Status: Accepted
 
 ## Context
 

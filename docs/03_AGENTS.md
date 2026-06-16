@@ -72,4 +72,9 @@ Place this file at repo root. Read it at the start of EVERY session, along with
 - 2026-06-12: Corey chose fixed debug receiver IP `116.203.200.55` for M1 log uploads.
   Debug app upload pairing is password-only and targets `http://116.203.200.55:8765`;
   cleartext is allowed only in the debug network security config for that IP.
-- (append discoveries here…)
+- 2026-06-15: Stability review sprint. Issues #99–#119 filed from deep line-by-line pass.
+  Codex unavailable until 2026-06-18; Claude implementing directly per HANDOFF §4.
+  Board hardware not available until Thursday 2026-06-19.
+  Active crash: app crashes on device select (build 122); root causes in #99–#100.
+  Key post-review findings: tripAmpHours always 0.0 (#113, HIGH); HA token plaintext (#114);
+  BoardStateServiceImpl narrow exception catch (#115); Room exportSchema missing (#117).

@@ -47,6 +47,7 @@ class SettingsRepository(
             speedUnit = prefs[SPEED_UNIT].toEnumOrDefault(SpeedUnit.MPH),
             temperatureUnit = prefs[TEMPERATURE_UNIT].toEnumOrDefault(TemperatureUnit.FAHRENHEIT),
             tireDiameterInches = prefs[TIRE_DIAMETER]?.coerceIn(TIRE_DIAMETER_RANGE) ?: DEFAULT_TIRE_DIAMETER,
+            hasCustomTireDiameter = prefs[HAS_CUSTOM_TIRE_DIAMETER] ?: false,
             lastConnectedDeviceId = prefs[LAST_DEVICE_ID],
             hasRequestedBatteryOptimization = prefs[HAS_REQUESTED_BATTERY_OPT] ?: false,
             haUrl = prefs[HA_URL] ?: "",
@@ -69,6 +70,7 @@ class SettingsRepository(
     suspend fun setTireDiameterInches(value: Double) {
         dataStore.edit { preferences ->
             preferences[TIRE_DIAMETER] = value.coerceIn(TIRE_DIAMETER_RANGE)
+            preferences[HAS_CUSTOM_TIRE_DIAMETER] = true
         }
     }
 
@@ -120,6 +122,7 @@ class SettingsRepository(
         val TIRE_DIAMETER = doublePreferencesKey("tire_diameter")
         val LAST_DEVICE_ID = stringPreferencesKey("last_device_id")
         val HAS_REQUESTED_BATTERY_OPT = booleanPreferencesKey("has_requested_battery_opt")
+        val HAS_CUSTOM_TIRE_DIAMETER = booleanPreferencesKey("has_custom_tire_diameter")
         val HA_URL = stringPreferencesKey("ha_url")
         val HA_TOKEN = stringPreferencesKey("ha_token")
         const val KEY_HA_TOKEN_SECURE = "ha_token_secure"

@@ -1,7 +1,6 @@
 package com.zwheel.app.ble
 
 import com.zwheel.app.data.settings.SettingsRepository
-import com.zwheel.app.data.settings.UserPreferences
 import com.zwheel.core.model.BoardIdentity
 import com.zwheel.core.model.BoardState
 import com.zwheel.core.ports.Clock
@@ -124,9 +123,9 @@ class ConnectionManager @Inject constructor(
             hardwareRevision = hwRev.toString(),
         )
 
-        val savedDiameter = settingsRepository.preferences.first().tireDiameterInches
-        val tireDiameter = if (savedDiameter != UserPreferences().tireDiameterInches) {
-            savedDiameter
+        val savedPrefs = settingsRepository.preferences.first()
+        val tireDiameter = if (savedPrefs.hasCustomTireDiameter) {
+            savedPrefs.tireDiameterInches
         } else {
             boardType.stockTireDiameterInches
         }

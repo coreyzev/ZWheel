@@ -1,6 +1,6 @@
 # ZWheel — Solo Handoff Guide
 
-Updated 2026-06-15 (post-stability-review sprint). Supersedes the previous handoff.
+Updated 2026-06-16 (all 2026-06-15 review Wave 1 issues merged). Supersedes the previous handoff.
 
 ---
 
@@ -19,8 +19,24 @@ Updated 2026-06-15 (post-stability-review sprint). Supersedes the previous hando
 - #95 — Fix GPS permanently-denied flow (PR #96)
 - #97 — Catch connect() exceptions (PR #97)
 
-**Active known crash:** App crashes on device select (build 122). Root cause diagnosed in the
-2026-06-15 stability review. Fixes tracked in issues #99–#107 below.
+**2026-06-16 status:** All Wave 1 issues from the stability review are merged to main.
+Crash from build 122 (#99 + #100) is fixed. No open PRs.
+
+**Completed 2026-06-15/16 sprint (merged to main):**
+- #96 → GPS permission state flicker (PR #98)
+- #97 → Catch connect() exceptions (PR #97)
+- #99 → Service crash guards: runCatching in ticker, onDestroy, Wear (PR #124)
+- #100 → API 34 SecurityException: gate Connect on location permission (PR #125)
+- #103 → Remove stale topSpeed mirror from DashboardViewModel (PR #126)
+- #105 → Wakelock object leak + move acquire after startForeground (PR #127)
+- #107 → CI: releases on workflow_dispatch only (PR #120)
+- #110 → HA cleartext HTTP warning in Settings (PR #129)
+- #111 → GPS permanently-denied pre-denied edge case (via #98 refactor)
+- #112 → ADR-007 data-path diagram + wear connectionLabel fix (PR #121)
+- #113 → tripAmpHours/regenAmpHours never mapped in toDashboardUiState (PR #123)
+- #114 → HA token shown in plaintext (PR #130)
+- #115 → BoardStateServiceImpl collectors catch only IAE (PR #128)
+- #118 → wear versionCode/versionName hardcoded (PR #122)
 
 **Gemini-OK tasks were dispatched via:** `GEMINI_CLI_TRUST_WORKSPACE=true gemini -p "$(cat /path/to/gate.md)" --yolo`
 run from the worktree directory.
@@ -32,22 +48,15 @@ run from the worktree directory.
 All issues below are from the full architecture review on 2026-06-15. Sonnet can implement
 all of them. Codex returns 2026-06-18. Hardware (board) not available until Thursday.
 
-### Wave 1 — no board needed, do first, can run in parallel
+### Wave 1 — DONE (all merged 2026-06-15/16)
+
+~~#99, #100, #103, #105, #107, #110, #111, #112, #113, #114, #115, #118~~ — all merged.
+
+**Remaining Wave 1 item:**
 
 | Issue | Title | Notes |
 |-------|-------|-------|
-| **#107** | CI: releases on workflow_dispatch only | One-line YAML change. Do first — stops release noise immediately. |
-| **#99** | CRASH: ticker/onDestroy/WearRepo runCatching | 3 small wrapping changes in 2 files. P0. |
-| **#100** | CRASH: API 34 SecurityException / location type | Touches Manifest + UI permission gate. P0. Can be verified on emulator. |
-| **#103** | Remove stale topSpeed mirror from DashboardViewModel | Small: remove one field and its usages. P2. |
-| **#105** | Wakelock object leak + move acquire after startForeground | Small: single-file refactor. P2. |
 | **#106** | HA token active migration + Keystore init protection | SettingsRepository only. P2. |
-| **#110** | HA cleartext HTTP warning in Settings UI | One conditional Text composable. P3. |
-| **#112** | ADR-007 data-path diagram update | Docs only, no code. P3. |
-| **#113** | Fix tripAmpHours/regenAmpHours always 0.0 — missing mapping in toDashboardUiState() | 2-line fix + 1 new test. P1. HIGH: trip energy display permanently broken. |
-| **#114** | HA token shown in plaintext — add PasswordVisualTransformation | Single-field change + show/hide toggle icon. P2. |
-| **#115** | BoardStateServiceImpl collectors catch only IAE — widen to all exceptions | Core-only change. P2. Prevents silent BLE stream death on transport errors. |
-| **#118** | wear/build.gradle.kts: hardcoded versionCode/versionName | One-line YAML + Gradle change. P3. |
 | **#119** | Dashboard RSSI always shows "0 dBm" | Design decision required — see issue. P3. |
 
 ### Wave 2 — no board needed, but depend on Wave 1 being stable

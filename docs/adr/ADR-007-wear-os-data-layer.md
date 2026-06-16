@@ -25,13 +25,13 @@ Use `DataClient.putDataItem()` from the Wear Data Layer (not `MessageClient` and
 ### 2. Data path
 
 ```
-RideServiceRepository (boardState StateFlow)
-  → WearDataLayerRepository (phone, app module)
+ConnectionManager (boardState StateFlow)
+  → WearDataLayerRepository (phone, app module)  [reads ConnectionManager + RideServiceRepository]
     → DataClient.putDataItem("/zwheel/state")
       → Wear OS Data Layer
         → WearDataLayerRepository (watch, wear module)
           → StateFlow<WatchPayload>
-            → WatchFaceService / TileService (renders)
+            → MainActivity / ZWheelWearScreen (renders)
 ```
 
 ### 3. `/zwheel/state` payload encoding
@@ -50,7 +50,7 @@ Do NOT encode cell voltages or full `BoardState` — the watch only needs the fi
 
 ### 4. Update cadence
 
-- Push on every new `boardState` emission from `RideServiceRepository` (which is already
+- Push on every new `boardState` emission from `ConnectionManager` (which is already
   bounded by BLE notification rate, typically 1–2 Hz).
 - Deduplicate: compare the new `WatchPayload` to the last-sent payload; skip `putDataItem`
   if unchanged (avoids spurious wakeups on the watch).
@@ -64,6 +64,7 @@ New file: `app/src/main/kotlin/com/zwheel/app/wear/WearDataLayerRepository.kt`
 @Singleton
 class WearDataLayerRepository @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val connectionManager: ConnectionManager,
     private val rideServiceRepository: RideServiceRepository,
     private val settingsRepository: SettingsRepository,
 ) {
@@ -73,8 +74,8 @@ class WearDataLayerRepository @Inject constructor(
     fun startSync(scope: CoroutineScope) {
         scope.launch {
             combine(
-                rideServiceRepository.boardState,
-                rideServiceRepository.connectionState,
+                connectionManager.boardState,
+                connectionManager.connectionState,
                 settingsRepository.preferences,
             ) { boardState, connectionState, prefs ->
                 boardState.toWatchPayload(connectionState, prefs)
@@ -144,6 +145,8 @@ OS delivers it when reconnected. No special retry logic needed.
 - `WatchPayload.isRiding` should be `true` when `RideRecorder` has an open session.
   Gate P4 wires this: `RideServiceRepository` gains an `isRiding: StateFlow<Boolean>`
   updated by `RideRecorder` when a session starts/ends.
+- Actual rendering is currently done via `MainActivity` and `ZWheelWearScreen` (Compose), 
+  not `WatchFaceService` / `TileService` (those are not yet implemented).
 
 ## Gates
 

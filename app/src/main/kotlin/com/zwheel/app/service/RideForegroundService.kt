@@ -61,6 +61,7 @@ class RideForegroundService : LifecycleService() {
     override fun onCreate() {
         super.onCreate()
         notifications.createChannel()
+        lifecycleScope.launch { settingsRepository.migrateHaTokenIfNeeded() }
         trackSpeedUnitPreference()
         observeBoardForNotificationAndWakelock()
         startRideRecorderTicker()

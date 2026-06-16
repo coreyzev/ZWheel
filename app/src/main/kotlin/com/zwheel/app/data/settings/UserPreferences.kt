@@ -10,6 +10,7 @@ data class UserPreferences(
     val hasCustomTireDiameter: Boolean = false,
     val lastConnectedDeviceId: String? = null,
     val hasRequestedBatteryOptimization: Boolean = false,
+    val hasAttemptedLocationPermission: Boolean = false,
     val haUrl: String = "",
     val haToken: String = "",
 )

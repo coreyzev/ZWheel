@@ -1,7 +1,5 @@
 package com.zwheel.core.ports
 
-import com.zwheel.core.model.RideDataPoint
-import com.zwheel.core.model.RideSession
 import com.zwheel.core.protocol.GattCharacteristicId
 import com.zwheel.core.protocol.HandshakeResult
 import com.zwheel.core.protocol.KeepAliveAction
@@ -29,13 +27,6 @@ interface HandshakeStrategy {
 
 interface Clock {
     fun nowEpochMillis(): Long
-}
-
-interface RideStorage {
-    suspend fun startSession(session: RideSession)
-    suspend fun appendPoint(point: RideDataPoint)
-    suspend fun finishSession(sessionId: String, endEpochMillis: Long)
-    suspend fun openSession(): RideSession?
 }
 
 data class ScanResult(

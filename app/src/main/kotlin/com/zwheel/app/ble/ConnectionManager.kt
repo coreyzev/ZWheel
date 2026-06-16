@@ -56,6 +56,9 @@ class ConnectionManager @Inject constructor(
     private val _devices = MutableStateFlow<List<ScanResult>>(emptyList())
     val devices: StateFlow<List<ScanResult>> = _devices.asStateFlow()
 
+    private val _rssi = MutableStateFlow<Int?>(null)
+    val rssi: StateFlow<Int?> = _rssi.asStateFlow()
+
     private val _boardState = MutableStateFlow(BoardState())
     val boardState: StateFlow<BoardState> = _boardState.asStateFlow()
 
@@ -99,6 +102,7 @@ class ConnectionManager @Inject constructor(
     suspend fun connect(deviceId: String) {
         connectJob?.cancelAndJoin()
         connectJob = coroutineContext[Job]
+        _rssi.value = _devices.value.firstOrNull { it.deviceKey() == deviceId.lowercase() }?.rssi
         stopScan()
         stateMirrorJob?.cancel()
         keepAliveJob?.cancel()
@@ -154,6 +158,7 @@ class ConnectionManager @Inject constructor(
         keepAliveJob = null
         scope.coroutineContext.cancelChildren()
         _boardState.value = BoardState()
+        _rssi.value = null
         scope.launch {
             runCatching { transport.disconnect() }
         }

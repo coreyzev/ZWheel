@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 data class DashboardUiState(
     val boardName: String,
     val connectionLabel: String,
-    val rssi: Int,
+    val rssi: Int?,
     val firmwareLabel: String,
     val speedMph: Double,
     val isSpeedCorrected: Boolean,
@@ -43,7 +43,7 @@ data class CellVoltageUiState(
 fun mockDashboardState(): DashboardUiState = DashboardUiState(
     boardName = "XR 4029",
     connectionLabel = "MOCK CONNECTED",
-    rssi = -58,
+    rssi = null,
     firmwareLabel = "FW GEMINI",
     speedMph = 14.8,
     isSpeedCorrected = true,
@@ -99,7 +99,7 @@ fun BoardState.toDashboardUiState(
     return DashboardUiState(
         boardName = identity?.name ?: "Onewheel",
         connectionLabel = connectionState.name,
-        rssi = 0,
+        rssi = null,
         firmwareLabel = identity?.firmwareRevision?.let { "FW $it" } ?: "FW --",
         speedMph = speed,
         isSpeedCorrected = isSpeedCorrected,

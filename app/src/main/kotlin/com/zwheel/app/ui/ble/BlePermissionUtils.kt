@@ -12,9 +12,16 @@ import android.provider.Settings
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
+// FINE and COARSE must be requested together: on Android 12+ a FINE-only runtime
+// request is silently ignored (no system dialog appears, result is immediate denial).
 internal fun rideLocationPermissions(): List<String> =
-    listOf(Manifest.permission.ACCESS_FINE_LOCATION)
+    listOf(
+        Manifest.permission.ACCESS_FINE_LOCATION,
+        Manifest.permission.ACCESS_COARSE_LOCATION,
+    )
 
+// GPS ride tracking needs precise location; coarse-only grants are treated as not granted
+// so the dashboard keeps offering the upgrade-to-precise prompt.
 internal fun hasLocationPermission(context: Context): Boolean =
     hasPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
 

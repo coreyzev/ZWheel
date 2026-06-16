@@ -88,6 +88,24 @@ class RideDaoTest {
     }
 
     @Test
+    fun `getAllOpenSessions returns all open sessions without LIMIT`() = runBlocking {
+        dao.insertSession(session("open1", endEpochMillis = null))
+        dao.insertSession(session("open2", endEpochMillis = null))
+        dao.insertSession(session("closed", endEpochMillis = 9000L))
+        val open = dao.getAllOpenSessions()
+        assertEquals(2, open.size)
+        assert(open.map { it.id }.containsAll(listOf("open1", "open2")))
+    }
+
+    @Test
+    fun `closeSession sets endEpochMillis`() = runBlocking {
+        dao.insertSession(session("s", endEpochMillis = null))
+        dao.closeSession("s", 42000L)
+        val closed = dao.getSession("s")
+        assertEquals(42000L, closed?.endEpochMillis)
+    }
+
+    @Test
     fun `getAllSessions returns sessions newest first`() = runBlocking {
         dao.insertSession(session("older", startEpochMillis = 1000L))
         dao.insertSession(session("newer", startEpochMillis = 2000L))

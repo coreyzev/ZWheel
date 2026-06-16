@@ -15,14 +15,16 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
     private val connectionManager: ConnectionManager,
     private val rideServiceRepository: RideServiceRepository,
     private val rideServiceController: RideServiceController,
-    settingsRepository: SettingsRepository,
+    private val settingsRepository: SettingsRepository,
     private val rangeEstimator: RangeEstimator,
 ) : ViewModel() {
     val uiState: StateFlow<DashboardUiState> = combine(
@@ -69,5 +71,15 @@ class DashboardViewModel @Inject constructor(
 
     fun disconnect() {
         rideServiceController.disconnect()
+    }
+
+    // Persisted across sessions so the UI can show "GPS DENIED" from the start of a new
+    // session when location was permanently denied in a prior session.
+    val locationPermissionAttempted: StateFlow<Boolean> = settingsRepository.preferences
+        .map { it.hasAttemptedLocationPermission }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), false)
+
+    fun markLocationPermissionAttempted() {
+        viewModelScope.launch { settingsRepository.saveHasAttemptedLocationPermission() }
     }
 }

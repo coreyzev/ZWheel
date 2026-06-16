@@ -51,6 +51,7 @@ import com.zwheel.app.ui.ble.hasAllRequiredPermissions
 import com.zwheel.app.ui.ble.hasPermission
 import com.zwheel.app.ui.ble.hasPermanentlyDeniedPermission
 import com.zwheel.app.ui.ble.openAppSettings
+import com.zwheel.app.ui.ble.openLocationPermissionSettings
 import com.zwheel.core.ports.ScanResult
 
 @Composable
@@ -112,11 +113,9 @@ private fun ZWheelDashboardScreen(
 
     val locationPermissions = remember { rideLocationPermissions() }
     var locationGranted by remember { mutableStateOf(hasLocationPermission(context)) }
-    // Tracks whether we have ever successfully launched the location permission dialog.
-    // This is the gate for detecting "permanently denied" vs "never asked": on Android,
-    // shouldShowRequestPermissionRationale() returns false for both states; the only way
-    // to tell them apart is whether a dialog attempt was already made.
-    var locationDialogAttempted by remember { mutableStateOf(false) }
+    // Persisted in DataStore: survives app restarts so "GPS DENIED" shows immediately on the
+    // next session after permanent denial, without requiring a wasted first tap to discover it.
+    val locationPermissionAttempted by viewModel.locationPermissionAttempted.collectAsStateWithLifecycle()
     var pendingConnectDeviceId by remember { mutableStateOf<String?>(null) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -136,8 +135,6 @@ private fun ZWheelDashboardScreen(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
     ) { results ->
         locationGranted = locationPermissions.all { results[it] == true || hasPermission(context, it) }
-        // Mark that a real dialog attempt completed (success or denial).
-        locationDialogAttempted = true
         if (locationGranted) {
             pendingConnectDeviceId?.let { viewModel.connect(it) }
         }
@@ -151,23 +148,24 @@ private fun ZWheelDashboardScreen(
 
     fun requestLocationPermission() {
         // Only route to Settings when we are sure the permission is permanently denied:
-        // a dialog was previously completed AND shouldShowRationale is now false (meaning
-        // the user checked "don't ask again"). Computing this at tap-time avoids the
-        // false-positive that occurs when setting state inside the launcher callback.
-        val permanentlyDenied = locationDialogAttempted && hasPermanentlyDeniedPermission(
+        // locationPermissionAttempted (persisted) AND shouldShowRationale is now false.
+        val permanentlyDenied = locationPermissionAttempted && hasPermanentlyDeniedPermission(
             context = context,
             permissions = locationPermissions,
             requestAttempted = true,
         )
         if (permanentlyDenied) {
-            context.openAppSettings()
+            context.openLocationPermissionSettings()
             return
         }
+        // Persist the attempt before launching so that even if the Activity is killed
+        // mid-dialog, the next session knows a request was previously made.
+        viewModel.markLocationPermissionAttempted()
         locationLauncher.launch(locationPermissions.toTypedArray())
     }
 
     // Derived — no mutable state; recomputed on each recomposition from current system state.
-    val locationPermanentlyDenied = !locationGranted && locationDialogAttempted &&
+    val locationPermanentlyDenied = !locationGranted && locationPermissionAttempted &&
         hasPermanentlyDeniedPermission(context, locationPermissions, requestAttempted = true)
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {

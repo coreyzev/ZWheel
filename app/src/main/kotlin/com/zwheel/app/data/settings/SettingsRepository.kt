@@ -50,6 +50,7 @@ class SettingsRepository(
             hasCustomTireDiameter = prefs[HAS_CUSTOM_TIRE_DIAMETER] ?: false,
             lastConnectedDeviceId = prefs[LAST_DEVICE_ID],
             hasRequestedBatteryOptimization = prefs[HAS_REQUESTED_BATTERY_OPT] ?: false,
+            hasAttemptedLocationPermission = prefs[HAS_ATTEMPTED_LOCATION_PERM] ?: false,
             haUrl = prefs[HA_URL] ?: "",
             haToken = token,
         )
@@ -106,6 +107,10 @@ class SettingsRepository(
         dataStore.edit { it[HAS_REQUESTED_BATTERY_OPT] = true }
     }
 
+    suspend fun saveHasAttemptedLocationPermission() {
+        dataStore.edit { it[HAS_ATTEMPTED_LOCATION_PERM] = true }
+    }
+
     suspend fun saveLastConnectedDeviceId(id: String?) {
         dataStore.edit { preferences ->
             if (id != null) preferences[LAST_DEVICE_ID] = id
@@ -122,6 +127,7 @@ class SettingsRepository(
         val TIRE_DIAMETER = doublePreferencesKey("tire_diameter")
         val LAST_DEVICE_ID = stringPreferencesKey("last_device_id")
         val HAS_REQUESTED_BATTERY_OPT = booleanPreferencesKey("has_requested_battery_opt")
+        val HAS_ATTEMPTED_LOCATION_PERM = booleanPreferencesKey("has_attempted_location_perm")
         val HAS_CUSTOM_TIRE_DIAMETER = booleanPreferencesKey("has_custom_tire_diameter")
         val HA_URL = stringPreferencesKey("ha_url")
         val HA_TOKEN = stringPreferencesKey("ha_token")

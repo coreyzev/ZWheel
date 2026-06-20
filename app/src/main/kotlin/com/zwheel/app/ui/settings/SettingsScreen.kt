@@ -1,244 +1,189 @@
 package com.zwheel.app.ui.settings
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.zwheel.app.data.settings.UserPreferences
 import com.zwheel.app.service.HaPushResult
+import com.zwheel.app.ui.JetBrainsMonoFamily
+import com.zwheel.app.ui.LocalZWheelColors
+import com.zwheel.app.ui.SairaFamily
+import com.zwheel.core.model.BoardState
 import com.zwheel.core.model.SpeedUnit
 import com.zwheel.core.model.TemperatureUnit
 
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
+    onDisconnect: () -> Unit = {},
+    onForgetBoard: () -> Unit = {},
+    onOpenBleDebug: () -> Unit = {},
 ) {
     val preferences by viewModel.preferences.collectAsState()
     val haTestResult by viewModel.haTestResult.collectAsState()
+    val boardState by viewModel.boardState.collectAsState()
+    val rssi by viewModel.rssi.collectAsState()
 
     SettingsContent(
         preferences = preferences,
         haTestResult = haTestResult,
+        boardState = boardState,
+        rssi = rssi,
+        onSaveBoardName = viewModel::setCustomBoardName,
         onSpeedUnitSelected = viewModel::setSpeedUnit,
         onTemperatureUnitSelected = viewModel::setTemperatureUnit,
         onTireDiameterChanged = viewModel::setTireDiameter,
         onHaUrlChanged = viewModel::setHaUrl,
         onHaTokenChanged = viewModel::setHaToken,
         onTestHaConnection = viewModel::testHaConnection,
+        onDisconnect = onDisconnect,
+        onForgetBoard = onForgetBoard,
+        onOpenBleDebug = onOpenBleDebug,
     )
 }
 
 @Composable
-private fun SettingsContent(
+internal fun SettingsContent(
     preferences: UserPreferences,
     haTestResult: HaPushResult?,
+    boardState: BoardState,
+    rssi: Int?,
+    onSaveBoardName: (String?) -> Unit,
     onSpeedUnitSelected: (SpeedUnit) -> Unit,
     onTemperatureUnitSelected: (TemperatureUnit) -> Unit,
     onTireDiameterChanged: (Double) -> Unit,
     onHaUrlChanged: (String) -> Unit,
     onHaTokenChanged: (String) -> Unit,
     onTestHaConnection: () -> Unit,
+    onDisconnect: () -> Unit,
+    onForgetBoard: () -> Unit,
+    onOpenBleDebug: () -> Unit,
 ) {
-    Column(
+    val c = LocalZWheelColors.current
+
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xffeeeeee))
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp),
+            .background(c.screenBg)
+            .systemBarsPadding(),
+        contentPadding = PaddingValues(bottom = 32.dp),
     ) {
-        SettingsHeader()
-        UnitSelector(
-            label = "SPEED UNIT",
-            options = listOf(SpeedUnit.MPH to "MPH", SpeedUnit.KPH to "KPH"),
-            selectedOption = preferences.speedUnit,
-            onSelected = onSpeedUnitSelected,
-        )
-        UnitSelector(
-            label = "TEMPERATURE UNIT",
-            options = listOf(TemperatureUnit.FAHRENHEIT to "°F", TemperatureUnit.CELSIUS to "°C"),
-            selectedOption = preferences.temperatureUnit,
-            onSelected = onTemperatureUnitSelected,
-        )
-        TireDiameterControl(
-            diameterInches = preferences.tireDiameterInches,
-            onDiameterChanged = onTireDiameterChanged,
-        )
-        HomeAssistantSection(
-            haUrl = preferences.haUrl,
-            haToken = preferences.haToken,
-            haTestResult = haTestResult,
-            onUrlChanged = onHaUrlChanged,
-            onTokenChanged = onHaTokenChanged,
-            onTestConnection = onTestHaConnection,
-        )
-    }
-}
-
-@Composable
-private fun SettingsHeader() {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
-            text = "Settings",
-            color = Color(0xff111111),
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Black,
-        )
-        Text(
-            text = "Units and tire calibration",
-            color = Color(0xff555555),
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold,
-        )
-    }
-}
-
-@Composable
-private fun <T> UnitSelector(
-    label: String,
-    options: List<Pair<T, String>>,
-    selectedOption: T,
-    onSelected: (T) -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionLabel(label)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            options.forEach { (option, text) ->
-                FilterChip(
-                    selected = option == selectedOption,
-                    onClick = { onSelected(option) },
-                    label = { Text(text = text) },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun TireDiameterControl(
-    diameterInches: Double,
-    onDiameterChanged: (Double) -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            SectionLabel("TIRE DIAMETER")
+        item {
             Text(
-                text = "%.1f in".format(diameterInches),
-                color = Color(0xff111111),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Black,
+                text = "Settings",
+                style = TextStyle(
+                    fontFamily = SairaFamily,
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.W800,
+                    letterSpacing = (-0.5).sp,
+                ),
+                color = c.textPrimary,
+                modifier = Modifier.padding(start = 22.dp, end = 22.dp, top = 20.dp, bottom = 16.dp),
             )
         }
-        Slider(
-            value = diameterInches.toFloat(),
-            onValueChange = { onDiameterChanged(it.toDouble()) },
-            valueRange = 8f..16f,
-        )
-    }
-}
-
-@Composable
-private fun HomeAssistantSection(
-    haUrl: String,
-    haToken: String,
-    haTestResult: HaPushResult?,
-    onUrlChanged: (String) -> Unit,
-    onTokenChanged: (String) -> Unit,
-    onTestConnection: () -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionLabel("HOME ASSISTANT")
-        androidx.compose.material3.OutlinedTextField(
-            value = haUrl,
-            onValueChange = onUrlChanged,
-            label = { Text("Server URL") },
-            placeholder = { Text("http://homeassistant.local:8123") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-        )
-        if (haUrl.startsWith("http://")) {
-            Text(
-                text = "Token sent over unencrypted HTTP. Use https:// if available.",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.error,
+        item { SectionEyebrowRow("CONNECTED BOARD", modifier = Modifier.padding(horizontal = 18.dp)) }
+        item {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 18.dp, vertical = 8.dp),
+                shape = RoundedCornerShape(16.dp),
+                color = c.card,
+                border = BorderStroke(1.dp, c.border),
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ConnectedBoardCard(
+                        boardState = boardState,
+                        rssi = rssi,
+                        customBoardName = preferences.customBoardName,
+                        onSaveName = onSaveBoardName,
+                        onDisconnect = onDisconnect,
+                        onForgetBoard = onForgetBoard,
+                    )
+                    HorizontalDivider(color = c.divider, thickness = 0.5.dp)
+                    DeviceInfoDisclosure(identity = boardState.identity, rssi = rssi)
+                }
+            }
+        }
+        item { Spacer(Modifier.height(22.dp)) }
+        item { SectionEyebrowRow("UNITS", modifier = Modifier.padding(horizontal = 18.dp)) }
+        item {
+            UnitsSection(
+                prefs = preferences,
+                onSpeedUnit = onSpeedUnitSelected,
+                onTempUnit = onTemperatureUnitSelected,
+                modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
             )
         }
-        var showToken by remember { mutableStateOf(false) }
-        androidx.compose.material3.OutlinedTextField(
-            value = haToken,
-            onValueChange = onTokenChanged,
-            label = { Text("Long-lived access token") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            visualTransformation = if (showToken) VisualTransformation.None else PasswordVisualTransformation(),
-            trailingIcon = {
-                androidx.compose.material3.TextButton(onClick = { showToken = !showToken }) {
-                    Text(if (showToken) "Hide" else "Show")
-                }
-            },
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Button(onClick = onTestConnection, enabled = haUrl.isNotBlank() && haToken.isNotBlank()) {
-                Text("Test connection")
-            }
-            if (haTestResult != null) {
-                val (label, color) = when (haTestResult) {
-                    HaPushResult.Success -> "Connected" to Color(0xff007a3d)
-                    HaPushResult.AuthFailed -> "Auth failed (check token)" to Color(0xff9b1c1c)
-                    HaPushResult.Unreachable -> "Unreachable (check URL)" to Color(0xffb45309)
-                    HaPushResult.BadUrl -> "Bad URL (needs http:// or https://)" to Color(0xff9b1c1c)
-                }
-                Text(text = label, color = color, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
-            }
+        item { Spacer(Modifier.height(22.dp)) }
+        item {
+            TireCalibrationSection(
+                prefs = preferences,
+                onDiameterChanged = onTireDiameterChanged,
+                modifier = Modifier.padding(horizontal = 18.dp),
+            )
         }
-        Text(
-            text = "When configured, battery % is pushed to HA as sensor.onewheel_battery while connected.",
-            style = MaterialTheme.typography.bodySmall,
-            color = Color(0xff777777),
-        )
+        item { Spacer(Modifier.height(22.dp)) }
+        item {
+            HomeAssistantSection(
+                haUrl = preferences.haUrl,
+                haToken = preferences.haToken,
+                haTestResult = haTestResult,
+                onUrlChanged = onHaUrlChanged,
+                onTokenChanged = onHaTokenChanged,
+                onTestConnection = onTestHaConnection,
+                modifier = Modifier.padding(horizontal = 18.dp),
+            )
+        }
+        item { Spacer(Modifier.height(22.dp)) }
+        item {
+            DeveloperSection(
+                onOpenBleDebug = onOpenBleDebug,
+                modifier = Modifier.padding(horizontal = 18.dp),
+            )
+        }
+        item { Spacer(Modifier.height(22.dp)) }
+        item { SupportSection(modifier = Modifier.padding(horizontal = 18.dp)) }
+        item { Spacer(Modifier.height(22.dp)) }
+        item { AboutSection(modifier = Modifier.padding(horizontal = 18.dp)) }
+        item { SettingsFooter() }
     }
 }
 
 @Composable
-private fun SectionLabel(text: String) {
+private fun SectionEyebrowRow(text: String, modifier: Modifier = Modifier) {
+    val c = LocalZWheelColors.current
     Text(
-        text = text,
-        color = Color(0xff555555),
-        style = MaterialTheme.typography.labelMedium,
-        fontWeight = FontWeight.Black,
+        text = text.uppercase(),
+        style = TextStyle(
+            fontFamily = JetBrainsMonoFamily,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.W400,
+            letterSpacing = 2.sp,
+        ),
+        color = c.textDimmest,
+        modifier = modifier.padding(bottom = 6.dp),
     )
 }

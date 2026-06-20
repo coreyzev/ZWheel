@@ -31,6 +31,7 @@ import com.zwheel.app.ui.ble.hasPermanentlyDeniedPermission
 import com.zwheel.app.ui.ble.openAppSettings
 import com.zwheel.app.ui.ble.openLocationPermissionSettings
 import com.zwheel.app.ui.ble.rideLocationPermissions
+import com.zwheel.app.ui.ble.BleDebugScreen
 import com.zwheel.app.ui.connect.ConnectScreen
 import com.zwheel.app.ui.dashboard.DashboardScreen
 import com.zwheel.app.ui.history.MapFullScreenScreen
@@ -41,12 +42,14 @@ import com.zwheel.app.ui.onboarding.OemBatteryAdviceScreen
 import com.zwheel.app.ui.onboarding.batteryAdviceForManufacturer
 import com.zwheel.app.ui.permissions.PermissionsScreen
 import com.zwheel.app.ui.settings.SettingsScreen
+import com.zwheel.app.ui.settings.SettingsViewModel
 import com.zwheel.core.ports.ScanResult
 
 @Composable
 fun ZWheelAppScreen(
     viewModel: DashboardViewModel = hiltViewModel(),
 ) {
+    val settingsViewModel: SettingsViewModel = hiltViewModel()
     val context = LocalContext.current
     val navController = rememberNavController()
     val c = LocalZWheelColors.current
@@ -210,7 +213,20 @@ fun ZWheelAppScreen(
             composable("mapFullScreen/{sessionId}") {
                 MapFullScreenScreen(onBack = { navController.popBackStack() })
             }
-            composable("settings") { SettingsScreen() }
+            composable("settings") {
+                SettingsScreen(
+                    viewModel = settingsViewModel,
+                    onDisconnect = viewModel::disconnect,
+                    onForgetBoard = {
+                        viewModel.disconnect()
+                        settingsViewModel.forgetBoard()
+                    },
+                    onOpenBleDebug = { navController.navigate("ble_debug") },
+                )
+            }
+            composable("ble_debug") {
+                BleDebugScreen()
+            }
             composable("battery") {
                 OemBatteryAdviceScreen(
                     advice = batteryAdviceForManufacturer(Build.MANUFACTURER),

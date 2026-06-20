@@ -6,8 +6,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,7 +50,7 @@ fun StatRow(state: DashboardUiState, modifier: Modifier = Modifier) {
 @Composable
 private fun DrawTile(state: DashboardUiState) {
     val c = LocalZWheelColors.current
-    Icon(Icons.Filled.Warning, contentDescription = null, tint = c.lime, modifier = Modifier.size(16.dp))
+    Icon(Icons.Filled.Bolt, contentDescription = null, tint = c.lime, modifier = Modifier.size(16.dp))
     Text(
         text = "%.1f A".format(state.amps),
         color = c.textPrimary,
@@ -85,7 +85,7 @@ private fun ModeTile(state: DashboardUiState) {
 private fun LightsTile(state: DashboardUiState) {
     val c = LocalZWheelColors.current
     val color = if (state.lightsOn) c.lime else c.textDim
-    Icon(Icons.Filled.Info, contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
+    Icon(Icons.Filled.Lightbulb, contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
     Text(
         text = if (state.lightsOn) "ON" else "OFF",
         color = color,

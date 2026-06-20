@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -108,7 +108,7 @@ fun SpeedSlab(state: DashboardUiState, modifier: Modifier = Modifier) {
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = Icons.Filled.KeyboardArrowUp,
+                        imageVector = Icons.Filled.ArrowUpward,
                         contentDescription = null,
                         tint = c.rampCaution,
                         modifier = Modifier.size(12.dp),

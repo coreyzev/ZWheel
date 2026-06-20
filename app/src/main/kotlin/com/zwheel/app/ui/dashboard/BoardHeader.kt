@@ -10,8 +10,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.BluetoothConnected
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -72,14 +72,14 @@ fun BoardHeader(state: DashboardUiState, modifier: Modifier = Modifier) {
             modifier = Modifier.padding(top = 4.dp),
         ) {
             Icon(
-                imageVector = Icons.Filled.LocationOn,
+                imageVector = Icons.Filled.MyLocation,
                 contentDescription = "GPS",
                 tint = c.cyan,
                 modifier = Modifier.size(12.dp),
             )
             Text("GPS · ", style = mono11, color = c.cyan)
             Icon(
-                imageVector = Icons.Filled.Settings,
+                imageVector = Icons.Filled.BluetoothConnected,
                 contentDescription = "BLE",
                 tint = c.textMuted,
                 modifier = Modifier.size(12.dp),

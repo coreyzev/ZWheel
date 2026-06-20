@@ -21,8 +21,9 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -67,13 +68,13 @@ fun CellStrip(cells: List<CellVoltageUiState>, modifier: Modifier = Modifier) {
             Box(modifier = Modifier.weight(1f)) {
                 Label("PER-CELL · ${cells.size}S")
             }
-            Icon(Icons.Filled.KeyboardArrowUp, contentDescription = null, tint = c.rampGood, modifier = Modifier.size(10.dp))
+            Icon(Icons.Filled.ArrowUpward, contentDescription = null, tint = c.rampGood, modifier = Modifier.size(10.dp))
             Text("%.2fV".format(maxVolts), style = monoStyle(11, FontWeight.Bold), color = c.rampGood)
             androidx.compose.foundation.layout.Spacer(Modifier.size(4.dp))
-            Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = c.rampDanger, modifier = Modifier.size(10.dp))
+            Icon(Icons.Filled.ArrowDownward, contentDescription = null, tint = c.rampDanger, modifier = Modifier.size(10.dp))
             Text("%.2fV".format(minVolts), style = monoStyle(11, FontWeight.Bold), color = c.rampDanger)
             Icon(
-                imageVector = Icons.Filled.KeyboardArrowDown,
+                imageVector = Icons.Filled.ExpandMore,
                 contentDescription = null,
                 tint = c.textMuted,
                 modifier = Modifier.graphicsLayer { rotationZ = chevronRotation },

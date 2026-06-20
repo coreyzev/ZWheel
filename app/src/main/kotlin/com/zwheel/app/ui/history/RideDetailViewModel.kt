@@ -10,6 +10,7 @@ import com.zwheel.core.model.RideSession
 import com.zwheel.core.model.SpeedUnit
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
@@ -22,6 +23,8 @@ import kotlinx.coroutines.launch
 
 data class RideDetailUiState(
     val dateLabel: String,
+    val titleLabel: String,
+    val subtitleLabel: String,
     val boardId: String,
     val durationLabel: String,
     val distanceLabel: String,
@@ -29,6 +32,7 @@ data class RideDetailUiState(
     val avgSpeedLabel: String,
     val gpsPoints: List<Triple<Double, Double, Double?>> = emptyList(),
     val gpsDistanceLabel: String = "--",
+    val ahUsedLabel: String = "--",
 )
 
 @HiltViewModel
@@ -102,9 +106,23 @@ class RideDetailViewModel @Inject constructor(
         } else {
             "%.1f kph".format(avgSpeedMps * 3.6)
         }
+        val (titleLabel, subtitleLabel) = formatTitleAndSubtitle(
+            startEpochMillis,
+            endEpochMillis,
+            boardId,
+        )
+        // TODO(hardware): nominal 63V (15S x 4.2V) - will under/over-report for other pack configs.
+        val watts = wattHoursUsed
+        val ahUsedLabel = if (watts != null && watts > 0.0) {
+            "%.1f Ah".format(watts / 63.0)
+        } else {
+            "--"
+        }
         return RideDetailUiState(
             dateLabel = SimpleDateFormat("MMM d, yyyy  h:mm a", Locale.getDefault())
                 .format(Date(startEpochMillis)),
+            titleLabel = titleLabel,
+            subtitleLabel = subtitleLabel,
             boardId = boardId,
             durationLabel = durationLabel,
             distanceLabel = distanceLabel,
@@ -112,8 +130,24 @@ class RideDetailViewModel @Inject constructor(
             avgSpeedLabel = avgSpeedLabel,
             gpsPoints = gpsPoints,
             gpsDistanceLabel = gpsDistanceLabel,
+            ahUsedLabel = ahUsedLabel,
         )
     }
+}
+
+private fun formatTitleAndSubtitle(startMs: Long, endMs: Long?, boardId: String): Pair<String, String> {
+    val todayStart = Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+    val time = SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date(startMs))
+    val monthDay = SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(startMs))
+    val title = if (startMs >= todayStart) "Today · $time" else "$monthDay · $time"
+    val durationMin = ((endMs ?: startMs) - startMs) / 60_000
+    val subtitle = "$monthDay · ${durationMin} min · $boardId"
+    return title to subtitle
 }
 
 private fun haversineMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {

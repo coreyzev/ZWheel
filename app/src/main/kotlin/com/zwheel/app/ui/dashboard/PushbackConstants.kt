@@ -9,8 +9,17 @@ import com.zwheel.core.model.BoardType
  * // observed behavior on XR (15.8 mph amber, 19.5 mph red) and Pint X.
  */
 object PushbackThresholds {
-    const val CAUTION_FRACTION = 0.80f
+    const val CAUTION_FRACTION = 0.78f
     const val DANGER_FRACTION = 0.95f
+}
+
+/**
+ * Per-cell voltage thresholds for dashboard status coloring.
+ * // TODO(hardware-tune): verify these visual thresholds against controlled XR captures.
+ */
+object CellThresholds {
+    const val LOW_VOLTS = 3.40
+    const val GOOD_VOLTS = 3.60
 }
 
 /**

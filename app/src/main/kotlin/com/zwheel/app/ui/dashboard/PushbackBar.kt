@@ -51,21 +51,23 @@ fun PushbackBar(state: DashboardUiState, modifier: Modifier = Modifier) {
             val markerWidth = 4.dp.toPx()
             val markerHeight = 10.dp.toPx()
             val trackTop = (size.height - trackHeight) / 2f
+            val cautionX = size.width * PushbackThresholds.CAUTION_FRACTION
+            val dangerX = size.width * PushbackThresholds.DANGER_FRACTION
             drawRect(c.border, topLeft = Offset(0f, trackTop), size = Size(size.width, trackHeight))
             drawRect(
                 c.rampGood.copy(alpha = 0.30f),
                 topLeft = Offset(0f, trackTop),
-                size = Size(size.width / 3f, trackHeight),
+                size = Size(cautionX, trackHeight),
             )
             drawRect(
                 c.rampCaution.copy(alpha = 0.30f),
-                topLeft = Offset(size.width / 3f, trackTop),
-                size = Size(size.width / 3f, trackHeight),
+                topLeft = Offset(cautionX, trackTop),
+                size = Size(dangerX - cautionX, trackHeight),
             )
             drawRect(
                 c.rampDanger.copy(alpha = 0.30f),
-                topLeft = Offset(size.width * 2f / 3f, trackTop),
-                size = Size(size.width / 3f, trackHeight),
+                topLeft = Offset(dangerX, trackTop),
+                size = Size(size.width - dangerX, trackHeight),
             )
             val markerX = (fraction * size.width).coerceIn(0f, size.width) - markerWidth / 2f
             drawRect(

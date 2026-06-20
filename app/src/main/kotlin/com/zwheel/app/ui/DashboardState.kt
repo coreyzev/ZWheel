@@ -1,6 +1,7 @@
 package com.zwheel.app.ui
 
 import com.zwheel.app.data.settings.UserPreferences
+import com.zwheel.app.ui.dashboard.CellThresholds
 import com.zwheel.core.calc.UnitConversions
 import com.zwheel.core.model.BoardState
 import com.zwheel.core.model.BoardType
@@ -66,7 +67,7 @@ fun mockDashboardState(): DashboardUiState = DashboardUiState(
     temperatureUnitLabel = "F",
     cellVoltages = List(16) { index ->
         val volts = if (index == 7) 3.86 else 3.94 + (index % 3) * 0.01
-        CellVoltageUiState(label = "C${index + 1}", volts = volts, isLow = volts < 3.9)
+        CellVoltageUiState(label = "C${index + 1}", volts = volts, isLow = volts < CellThresholds.LOW_VOLTS)
     },
     tripMiles = 3.42,
     tripAmpHours = 2.14,
@@ -128,7 +129,7 @@ fun BoardState.toDashboardUiState(
         batteryTempF = batteryTemp,
         temperatureUnitLabel = if (prefs.temperatureUnit == TemperatureUnit.FAHRENHEIT) "F" else "C",
         cellVoltages = cellVoltages.mapIndexed { index, volts ->
-            CellVoltageUiState(label = "C${index + 1}", volts = volts, isLow = volts < 3.9)
+            CellVoltageUiState(label = "C${index + 1}", volts = volts, isLow = volts < CellThresholds.LOW_VOLTS)
         },
         tripMiles = when (prefs.speedUnit) {
             SpeedUnit.MPH -> tripDistanceMeters / 1_609.344

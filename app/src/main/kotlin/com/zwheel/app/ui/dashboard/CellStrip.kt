@@ -35,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -44,7 +45,7 @@ import com.zwheel.app.ui.CellVoltageUiState
 import com.zwheel.app.ui.JetBrainsMonoFamily
 import com.zwheel.app.ui.Label
 import com.zwheel.app.ui.LocalZWheelColors
-import com.zwheel.app.ui.ramp
+import com.zwheel.app.ui.ZWheelColors
 
 @Composable
 fun CellStrip(cells: List<CellVoltageUiState>, modifier: Modifier = Modifier) {
@@ -88,13 +89,12 @@ fun CellStrip(cells: List<CellVoltageUiState>, modifier: Modifier = Modifier) {
                     .padding(top = 8.dp),
             ) {
                 cells.forEach { cell ->
-                    val fraction = ((cell.volts - 3.5) / 0.7).toFloat().coerceIn(0f, 1f)
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .height(32.dp)
                             .clip(RoundedCornerShape(3.dp))
-                            .background(c.ramp(fraction)),
+                            .background(cellVoltageColor(cell.volts, c)),
                     )
                 }
             }
@@ -119,17 +119,24 @@ fun CellStrip(cells: List<CellVoltageUiState>, modifier: Modifier = Modifier) {
 @Composable
 private fun CellVoltageTile(cell: CellVoltageUiState) {
     val c = LocalZWheelColors.current
+    val statusColor = cellVoltageColor(cell.volts, c)
     Surface(
         shape = RoundedCornerShape(14.dp),
         color = c.card,
-        border = if (cell.isLow) BorderStroke(1.dp, c.rampDanger) else BorderStroke(1.dp, c.border),
+        border = if (cell.isLow) BorderStroke(1.dp, statusColor) else BorderStroke(1.dp, c.border),
         modifier = Modifier.padding(3.dp),
     ) {
         Column(Modifier.padding(6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(cell.label, style = monoStyle(9, FontWeight.Normal), color = c.textLabel)
-            Text("%.2f".format(cell.volts), style = monoStyle(12, FontWeight.Bold), color = c.rampGood)
+            Text("%.2f".format(cell.volts), style = monoStyle(12, FontWeight.Bold), color = statusColor)
         }
     }
+}
+
+private fun cellVoltageColor(volts: Double, c: ZWheelColors): Color = when {
+    volts >= CellThresholds.GOOD_VOLTS -> c.rampGood
+    volts >= CellThresholds.LOW_VOLTS -> c.rampCaution
+    else -> c.rampDanger
 }
 
 private fun monoStyle(size: Int, weight: FontWeight) = TextStyle(

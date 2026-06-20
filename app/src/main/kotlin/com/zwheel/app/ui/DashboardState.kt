@@ -3,6 +3,7 @@ package com.zwheel.app.ui
 import com.zwheel.app.data.settings.UserPreferences
 import com.zwheel.core.calc.UnitConversions
 import com.zwheel.core.model.BoardState
+import com.zwheel.core.model.BoardType
 import com.zwheel.core.model.SpeedUnit
 import com.zwheel.core.model.TemperatureUnit
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,14 +24,19 @@ data class DashboardUiState(
     val packVoltage: Double,
     val amps: Double,
     val controllerTempF: Int,
+    val motorTempF: Int,
+    val batteryTempF: Int,
     val temperatureUnitLabel: String,
     val cellVoltages: List<CellVoltageUiState>,
     val tripMiles: Double,
     val tripAmpHours: Double,
     val regenAmpHours: Double,
+    val boardType: BoardType,
     val gpsLocked: Boolean = false,
     val rideMode: String,
+    val lightsOn: Boolean,
     val lightsLabel: String,
+    val avgSpeedMph: Double,
     val tireDiameterInches: Double,
 )
 
@@ -55,6 +61,8 @@ fun mockDashboardState(): DashboardUiState = DashboardUiState(
     packVoltage = 54.2,
     amps = -8.4,
     controllerTempF = 96,
+    motorTempF = 104,
+    batteryTempF = 88,
     temperatureUnitLabel = "F",
     cellVoltages = List(16) { index ->
         val volts = if (index == 7) 3.86 else 3.94 + (index % 3) * 0.01
@@ -63,9 +71,12 @@ fun mockDashboardState(): DashboardUiState = DashboardUiState(
     tripMiles = 3.42,
     tripAmpHours = 2.14,
     regenAmpHours = 0.31,
+    boardType = BoardType.PINT_X,
     gpsLocked = true,
     rideMode = "MISSION",
+    lightsOn = true,
     lightsLabel = "FRONT + BACK",
+    avgSpeedMph = 8.3,
     tireDiameterInches = 10.5,
 )
 
@@ -95,6 +106,8 @@ fun BoardState.toDashboardUiState(
         SpeedUnit.KPH -> estimatedRangeKilometers ?: 0.0
     }
     val controllerTemp = controllerTempCelsius?.toDisplayTemperature(prefs.temperatureUnit) ?: 0.0
+    val motorTemp = motorTempCelsius?.toDisplayTemperature(prefs.temperatureUnit)?.toInt() ?: 0
+    val batteryTemp = batteryTempCelsius?.toDouble()?.toDisplayTemperature(prefs.temperatureUnit)?.toInt() ?: 0
 
     return DashboardUiState(
         boardName = identity?.name ?: "Onewheel",
@@ -111,6 +124,8 @@ fun BoardState.toDashboardUiState(
         packVoltage = packVoltage ?: 0.0,
         amps = amps ?: 0.0,
         controllerTempF = controllerTemp.toInt(),
+        motorTempF = motorTemp,
+        batteryTempF = batteryTemp,
         temperatureUnitLabel = if (prefs.temperatureUnit == TemperatureUnit.FAHRENHEIT) "F" else "C",
         cellVoltages = cellVoltages.mapIndexed { index, volts ->
             CellVoltageUiState(label = "C${index + 1}", volts = volts, isLow = volts < 3.9)
@@ -121,13 +136,17 @@ fun BoardState.toDashboardUiState(
         },
         tripAmpHours = tripAmpHours ?: 0.0,
         regenAmpHours = tripRegenAmpHours ?: 0.0,
+        boardType = identity?.type ?: BoardType.UNKNOWN,
         gpsLocked = gpsLocked,
         rideMode = rideMode.name,
+        lightsOn = lightsOn ?: false,
         lightsLabel = when (lightsOn) {
             true -> "ON"
             false -> "OFF"
             null -> "--"
         },
+        // TODO(avg-speed): wire RideServiceRepository once rolling avg is tracked
+        avgSpeedMph = 0.0,
         tireDiameterInches = prefs.tireDiameterInches,
     )
 }

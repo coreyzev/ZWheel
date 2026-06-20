@@ -1,11 +1,13 @@
 package com.zwheel.app.ui.connect
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -49,7 +51,9 @@ fun ConnectScreen(
     val c = LocalZWheelColors.current
 
     LazyColumn(
-        modifier = modifier,
+        modifier = modifier
+            .fillMaxSize()
+            .background(c.screenBg),
         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 22.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {

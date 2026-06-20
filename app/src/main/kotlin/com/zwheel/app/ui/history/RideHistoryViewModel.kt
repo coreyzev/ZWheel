@@ -60,7 +60,7 @@ class RideHistoryViewModel @Inject constructor(
                 durationLabel = formatDuration(session.startEpochMillis, session.endEpochMillis, hasGps),
                 distanceLabel = distanceLabel,
                 topSpeedLabel = topSpeedLabel,
-                boardName = session.boardId,
+                boardName = prefs.customBoardName?.takeIf { it.isNotBlank() } ?: session.boardId,
                 hasGps = hasGps,
                 thumbnailPoints = thumbnailPoints,
                 startEpochMillis = session.startEpochMillis,

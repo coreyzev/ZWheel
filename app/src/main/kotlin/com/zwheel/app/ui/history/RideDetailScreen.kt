@@ -277,7 +277,7 @@ private fun BoardCard(state: RideDetailUiState) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("BOARD", fontFamily = JetBrainsMonoFamily, fontSize = 9.sp, color = c.textLabel, letterSpacing = 2.sp)
             Text(
-                state.boardId,
+                state.boardName,
                 fontFamily = SairaFamily,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.W700,

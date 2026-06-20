@@ -111,7 +111,7 @@ fun BoardState.toDashboardUiState(
     val batteryTemp = batteryTempCelsius?.toDouble()?.toDisplayTemperature(prefs.temperatureUnit)?.toInt() ?: 0
 
     return DashboardUiState(
-        boardName = identity?.name ?: "Onewheel",
+        boardName = resolvedBoardName(prefs.customBoardName, identity?.name),
         connectionLabel = connectionState.name,
         rssi = null,
         firmwareLabel = identity?.firmwareRevision?.let { "FW $it" } ?: "FW --",
@@ -163,3 +163,6 @@ private fun Double.toDisplayTemperature(unit: TemperatureUnit): Double =
         TemperatureUnit.FAHRENHEIT -> UnitConversions.celsiusToFahrenheit(this)
         TemperatureUnit.CELSIUS -> this
     }
+
+fun resolvedBoardName(customName: String?, identityName: String?): String =
+    customName?.takeIf { it.isNotBlank() } ?: identityName ?: "Onewheel"

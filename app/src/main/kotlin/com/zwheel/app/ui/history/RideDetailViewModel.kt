@@ -25,7 +25,7 @@ data class RideDetailUiState(
     val dateLabel: String,
     val titleLabel: String,
     val subtitleLabel: String,
-    val boardId: String,
+    val boardName: String,
     val durationLabel: String,
     val distanceLabel: String,
     val topSpeedLabel: String,
@@ -50,7 +50,9 @@ class RideDetailViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             val session = repository.getSession(sessionId) ?: return@launch
-            val speedUnit = prefs.preferences.first().speedUnit
+            val userPrefs = prefs.preferences.first()
+            val speedUnit = userPrefs.speedUnit
+            val boardName = userPrefs.customBoardName?.takeIf { it.isNotBlank() } ?: session.boardId
             val points = repository.getPointsForSession(sessionId).first()
             val gpsPoints = points.mapNotNull { p ->
                 val lat = p.latitude ?: return@mapNotNull null
@@ -70,12 +72,13 @@ class RideDetailViewModel @Inject constructor(
             } else {
                 "%.2f km (GPS)".format(gpsMeters / 1_000.0)
             }
-            _state.value = session.toUiState(speedUnit, gpsPoints, gpsDistanceLabel)
+            _state.value = session.toUiState(speedUnit, boardName, gpsPoints, gpsDistanceLabel)
         }
     }
 
     private fun RideSession.toUiState(
         speedUnit: SpeedUnit,
+        boardName: String,
         gpsPoints: List<Triple<Double, Double, Double?>> = emptyList(),
         gpsDistanceLabel: String = "--",
     ): RideDetailUiState {
@@ -109,7 +112,7 @@ class RideDetailViewModel @Inject constructor(
         val (titleLabel, subtitleLabel) = formatTitleAndSubtitle(
             startEpochMillis,
             endEpochMillis,
-            boardId,
+            boardName,
         )
         // TODO(hardware): nominal 63V (15S x 4.2V) - will under/over-report for other pack configs.
         val watts = wattHoursUsed
@@ -123,7 +126,7 @@ class RideDetailViewModel @Inject constructor(
                 .format(Date(startEpochMillis)),
             titleLabel = titleLabel,
             subtitleLabel = subtitleLabel,
-            boardId = boardId,
+            boardName = boardName,
             durationLabel = durationLabel,
             distanceLabel = distanceLabel,
             topSpeedLabel = topSpeedLabel,

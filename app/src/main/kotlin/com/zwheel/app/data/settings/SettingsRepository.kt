@@ -53,6 +53,7 @@ class SettingsRepository(
             hasAttemptedLocationPermission = prefs[HAS_ATTEMPTED_LOCATION_PERM] ?: false,
             haUrl = prefs[HA_URL] ?: "",
             haToken = token,
+            customBoardName = prefs[CUSTOM_BOARD_NAME]?.takeIf { it.isNotBlank() },
         )
     }
 
@@ -118,6 +119,14 @@ class SettingsRepository(
         }
     }
 
+    suspend fun setCustomBoardName(name: String?) {
+        // Local-only display override. Never write this value to the board.
+        dataStore.edit { preferences ->
+            if (name != null && name.isNotBlank()) preferences[CUSTOM_BOARD_NAME] = name.trim()
+            else preferences.remove(CUSTOM_BOARD_NAME)
+        }
+    }
+
     private inline fun <reified T : Enum<T>> String?.toEnumOrDefault(default: T): T =
         enumValues<T>().firstOrNull { it.name == this } ?: default
 
@@ -131,6 +140,7 @@ class SettingsRepository(
         val HAS_CUSTOM_TIRE_DIAMETER = booleanPreferencesKey("has_custom_tire_diameter")
         val HA_URL = stringPreferencesKey("ha_url")
         val HA_TOKEN = stringPreferencesKey("ha_token")
+        val CUSTOM_BOARD_NAME = stringPreferencesKey("custom_board_name")
         const val KEY_HA_TOKEN_SECURE = "ha_token_secure"
         val TIRE_DIAMETER_RANGE = 8.0..16.0
         const val DEFAULT_TIRE_DIAMETER = 11.5

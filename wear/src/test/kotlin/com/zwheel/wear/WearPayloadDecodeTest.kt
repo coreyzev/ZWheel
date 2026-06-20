@@ -16,7 +16,17 @@ class WearPayloadDecodeTest {
         speedUnitStr: String? = "MPH",
         isRiding: Boolean = true,
         connStateStr: String? = "SUBSCRIBED",
-    ) = decodeWatchPayload(speedRaw, topSpeedRaw, batteryRaw, rangeRaw, speedUnitStr, isRiding, connStateStr)
+        safetyHeadroomRaw: Int = -1,
+    ) = decodeWatchPayload(
+        speedRaw,
+        topSpeedRaw,
+        batteryRaw,
+        rangeRaw,
+        speedUnitStr,
+        isRiding,
+        connStateStr,
+        safetyHeadroomRaw,
+    )
 
     @Test
     fun `speed is decoded from float`() {
@@ -102,5 +112,15 @@ class WearPayloadDecodeTest {
     fun `is_riding decoded correctly`() {
         assertEquals(true, decode(isRiding = true).isRiding)
         assertEquals(false, decode(isRiding = false).isRiding)
+    }
+
+    @Test
+    fun `safety headroom sentinel -1 decodes to null`() {
+        assertNull(decode(safetyHeadroomRaw = -1).safetyHeadroom)
+    }
+
+    @Test
+    fun `safety headroom value decodes correctly`() {
+        assertEquals(3, decode(safetyHeadroomRaw = 3).safetyHeadroom)
     }
 }

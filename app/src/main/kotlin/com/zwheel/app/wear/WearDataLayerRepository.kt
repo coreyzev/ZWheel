@@ -14,6 +14,7 @@ import com.zwheel.core.model.KEY_BATTERY_PCT
 import com.zwheel.core.model.KEY_CONNECTION_STATE
 import com.zwheel.core.model.KEY_ESTIMATED_RANGE_M
 import com.zwheel.core.model.KEY_IS_RIDING
+import com.zwheel.core.model.KEY_SAFETY_HEADROOM
 import com.zwheel.core.model.KEY_SPEED_MPS_CORRECTED
 import com.zwheel.core.model.KEY_SPEED_UNIT
 import com.zwheel.core.model.KEY_TOP_SPEED_MPS
@@ -70,6 +71,8 @@ class WearDataLayerRepository @Inject constructor(
             dataMap.putString(KEY_SPEED_UNIT, payload.speedUnit.name)
             dataMap.putBoolean(KEY_IS_RIDING, payload.isRiding)
             dataMap.putString(KEY_CONNECTION_STATE, payload.connectionState.name)
+            // Sentinel: -1 = null/unknown (DataMap has no nullable int)
+            dataMap.putInt(KEY_SAFETY_HEADROOM, payload.safetyHeadroom ?: -1)
         }.asPutDataRequest().setUrgent()
         dataClient.putDataItem(request)
     }
@@ -83,6 +86,7 @@ internal fun WatchPayload.toDataEntries(): Map<String, Any> = mapOf(
     KEY_SPEED_UNIT to speedUnit.name,
     KEY_IS_RIDING to isRiding,
     KEY_CONNECTION_STATE to connectionState.name,
+    KEY_SAFETY_HEADROOM to (safetyHeadroom ?: -1),
 )
 
 private fun toWatchPayload(
@@ -107,5 +111,9 @@ private fun toWatchPayload(
         speedUnit = speedUnit,
         isRiding = isRiding,
         connectionState = coreConnectionState,
+        // TODO(hardware-tune): safetyHeadroom is the raw firmware integer;
+        // the watch treats values <= 0 as "approaching pushback" and null as "unknown".
+        // Verify the exact firmware zero-crossing on real hardware before shipping.
+        safetyHeadroom = boardState.safetyHeadroom,
     )
 }

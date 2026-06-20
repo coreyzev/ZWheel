@@ -13,3 +13,7 @@ local.properties
 # Python tooling
 __pycache__/
 *.py[cod]
+
+# Roborazzi headless screenshot artifacts (inspection only, not source)
+build/outputs/roborazzi/
+**/roborazzi/*.png

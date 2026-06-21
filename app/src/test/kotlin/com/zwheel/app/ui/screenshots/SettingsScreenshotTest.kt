@@ -101,6 +101,7 @@ private fun mockBoardState() = BoardState(
         name = "Pint X",
         type = BoardType.PINT_X,
         serialNumber = "18694",
+        batterySerialNumber = "22136",
         firmwareRevision = "4134",
         hardwareRevision = "4209",
     ),

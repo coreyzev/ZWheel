@@ -196,6 +196,18 @@ class ParsersTest {
         assertEquals(4134, Parsers.firmwareRevision(hex("1026")))
     }
 
+    @Test
+    fun `serialNumber parses uint16 big endian golden 18694`() {
+        // 18694 = 0x4906
+        assertEquals("18694", Parsers.serialNumber(hex("4906")))
+    }
+
+    @Test
+    fun `batterySerialNumber parses uint16 big endian golden 22136`() {
+        // 22136 = 0x5678
+        assertEquals("22136", Parsers.batterySerialNumber(hex("5678")))
+    }
+
     private fun hex(value: String): ByteArray {
         require(value.length % 2 == 0) { "Hex string must contain complete bytes." }
         return value.chunked(2)

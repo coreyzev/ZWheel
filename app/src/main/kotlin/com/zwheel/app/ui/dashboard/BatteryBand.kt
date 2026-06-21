@@ -67,7 +67,7 @@ private fun BatteryCard(state: DashboardUiState) {
                     .clip(RoundedCornerShape(999.dp)),
             )
             Text(
-                text = "${state.cellVoltages.size}S-pack · %.1fV".format(state.packVoltage),
+                text = "%.1fV · %dS PACK".format(state.packVoltage, state.cellVoltages.size),
                 color = c.textLabel,
                 style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 9.sp),
             )

@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -44,11 +45,11 @@ fun SpeedSlab(state: DashboardUiState, modifier: Modifier = Modifier) {
         modifier = modifier
             .fillMaxWidth()
             .background(Brush.verticalGradient(listOf(c.legendCard, c.screenBg)))
-            .padding(vertical = 24.dp),
+            .padding(top = 4.dp, bottom = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
         androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Row(verticalAlignment = Alignment.Bottom) {
+            Row(verticalAlignment = Alignment.Top) {
                 Text(
                     text = intPart,
                     color = speedColor,
@@ -58,6 +59,7 @@ fun SpeedSlab(state: DashboardUiState, modifier: Modifier = Modifier) {
                         fontWeight = FontWeight.Black,
                         lineHeight = 96.sp,
                         fontFeatureSettings = "tnum",
+                        platformStyle = PlatformTextStyle(includeFontPadding = false),
                     ),
                 )
                 Text(
@@ -67,8 +69,9 @@ fun SpeedSlab(state: DashboardUiState, modifier: Modifier = Modifier) {
                         fontFamily = SairaFamily,
                         fontSize = 48.sp,
                         fontWeight = FontWeight.Black,
-                        lineHeight = 64.sp,
+                        lineHeight = 48.sp,
                         fontFeatureSettings = "tnum",
+                        platformStyle = PlatformTextStyle(includeFontPadding = false),
                     ),
                 )
             }

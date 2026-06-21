@@ -1,12 +1,12 @@
 package com.zwheel.app.ui.dashboard
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -30,61 +30,53 @@ fun PushbackBar(state: DashboardUiState, modifier: Modifier = Modifier) {
         fraction >= PushbackThresholds.CAUTION_FRACTION -> c.rampCaution
         else -> c.rampGood
     }
-    val statusLabel = if (fraction >= PushbackThresholds.CAUTION_FRACTION) {
-        "approaching pushback"
-    } else {
-        "nominal"
+    val statusLabel = when {
+        fraction >= PushbackThresholds.DANGER_FRACTION -> "pushback · ease off"
+        fraction >= PushbackThresholds.CAUTION_FRACTION -> "approaching pushback"
+        else -> "nominal"
     }
 
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 18.dp, vertical = 8.dp),
+            .padding(horizontal = 18.dp),
     ) {
-        Canvas(
-            modifier = Modifier
-                .weight(1f)
-                .height(10.dp),
+        Row(
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            val trackHeight = 6.dp.toPx()
-            val markerWidth = 4.dp.toPx()
-            val markerHeight = 10.dp.toPx()
-            val trackTop = (size.height - trackHeight) / 2f
-            val cautionX = size.width * PushbackThresholds.CAUTION_FRACTION
-            val dangerX = size.width * PushbackThresholds.DANGER_FRACTION
-            drawRect(c.border, topLeft = Offset(0f, trackTop), size = Size(size.width, trackHeight))
-            drawRect(
-                c.rampGood.copy(alpha = 0.30f),
-                topLeft = Offset(0f, trackTop),
-                size = Size(cautionX, trackHeight),
+            Text(
+                text = "PUSHBACK HEADROOM",
+                color = c.textDimmest,
+                style = TextStyle(
+                    fontFamily = JetBrainsMonoFamily,
+                    fontSize = 9.sp,
+                    letterSpacing = 1.5.sp,
+                ),
             )
-            drawRect(
-                c.rampCaution.copy(alpha = 0.30f),
-                topLeft = Offset(cautionX, trackTop),
-                size = Size(dangerX - cautionX, trackHeight),
-            )
-            drawRect(
-                c.rampDanger.copy(alpha = 0.30f),
-                topLeft = Offset(dangerX, trackTop),
-                size = Size(size.width - dangerX, trackHeight),
-            )
-            val markerX = (fraction * size.width).coerceIn(0f, size.width) - markerWidth / 2f
-            drawRect(
-                barColor,
-                topLeft = Offset(markerX.coerceIn(0f, size.width - markerWidth), (size.height - markerHeight) / 2f),
-                size = Size(markerWidth, markerHeight),
+            Text(
+                text = statusLabel,
+                color = barColor,
+                style = TextStyle(
+                    fontFamily = JetBrainsMonoFamily,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Normal,
+                ),
             )
         }
-        Spacer(Modifier.width(8.dp))
-        Text(
-            text = statusLabel,
-            color = barColor,
-            style = TextStyle(
-                fontFamily = JetBrainsMonoFamily,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Normal,
-            ),
-        )
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(8.dp),
+        ) {
+            drawRect(c.border, topLeft = Offset.Zero, size = size)
+            drawRect(
+                barColor,
+                topLeft = Offset.Zero,
+                size = Size((fraction * size.width).coerceIn(0f, size.width), size.height),
+            )
+        }
     }
 }

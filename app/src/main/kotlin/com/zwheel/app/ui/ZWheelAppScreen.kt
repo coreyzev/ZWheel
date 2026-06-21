@@ -230,6 +230,7 @@ fun ZWheelAppScreen(
             composable("battery") {
                 OemBatteryAdviceScreen(
                     advice = batteryAdviceForManufacturer(Build.MANUFACTURER),
+                    deviceLabel = Build.MANUFACTURER.uppercase() + " DETECTED",
                     onOpenSettings = { context.openAppSettings() },
                     onDone = { navController.popBackStack() },
                 )

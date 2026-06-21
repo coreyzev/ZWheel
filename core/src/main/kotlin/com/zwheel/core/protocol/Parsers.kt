@@ -106,6 +106,10 @@ object Parsers {
 
     fun firmwareRevision(value: ByteArray): Int = value.uint16BigEndian()
 
+    fun serialNumber(value: ByteArray): String = value.uint16BigEndian().toString()
+
+    fun batterySerialNumber(value: ByteArray): String = value.uint16BigEndian().toString()
+
     private fun ByteArray.uint16BigEndian(): Int {
         val bytes = requireSize(2)
         return ((bytes[0].toInt() and 0xff) shl 8) or (bytes[1].toInt() and 0xff)

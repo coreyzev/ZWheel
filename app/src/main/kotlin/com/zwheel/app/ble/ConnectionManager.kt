@@ -119,10 +119,18 @@ class ConnectionManager @Inject constructor(
         val hwRev = Parsers.hardwareRevision(hwBytes)
         val fwRev = Parsers.firmwareRevision(fwBytes)
         val boardType = BoardTypeDetector.detect(hwRev)
+        val serialNumber = runCatching {
+            Parsers.serialNumber(transport.read(OwUuids.SERIAL_NUMBER))
+        }.getOrNull()
+        val batterySerialNumber = runCatching {
+            Parsers.batterySerialNumber(transport.read(OwUuids.BATTERY_SERIAL))
+        }.getOrNull()
         val identity = BoardIdentity(
             boardId = deviceId,
             name = boardType.displayName,
             type = boardType,
+            serialNumber = serialNumber,
+            batterySerialNumber = batterySerialNumber,
             firmwareRevision = fwRev.toString(),
             hardwareRevision = hwRev.toString(),
         )

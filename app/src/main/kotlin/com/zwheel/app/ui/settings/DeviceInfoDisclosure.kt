@@ -78,9 +78,7 @@ internal fun DeviceInfoDisclosure(
         AnimatedVisibility(visible = expanded) {
             val rows = listOf(
                 "Serial" to (identity?.serialNumber ?: "—"),
-                // TODO(battery-serial): BoardIdentity does not yet carry batterySerialNumber.
-                // Wire OwUuids.BATTERY_SERIAL through BLE and BoardIdentity in a future gate.
-                "Battery serial" to "—",
+                "Battery serial" to (identity?.batterySerialNumber ?: "—"),
                 "Hardware rev" to (identity?.hardwareRevision ?: "—"),
                 "Firmware" to (identity?.firmwareRevision ?: "—"),
                 "RSSI" to (rssi?.let { "$it dBm" } ?: "—"),

@@ -41,6 +41,7 @@ data class BoardIdentity(
     val name: String,
     val type: BoardType,
     val serialNumber: String? = null,
+    val batterySerialNumber: String? = null,
     val firmwareRevision: String? = null,
     val hardwareRevision: String? = null,
 )

@@ -146,7 +146,6 @@ fun BoardState.toDashboardUiState(
             false -> "OFF"
             null -> "--"
         },
-        // TODO(avg-speed): wire RideServiceRepository once rolling avg is tracked
         avgSpeedMph = 0.0,
         tireDiameterInches = prefs.tireDiameterInches,
     )

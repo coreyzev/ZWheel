@@ -8,6 +8,7 @@ import com.zwheel.app.data.settings.SettingsRepository
 import com.zwheel.app.service.RideServiceController
 import com.zwheel.app.service.RideServiceRepository
 import com.zwheel.core.calc.RangeEstimator
+import com.zwheel.core.calc.UnitConversions
 import com.zwheel.core.model.BoardType
 import com.zwheel.core.ports.ScanResult
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -49,6 +50,8 @@ class DashboardViewModel @Inject constructor(
         )
     }.combine(connectionManager.rssi) { state, rssi ->
         state.copy(rssi = rssi)
+    }.combine(rideServiceRepository.avgSpeedMetersPerSecond) { state, avgSpeedMps ->
+        state.copy(avgSpeedMph = avgSpeedMps.toDisplaySpeed(state))
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000L),
@@ -81,5 +84,13 @@ class DashboardViewModel @Inject constructor(
 
     fun markLocationPermissionAttempted() {
         viewModelScope.launch { settingsRepository.saveHasAttemptedLocationPermission() }
+    }
+}
+
+private fun Double.toDisplaySpeed(state: DashboardUiState): Double {
+    return if (state.speedUnitLabel.startsWith("KPH")) {
+        UnitConversions.metersPerSecondToKph(this)
+    } else {
+        UnitConversions.metersPerSecondToMph(this)
     }
 }

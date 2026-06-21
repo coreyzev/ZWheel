@@ -158,7 +158,10 @@ class RideForegroundService : LifecycleService() {
         val recorder = RideRecorder(rideRepository, clock)
         recorder.onSessionChanged = { isRiding ->
             rideServiceRepository.updateIsRiding(isRiding)
-            if (!isRiding) {
+            if (isRiding) {
+                rideServiceRepository.markRideStarted(clock.nowEpochMillis())
+            } else {
+                rideServiceRepository.markRideStopped()
                 topSpeedTracker = DefaultTopSpeedTracker()
                 rideServiceRepository.updateTopSpeed(0.0)
             }
@@ -174,6 +177,7 @@ class RideForegroundService : LifecycleService() {
                         lastLongitude,
                         lastAltitude,
                     )
+                    rideServiceRepository.tickElapsed(clock.nowEpochMillis())
                 }
             }
         }

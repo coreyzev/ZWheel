@@ -22,12 +22,12 @@ object Parsers {
 
     fun tripAmpHours(value: ByteArray, boardType: BoardType): Double {
         val scale = if (boardType == BoardType.ONEWHEEL_V1) 0.00009 else 0.00018
-        return value.uint16BigEndian() * scale
+        return value.uint16LastTwoBytes() * scale
     }
 
     fun tripRegenAmpHours(value: ByteArray, boardType: BoardType): Double {
         val scale = if (boardType == BoardType.ONEWHEEL_V1) 0.00009 else 0.00018
-        return value.uint16BigEndian() * scale
+        return value.uint16LastTwoBytes() * scale
     }
 
     fun packVoltage(value: ByteArray): Double = value.uint16BigEndian() / 10.0
@@ -106,9 +106,22 @@ object Parsers {
 
     fun firmwareRevision(value: ByteArray): Int = value.uint16BigEndian()
 
+    fun serialNumber(value: ByteArray): String = value.uint16BigEndian().toString()
+
+    fun batterySerialNumber(value: ByteArray): String = value.uint16BigEndian().toString()
+
     private fun ByteArray.uint16BigEndian(): Int {
         val bytes = requireSize(2)
         return ((bytes[0].toInt() and 0xff) shl 8) or (bytes[1].toInt() and 0xff)
+    }
+
+    // Reads the last two bytes as a big-endian uint16. Handles boards that zero-pad
+    // trip-counter characteristics to 4 bytes on Gemini/newer firmware.
+    private fun ByteArray.uint16LastTwoBytes(): Int {
+        require(size >= 2) { "Expected at least 2 byte(s), got $size." }
+        val hi = this[size - 2].toInt() and 0xff
+        val lo = this[size - 1].toInt() and 0xff
+        return (hi shl 8) or lo
     }
 
     private fun ByteArray.int16BigEndian(): Int = uint16BigEndian().toShort().toInt()

@@ -37,6 +37,12 @@ class ParsersTest {
     }
 
     @Test
+    fun `tripAmpHours XR 4-byte zero-padded payload same result`() {
+        // Gemini firmware may zero-pad trip counters to 4 bytes; last 2 bytes carry the value.
+        assertEquals(0.018, Parsers.tripAmpHours(hex("00000064"), BoardType.XR), 1e-9)
+    }
+
+    @Test
     fun `tripAmpHours V1 scale 0x0064 = 100 * 0_00009`() {
         assertEquals(0.009, Parsers.tripAmpHours(hex("0064"), BoardType.ONEWHEEL_V1), 1e-9)
     }
@@ -50,6 +56,11 @@ class ParsersTest {
     @Test
     fun `tripRegenAmpHours zero returns 0`() {
         assertEquals(0.0, Parsers.tripRegenAmpHours(hex("0000"), BoardType.XR), 1e-9)
+    }
+
+    @Test
+    fun `tripRegenAmpHours XR 4-byte zero-padded payload same result`() {
+        assertEquals(0.009, Parsers.tripRegenAmpHours(hex("00000032"), BoardType.XR), 1e-9)
     }
 
     @Test
@@ -194,6 +205,18 @@ class ParsersTest {
         // Source: core/src/test/resources/xr4209-success-handshake-telemetry.jsonl,
         // e659f311 firmware_revision metadata_read rawValueHex 1026 from the M1 XR 4209 success capture.
         assertEquals(4134, Parsers.firmwareRevision(hex("1026")))
+    }
+
+    @Test
+    fun `serialNumber parses uint16 big endian golden 18694`() {
+        // 18694 = 0x4906
+        assertEquals("18694", Parsers.serialNumber(hex("4906")))
+    }
+
+    @Test
+    fun `batterySerialNumber parses uint16 big endian golden 22136`() {
+        // 22136 = 0x5678
+        assertEquals("22136", Parsers.batterySerialNumber(hex("5678")))
     }
 
     private fun hex(value: String): ByteArray {

@@ -9,6 +9,9 @@ plugins {
 }
 
 val ciKeystorePath: String? = System.getenv("KEYSTORE_PATH")
+val localDebugKeystore = providers.environmentVariable("GRADLE_USER_HOME")
+    .map { file("$it/android-debug.keystore") }
+    .orElse(rootProject.layout.buildDirectory.file("android-debug.keystore").map { it.asFile })
 
 android {
     namespace = "com.zwheel.app"
@@ -23,6 +26,12 @@ android {
     }
 
     signingConfigs {
+        getByName("debug") {
+            val keystore = localDebugKeystore.get()
+            keystore.parentFile.mkdirs()
+            storeFile = keystore
+        }
+
         if (ciKeystorePath != null) {
             create("stableDebug") {
                 storeFile = file(ciKeystorePath)
@@ -45,6 +54,13 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
+    }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
     }
 
     compileOptions {
@@ -140,6 +156,36 @@ tasks.check {
     dependsOn(enforceAdr010NetworkPolicy)
 }
 
+val ensureDebugKeystore by tasks.registering(Exec::class) {
+    val keystore = localDebugKeystore.get()
+
+    onlyIf {
+        !keystore.exists()
+    }
+
+    doFirst {
+        keystore.parentFile.mkdirs()
+    }
+
+    commandLine(
+        "keytool",
+        "-genkeypair",
+        "-v",
+        "-keystore", keystore.absolutePath,
+        "-storepass", "android",
+        "-alias", "androiddebugkey",
+        "-keypass", "android",
+        "-keyalg", "RSA",
+        "-keysize", "2048",
+        "-validity", "10000",
+        "-dname", "CN=Android Debug,O=Android,C=US",
+    )
+}
+
+tasks.matching { it.name == "validateSigningDebug" }.configureEach {
+    dependsOn(ensureDebugKeystore)
+}
+
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
 }
@@ -152,6 +198,7 @@ dependencies {
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.tooling.preview)
@@ -170,10 +217,10 @@ dependencies {
     implementation(libs.play.services.wearable)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.core)
-    testImplementation(libs.androidx.test.core)
     testImplementation(libs.junit.jupiter)
-    testImplementation(libs.robolectric)
     testImplementation(libs.junit.junit4)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
     testRuntimeOnly(libs.junit.vintage.engine)
     ksp(libs.hilt.compiler)
 }

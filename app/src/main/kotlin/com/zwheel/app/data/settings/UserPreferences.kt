@@ -13,4 +13,5 @@ data class UserPreferences(
     val hasAttemptedLocationPermission: Boolean = false,
     val haUrl: String = "",
     val haToken: String = "",
+    val customBoardName: String? = null,
 )

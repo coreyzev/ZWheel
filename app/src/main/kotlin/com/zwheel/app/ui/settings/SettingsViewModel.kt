@@ -2,10 +2,12 @@ package com.zwheel.app.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.zwheel.app.ble.ConnectionManager
 import com.zwheel.app.data.settings.SettingsRepository
 import com.zwheel.app.data.settings.UserPreferences
 import com.zwheel.app.service.HaPushResult
 import com.zwheel.app.service.HomeAssistantPusher
+import com.zwheel.core.model.BoardState
 import com.zwheel.core.model.SpeedUnit
 import com.zwheel.core.model.TemperatureUnit
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,11 +22,24 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val repo: SettingsRepository,
+    private val connectionManager: ConnectionManager,
 ) : ViewModel() {
     val preferences: StateFlow<UserPreferences> = repo.preferences.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = UserPreferences(),
+    )
+
+    val boardState: StateFlow<BoardState> = connectionManager.boardState.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = BoardState(),
+    )
+
+    val rssi: StateFlow<Int?> = connectionManager.rssi.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = null,
     )
 
     private val _haTestResult = MutableStateFlow<HaPushResult?>(null)
@@ -57,6 +72,18 @@ class SettingsViewModel @Inject constructor(
     fun setHaToken(token: String) {
         viewModelScope.launch {
             repo.setHaToken(token)
+        }
+    }
+
+    fun setCustomBoardName(name: String?) {
+        viewModelScope.launch {
+            repo.setCustomBoardName(name)
+        }
+    }
+
+    fun forgetBoard() {
+        viewModelScope.launch {
+            repo.saveLastConnectedDeviceId(null)
         }
     }
 

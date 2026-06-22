@@ -1,9 +1,12 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.roborazzi)
 }
 
 val localDebugKeystore = providers.environmentVariable("GRADLE_USER_HOME")
@@ -40,7 +43,10 @@ android {
     }
 
     testOptions {
-        unitTests.all { it.useJUnitPlatform() }
+        unitTests {
+            isIncludeAndroidResources = true
+            all { it.useJUnitPlatform() }
+        }
     }
 }
 
@@ -96,4 +102,36 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
     ksp(libs.hilt.compiler)
     testImplementation(libs.junit.jupiter)
+    testImplementation(libs.junit.junit4)
+    testImplementation(libs.compose.ui.test.junit4)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.roborazzi.core)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(libs.roborazzi.junit.rule)
+    testRuntimeOnly(libs.junit.vintage.engine)
+}
+
+tasks.withType<KotlinCompile>().configureEach {
+    if (name.contains("UnitTest")) {
+        compilerOptions {
+            freeCompilerArgs.add("-Xskip-metadata-version-check")
+        }
+    }
+}
+
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
+
+    val robolectricHome = layout.buildDirectory.dir("robolectric-home")
+    val robolectricMavenRepo = providers.environmentVariable("GRADLE_USER_HOME")
+        .map { file("$it/robolectric-m2") }
+        .orElse(layout.buildDirectory.dir("robolectric-m2").map { it.asFile })
+
+    doFirst {
+        robolectricHome.get().asFile.mkdirs()
+        robolectricMavenRepo.get().mkdirs()
+    }
+
+    systemProperty("user.home", robolectricHome.get().asFile.absolutePath)
+    systemProperty("maven.repo.local", robolectricMavenRepo.get().absolutePath)
 }

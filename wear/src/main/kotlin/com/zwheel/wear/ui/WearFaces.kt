@@ -96,7 +96,19 @@ internal fun CautionFace(state: WearDashboardUiState) {
             )
             SpeedHero(state, WearColors.amber, WearColors.amber.copy(alpha = 0.5f))
             Text(state.speedUnitLabel, style = wearLabelStyle, color = WearColors.amber)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "${state.batteryDisplay}  ${state.rangeDisplay}",
+                style = wearSmallStyle,
+                color = WearColors.amber.copy(alpha = 0.7f),
+            )
         }
+        Text(
+            text = "TOP  ${state.topSpeedDisplay}",
+            style = wearSmallStyle,
+            color = WearColors.amber.copy(alpha = 0.5f),
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 18.dp),
+        )
     }
 }
 

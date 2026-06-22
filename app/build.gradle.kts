@@ -11,6 +11,9 @@ plugins {
 }
 
 val ciKeystorePath: String? = System.getenv("KEYSTORE_PATH")
+val localDebugKeystore = providers.environmentVariable("GRADLE_USER_HOME")
+    .map { file("$it/android-debug.keystore") }
+    .orElse(rootProject.layout.buildDirectory.file("android-debug.keystore").map { it.asFile })
 
 android {
     namespace = "com.zwheel.app"
@@ -25,6 +28,12 @@ android {
     }
 
     signingConfigs {
+        getByName("debug") {
+            val keystore = localDebugKeystore.get()
+            keystore.parentFile.mkdirs()
+            storeFile = keystore
+        }
+
         if (ciKeystorePath != null) {
             create("stableDebug") {
                 storeFile = file(ciKeystorePath)
@@ -149,8 +158,51 @@ tasks.check {
     dependsOn(enforceAdr010NetworkPolicy)
 }
 
+val ensureDebugKeystore by tasks.registering(Exec::class) {
+    val keystore = localDebugKeystore.get()
+
+    onlyIf {
+        !keystore.exists()
+    }
+
+    doFirst {
+        keystore.parentFile.mkdirs()
+    }
+
+    commandLine(
+        "keytool",
+        "-genkeypair",
+        "-v",
+        "-keystore", keystore.absolutePath,
+        "-storepass", "android",
+        "-alias", "androiddebugkey",
+        "-keypass", "android",
+        "-keyalg", "RSA",
+        "-keysize", "2048",
+        "-validity", "10000",
+        "-dname", "CN=Android Debug,O=Android,C=US",
+    )
+}
+
+tasks.matching { it.name == "validateSigningDebug" }.configureEach {
+    dependsOn(ensureDebugKeystore)
+}
+
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
+
+    val robolectricHome = layout.buildDirectory.dir("robolectric-home")
+    val robolectricMavenRepo = providers.environmentVariable("GRADLE_USER_HOME")
+        .map { file("$it/robolectric-m2") }
+        .orElse(layout.buildDirectory.dir("robolectric-m2").map { it.asFile })
+
+    doFirst {
+        robolectricHome.get().asFile.mkdirs()
+        robolectricMavenRepo.get().mkdirs()
+    }
+
+    systemProperty("user.home", robolectricHome.get().asFile.absolutePath)
+    systemProperty("maven.repo.local", robolectricMavenRepo.get().absolutePath)
 }
 
 tasks.withType<KotlinCompile>().configureEach {

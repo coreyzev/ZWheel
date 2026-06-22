@@ -6,6 +6,10 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+val localDebugKeystore = providers.environmentVariable("GRADLE_USER_HOME")
+    .map { file("$it/android-debug.keystore") }
+    .orElse(rootProject.layout.buildDirectory.file("android-debug.keystore").map { it.asFile })
+
 android {
     namespace = "com.zwheel.wear"
     compileSdk = 35
@@ -16,6 +20,14 @@ android {
         targetSdk = 35
         versionCode = (System.getenv("VERSION_CODE") ?: "1").toInt()
         versionName = System.getenv("VERSION_NAME") ?: "0.1.0"
+    }
+
+    signingConfigs {
+        getByName("debug") {
+            val keystore = localDebugKeystore.get()
+            keystore.parentFile.mkdirs()
+            storeFile = keystore
+        }
     }
 
     buildFeatures {
@@ -30,6 +42,36 @@ android {
     testOptions {
         unitTests.all { it.useJUnitPlatform() }
     }
+}
+
+val ensureDebugKeystore by tasks.registering(Exec::class) {
+    val keystore = localDebugKeystore.get()
+
+    onlyIf {
+        !keystore.exists()
+    }
+
+    doFirst {
+        keystore.parentFile.mkdirs()
+    }
+
+    commandLine(
+        "keytool",
+        "-genkeypair",
+        "-v",
+        "-keystore", keystore.absolutePath,
+        "-storepass", "android",
+        "-alias", "androiddebugkey",
+        "-keypass", "android",
+        "-keyalg", "RSA",
+        "-keysize", "2048",
+        "-validity", "10000",
+        "-dname", "CN=Android Debug,O=Android,C=US",
+    )
+}
+
+tasks.matching { it.name == "validateSigningDebug" }.configureEach {
+    dependsOn(ensureDebugKeystore)
 }
 
 kotlin {

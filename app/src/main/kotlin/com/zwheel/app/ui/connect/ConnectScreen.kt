@@ -87,7 +87,8 @@ fun ConnectScreen(
             DeviceRow(device = device, connectionState = connectionState, onConnect = onConnect)
         }
         item {
-            if (devices.isEmpty() && connectionState == ConnectionState.Idle) {
+            val scannable = connectionState != ConnectionState.Scanning && connectionState != ConnectionState.Connected
+            if (devices.isEmpty() && scannable) {
                 EmptyDeviceState(onScan = onScan)
             }
         }

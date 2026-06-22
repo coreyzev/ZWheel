@@ -82,6 +82,7 @@ internal fun SettingsContent(
     onOpenBleDebug: () -> Unit,
 ) {
     val c = LocalZWheelColors.current
+    val hasSavedBoard = boardState.identity != null || preferences.lastConnectedDeviceId != null
 
     LazyColumn(
         modifier = Modifier
@@ -103,31 +104,33 @@ internal fun SettingsContent(
                 modifier = Modifier.padding(start = 22.dp, end = 22.dp, top = 20.dp, bottom = 16.dp),
             )
         }
-        item { SectionEyebrowRow("CONNECTED BOARD", modifier = Modifier.padding(horizontal = 18.dp)) }
-        item {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 18.dp, vertical = 8.dp),
-                shape = RoundedCornerShape(16.dp),
-                color = c.card,
-                border = BorderStroke(1.dp, c.border),
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ConnectedBoardCard(
-                        boardState = boardState,
-                        rssi = rssi,
-                        customBoardName = preferences.customBoardName,
-                        onSaveName = onSaveBoardName,
-                        onDisconnect = onDisconnect,
-                        onForgetBoard = onForgetBoard,
-                    )
-                    HorizontalDivider(color = c.divider, thickness = 0.5.dp)
-                    DeviceInfoDisclosure(identity = boardState.identity, rssi = rssi)
+        if (hasSavedBoard) {
+            item { SectionEyebrowRow("CONNECTED BOARD", modifier = Modifier.padding(horizontal = 18.dp)) }
+            item {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 18.dp, vertical = 8.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    color = c.card,
+                    border = BorderStroke(1.dp, c.border),
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        ConnectedBoardCard(
+                            boardState = boardState,
+                            rssi = rssi,
+                            customBoardName = preferences.customBoardName,
+                            onSaveName = onSaveBoardName,
+                            onDisconnect = onDisconnect,
+                            onForgetBoard = onForgetBoard,
+                        )
+                        HorizontalDivider(color = c.divider, thickness = 0.5.dp)
+                        DeviceInfoDisclosure(identity = boardState.identity, rssi = rssi)
+                    }
                 }
             }
+            item { Spacer(Modifier.height(22.dp)) }
         }
-        item { Spacer(Modifier.height(22.dp)) }
         item { SectionEyebrowRow("UNITS", modifier = Modifier.padding(horizontal = 18.dp)) }
         item {
             UnitsSection(

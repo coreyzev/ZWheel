@@ -95,7 +95,7 @@ internal fun TireCalibrationSection(
         Slider(
             value = prefs.tireDiameterInches.toFloat(),
             onValueChange = { onDiameterChanged(it.toDouble()) },
-            valueRange = 8f..16f,
+            valueRange = 8f..13f,
             colors = SliderDefaults.colors(
                 thumbColor = c.lime,
                 activeTrackColor = c.lime,
@@ -105,7 +105,7 @@ internal fun TireCalibrationSection(
         )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text("8 in", style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 9.sp), color = c.textDim)
-            Text("16 in", style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 9.sp), color = c.textDim)
+            Text("13 in", style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 9.sp), color = c.textDim)
         }
     }
 }

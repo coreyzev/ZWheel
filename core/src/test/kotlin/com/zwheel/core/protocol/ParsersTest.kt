@@ -37,6 +37,12 @@ class ParsersTest {
     }
 
     @Test
+    fun `tripAmpHours XR 4-byte zero-padded payload same result`() {
+        // Gemini firmware may zero-pad trip counters to 4 bytes; last 2 bytes carry the value.
+        assertEquals(0.018, Parsers.tripAmpHours(hex("00000064"), BoardType.XR), 1e-9)
+    }
+
+    @Test
     fun `tripAmpHours V1 scale 0x0064 = 100 * 0_00009`() {
         assertEquals(0.009, Parsers.tripAmpHours(hex("0064"), BoardType.ONEWHEEL_V1), 1e-9)
     }
@@ -50,6 +56,11 @@ class ParsersTest {
     @Test
     fun `tripRegenAmpHours zero returns 0`() {
         assertEquals(0.0, Parsers.tripRegenAmpHours(hex("0000"), BoardType.XR), 1e-9)
+    }
+
+    @Test
+    fun `tripRegenAmpHours XR 4-byte zero-padded payload same result`() {
+        assertEquals(0.009, Parsers.tripRegenAmpHours(hex("00000032"), BoardType.XR), 1e-9)
     }
 
     @Test

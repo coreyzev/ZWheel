@@ -226,23 +226,6 @@ private fun DeviceRow(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false),
                     )
-                    if (device.displayName != null) {
-                        Surface(
-                            shape = RoundedCornerShape(5.dp),
-                            color = Color.Transparent,
-                            border = BorderStroke(1.dp, c.borderLime),
-                        ) {
-                            // TODO: use device.boardType when available.
-                            Text(
-                                "PINT X",
-                                fontFamily = JetBrainsMonoFamily,
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.W700,
-                                color = c.lime,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            )
-                        }
-                    }
                 }
                 Text(
                     device.rssi?.let { "$it dBm" } ?: "-",

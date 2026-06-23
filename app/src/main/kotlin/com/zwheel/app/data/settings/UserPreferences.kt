@@ -22,4 +22,5 @@ data class UserPreferences(
     val haUrl: String = "",
     val haToken: String = "",
     val customBoardName: String? = null,
+    val bleDebugPassword: String = "",
 )

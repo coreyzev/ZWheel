@@ -1,5 +1,6 @@
 package com.zwheel.app.ui.settings
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -10,21 +11,38 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zwheel.app.BuildConfig
@@ -57,25 +75,165 @@ internal fun UnitsSection(
 }
 
 @Composable
-internal fun DeveloperSection(modifier: Modifier = Modifier, onOpenBleDebug: () -> Unit) {
+internal fun DeveloperSection(
+    isDebugLogging: Boolean,
+    debugPassword: String,
+    debugStatus: String?,
+    onToggleLogging: (Boolean) -> Unit,
+    onSavePassword: (String) -> Unit,
+    onRestartLogging: () -> Unit,
+    onPair: () -> Unit,
+    onUpload: () -> Unit,
+    onShare: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val c = LocalZWheelColors.current
+    var localPassword by remember(debugPassword) { mutableStateOf(debugPassword) }
+
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionEyebrow("DEVELOPER")
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(
-                "BLE debug view",
-                style = TextStyle(fontFamily = SairaFamily, fontSize = 14.sp, fontWeight = FontWeight.W600),
-                color = c.textSecondary,
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                val dotColor = if (isDebugLogging) c.rampGood else c.textDim
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .then(
+                            if (isDebugLogging) Modifier.drawBehind {
+                                drawCircle(c.rampGood.copy(alpha = 0.35f), radius = 14.dp.toPx())
+                            } else Modifier
+                        )
+                        .background(dotColor, CircleShape),
+                )
+                Text(
+                    "BLE debug logging",
+                    style = TextStyle(
+                        fontFamily = SairaFamily,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.W600,
+                    ),
+                    color = c.textSecondary,
+                )
+            }
             Switch(
-                checked = false,
-                onCheckedChange = { if (it) onOpenBleDebug() },
+                checked = isDebugLogging,
+                onCheckedChange = onToggleLogging,
                 colors = settingsSwitchColors(),
             )
+        }
+
+        AnimatedVisibility(visible = isDebugLogging) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                HorizontalDivider(color = c.divider, thickness = 0.5.dp)
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        "Password",
+                        style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 11.sp),
+                        color = c.textDim,
+                        modifier = Modifier.width(72.dp),
+                    )
+                    BasicTextField(
+                        value = localPassword,
+                        onValueChange = { localPassword = it },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { onSavePassword(localPassword) }),
+                        textStyle = TextStyle(
+                            fontFamily = JetBrainsMonoFamily,
+                            fontSize = 12.sp,
+                            color = c.textPrimary,
+                        ),
+                        cursorBrush = SolidColor(c.lime),
+                        modifier = Modifier
+                            .weight(1f)
+                            .border(1.dp, c.buttonBorder, RoundedCornerShape(8.dp))
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    TextButton(
+                        onClick = onRestartLogging,
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.textButtonColors(contentColor = c.textSecondary),
+                    ) {
+                        Text(
+                            "Restart",
+                            fontFamily = SairaFamily,
+                            fontWeight = FontWeight.W600,
+                            fontSize = 12.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Clip,
+                        )
+                    }
+                    TextButton(
+                        onClick = { onSavePassword(localPassword); onPair() },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.textButtonColors(contentColor = c.textSecondary),
+                    ) {
+                        Text(
+                            "Pair",
+                            fontFamily = SairaFamily,
+                            fontWeight = FontWeight.W600,
+                            fontSize = 12.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Clip,
+                        )
+                    }
+                    TextButton(
+                        onClick = onUpload,
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.textButtonColors(contentColor = c.lime),
+                    ) {
+                        Text(
+                            "Upload",
+                            fontFamily = SairaFamily,
+                            fontWeight = FontWeight.W600,
+                            fontSize = 12.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Clip,
+                        )
+                    }
+                    TextButton(
+                        onClick = onShare,
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.textButtonColors(contentColor = c.textSecondary),
+                    ) {
+                        Text(
+                            "Share",
+                            fontFamily = SairaFamily,
+                            fontWeight = FontWeight.W600,
+                            fontSize = 12.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Clip,
+                        )
+                    }
+                }
+
+                if (debugStatus != null) {
+                    Text(
+                        debugStatus,
+                        style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 10.sp),
+                        color = c.textDim,
+                    )
+                }
+            }
         }
     }
 }

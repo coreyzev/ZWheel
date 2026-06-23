@@ -41,18 +41,21 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
     onDisconnect: () -> Unit = {},
     onForgetBoard: () -> Unit = {},
-    onOpenBleDebug: () -> Unit = {},
 ) {
     val preferences by viewModel.preferences.collectAsState()
     val haTestResult by viewModel.haTestResult.collectAsState()
     val boardState by viewModel.boardState.collectAsState()
     val rssi by viewModel.rssi.collectAsState()
+    val isDebugLogging by viewModel.isDebugLogging.collectAsState()
+    val debugStatus by viewModel.debugStatus.collectAsState()
 
     SettingsContent(
         preferences = preferences,
         haTestResult = haTestResult,
         boardState = boardState,
         rssi = rssi,
+        isDebugLogging = isDebugLogging,
+        debugStatus = debugStatus,
         onSaveBoardName = viewModel::setCustomBoardName,
         onSaveBoardTireDiameter = viewModel::saveBoardTireDiameter,
         onSpeedUnitSelected = viewModel::setSpeedUnit,
@@ -62,7 +65,12 @@ fun SettingsScreen(
         onTestHaConnection = viewModel::testHaConnection,
         onDisconnect = onDisconnect,
         onForgetBoard = onForgetBoard,
-        onOpenBleDebug = onOpenBleDebug,
+        onToggleDebugLogging = viewModel::setDebugLogging,
+        onSaveDebugPassword = viewModel::saveDebugPassword,
+        onRestartDebugLogging = viewModel::restartDebugLogging,
+        onPairDebug = viewModel::pairDebug,
+        onUploadDebug = viewModel::uploadDebug,
+        onShareDebug = viewModel::shareDebug,
     )
 }
 
@@ -72,6 +80,8 @@ internal fun SettingsContent(
     haTestResult: HaPushResult?,
     boardState: BoardState,
     rssi: Int?,
+    isDebugLogging: Boolean,
+    debugStatus: String?,
     onSaveBoardName: (String?) -> Unit,
     onSaveBoardTireDiameter: (Double) -> Unit,
     onSpeedUnitSelected: (SpeedUnit) -> Unit,
@@ -81,7 +91,12 @@ internal fun SettingsContent(
     onTestHaConnection: () -> Unit,
     onDisconnect: () -> Unit,
     onForgetBoard: () -> Unit,
-    onOpenBleDebug: () -> Unit,
+    onToggleDebugLogging: (Boolean) -> Unit,
+    onSaveDebugPassword: (String) -> Unit,
+    onRestartDebugLogging: () -> Unit,
+    onPairDebug: () -> Unit,
+    onUploadDebug: () -> Unit,
+    onShareDebug: () -> Unit,
 ) {
     val c = LocalZWheelColors.current
     val hasSavedBoard = boardState.identity != null || preferences.lastConnectedDeviceId != null
@@ -175,7 +190,15 @@ internal fun SettingsContent(
         item { Spacer(Modifier.height(22.dp)) }
         item {
             DeveloperSection(
-                onOpenBleDebug = onOpenBleDebug,
+                isDebugLogging = isDebugLogging,
+                debugPassword = preferences.bleDebugPassword,
+                debugStatus = debugStatus,
+                onToggleLogging = onToggleDebugLogging,
+                onSavePassword = onSaveDebugPassword,
+                onRestartLogging = onRestartDebugLogging,
+                onPair = onPairDebug,
+                onUpload = onUploadDebug,
+                onShare = onShareDebug,
                 modifier = Modifier.padding(horizontal = 18.dp),
             )
         }

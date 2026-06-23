@@ -1,7 +1,15 @@
 package com.zwheel.app.ui
 
+import android.Manifest
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.padding
@@ -22,16 +30,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.zwheel.app.ble.ConnectionState
-import com.zwheel.app.ui.ble.bleScanPermissions
-import com.zwheel.app.ui.ble.hasAllRequiredPermissions
-import com.zwheel.app.ui.ble.hasLocationPermission
-import com.zwheel.app.ui.ble.hasPermission
-import com.zwheel.app.ui.ble.hasPermanentlyDeniedPermission
-import com.zwheel.app.ui.ble.openAppSettings
-import com.zwheel.app.ui.ble.openLocationPermissionSettings
-import com.zwheel.app.ui.ble.rideLocationPermissions
-import com.zwheel.app.ui.ble.BleDebugScreen
 import com.zwheel.app.ui.connect.ConnectScreen
 import com.zwheel.app.ui.dashboard.DashboardScreen
 import com.zwheel.app.ui.history.MapFullScreenScreen
@@ -225,11 +226,7 @@ fun ZWheelAppScreen(
                         viewModel.disconnect()
                         settingsViewModel.forgetBoard()
                     },
-                    onOpenBleDebug = { navController.navigate("ble_debug") },
                 )
-            }
-            composable("ble_debug") {
-                BleDebugScreen()
             }
             composable("battery") {
                 OemBatteryAdviceScreen(
@@ -241,6 +238,74 @@ fun ZWheelAppScreen(
             }
         }
     }
+}
+
+// FINE and COARSE must be requested together: on Android 12+ a FINE-only runtime
+// request is silently ignored (no system dialog appears, result is immediate denial).
+private fun rideLocationPermissions(): List<String> =
+    listOf(
+        Manifest.permission.ACCESS_FINE_LOCATION,
+        Manifest.permission.ACCESS_COARSE_LOCATION,
+    )
+
+// GPS ride tracking needs precise location; coarse-only grants are treated as not granted
+// so the dashboard keeps offering the upgrade-to-precise prompt.
+private fun hasLocationPermission(context: Context): Boolean =
+    hasPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
+
+private fun bleScanPermissions(): List<String> =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        // BLUETOOTH_SCAN is declared neverForLocation in the manifest;
+        // location permission is requested separately when a ride starts.
+        listOf(
+            Manifest.permission.BLUETOOTH_SCAN,
+            Manifest.permission.BLUETOOTH_CONNECT,
+        )
+    } else {
+        listOf(Manifest.permission.ACCESS_FINE_LOCATION)
+    }
+
+private fun hasPermission(context: Context, permission: String): Boolean =
+    ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+
+private fun hasAllRequiredPermissions(
+    context: Context,
+    permissions: List<String>,
+): Boolean = permissions.all { hasPermission(context, it) }
+
+private fun hasPermanentlyDeniedPermission(
+    context: Context,
+    permissions: List<String>,
+    requestAttempted: Boolean,
+): Boolean {
+    val activity = context.findActivity() ?: return false
+    return requestAttempted && permissions.any { permission ->
+        !hasPermission(context, permission) &&
+            !ActivityCompat.shouldShowRequestPermissionRationale(activity, permission)
+    }
+}
+
+private fun Context.openAppSettings() {
+    startActivity(
+        Intent(
+            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+            Uri.fromParts("package", packageName, null),
+        ),
+    )
+}
+
+// Opens the app's details page in system Settings, which has a one-tap "Permissions" entry.
+// There is no reliable public intent to deep-link straight to the permissions list because
+// the internal MANAGE_APP_PERMISSIONS action is protected and throws on many devices.
+private fun Context.openLocationPermissionSettings() = openAppSettings()
+
+private fun Context.findActivity(): Activity? {
+    var currentContext = this
+    while (currentContext is ContextWrapper) {
+        if (currentContext is Activity) return currentContext
+        currentContext = currentContext.baseContext
+    }
+    return null
 }
 
 @Composable

@@ -64,6 +64,7 @@ class SettingsRepository(
             haUrl = prefs[HA_URL] ?: "",
             haToken = token,
             customBoardName = prefs[CUSTOM_BOARD_NAME]?.takeIf { it.isNotBlank() },
+            bleDebugPassword = prefs[BLE_DEBUG_PASSWORD] ?: "",
         )
     }
 
@@ -98,6 +99,10 @@ class SettingsRepository(
         dataStore.edit { preferences ->
             preferences.remove(HA_TOKEN)
         }
+    }
+
+    suspend fun saveDebugPassword(password: String) {
+        dataStore.edit { prefs -> prefs[BLE_DEBUG_PASSWORD] = password }
     }
 
     // Moves the legacy plaintext HA token from DataStore into EncryptedSharedPreferences.
@@ -187,6 +192,7 @@ class SettingsRepository(
         val HAS_CUSTOM_TIRE_DIAMETER = booleanPreferencesKey("has_custom_tire_diameter")
         val HA_URL = stringPreferencesKey("ha_url")
         val HA_TOKEN = stringPreferencesKey("ha_token")
+        val BLE_DEBUG_PASSWORD = stringPreferencesKey("ble_debug_password")
         val CUSTOM_BOARD_NAME = stringPreferencesKey("custom_board_name")
         const val KEY_HA_TOKEN_SECURE = "ha_token_secure"
         val TIRE_DIAMETER_RANGE = 8.0..16.0

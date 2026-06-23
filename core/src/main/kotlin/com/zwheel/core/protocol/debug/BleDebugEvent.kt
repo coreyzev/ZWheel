@@ -20,10 +20,20 @@ data class BleDebugEvent(
 
 class BleDebugRecorder(
     private val salt: String = UUID.randomUUID().toString(),
-    private val sessionId: String = UUID.randomUUID().toString(),
-    private val startEpochMs: Long = System.currentTimeMillis(),
 ) {
     private val events = Collections.synchronizedList(mutableListOf<BleDebugEvent>())
+    private var sessionId: String = UUID.randomUUID().toString()
+    private var startEpochMs: Long = System.currentTimeMillis()
+
+    val eventCount: Int get() = events.size
+
+    fun reset() {
+        synchronized(events) {
+            events.clear()
+            sessionId = UUID.randomUUID().toString()
+            startEpochMs = System.currentTimeMillis()
+        }
+    }
 
     fun record(
         type: String,

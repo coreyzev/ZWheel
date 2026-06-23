@@ -1,5 +1,6 @@
 package com.zwheel.app.ui.settings
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zwheel.app.ble.ConnectionManager
@@ -7,9 +8,12 @@ import com.zwheel.app.data.settings.SettingsRepository
 import com.zwheel.app.data.settings.UserPreferences
 import com.zwheel.app.service.HaPushResult
 import com.zwheel.app.service.HomeAssistantPusher
+import com.zwheel.app.ui.ble.BleDebugLogExporter
 import com.zwheel.core.model.BoardState
 import com.zwheel.core.model.SpeedUnit
 import com.zwheel.core.model.TemperatureUnit
+import com.zwheel.core.protocol.debug.BleDebugRecorder
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +27,8 @@ import kotlinx.coroutines.launch
 class SettingsViewModel @Inject constructor(
     private val repo: SettingsRepository,
     private val connectionManager: ConnectionManager,
+    private val bleRecorder: BleDebugRecorder,
+    @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
     val preferences: StateFlow<UserPreferences> = repo.preferences.stateIn(
         scope = viewModelScope,
@@ -44,6 +50,62 @@ class SettingsViewModel @Inject constructor(
 
     private val _haTestResult = MutableStateFlow<HaPushResult?>(null)
     val haTestResult: StateFlow<HaPushResult?> = _haTestResult.asStateFlow()
+
+    private val bleExporter: BleDebugLogExporter by lazy { BleDebugLogExporter(appContext) }
+
+    private val _isDebugLogging = MutableStateFlow(false)
+    val isDebugLogging: StateFlow<Boolean> = _isDebugLogging.asStateFlow()
+
+    private val _debugStatus = MutableStateFlow<String?>(null)
+    val debugStatus: StateFlow<String?> = _debugStatus.asStateFlow()
+
+    fun setDebugLogging(enabled: Boolean) {
+        if (enabled) {
+            bleRecorder.reset()
+            _isDebugLogging.value = true
+            _debugStatus.value = "Logging"
+        } else {
+            _isDebugLogging.value = false
+            _debugStatus.value = null
+        }
+    }
+
+    fun restartDebugLogging() {
+        bleRecorder.reset()
+        _debugStatus.value = "Restarted — logging"
+    }
+
+    fun saveDebugPassword(password: String) {
+        viewModelScope.launch { repo.saveDebugPassword(password) }
+    }
+
+    fun pairDebug() {
+        val password = preferences.value.bleDebugPassword
+        if (password.isBlank()) { _debugStatus.value = "Enter a password first"; return }
+        _debugStatus.value = "Pairing..."
+        viewModelScope.launch {
+            runCatching { bleExporter.pair(password) }
+                .onSuccess { msg -> _debugStatus.value = msg }
+                .onFailure { err -> _debugStatus.value = "Pair failed: ${err.message}" }
+        }
+    }
+
+    fun uploadDebug() {
+        _debugStatus.value = "Uploading ${bleRecorder.eventCount} events..."
+        viewModelScope.launch {
+            runCatching { bleExporter.upload(bleRecorder.toJsonLines()) }
+                .onSuccess { msg -> _debugStatus.value = msg }
+                .onFailure { err -> _debugStatus.value = "Upload failed: ${err.message}" }
+        }
+    }
+
+    fun shareDebug() {
+        viewModelScope.launch {
+            runCatching { bleExporter.share(bleRecorder.toJsonLines()) }
+                .onSuccess { msg -> _debugStatus.value = msg }
+                .onFailure { err -> _debugStatus.value = "Share failed: ${err.message}" }
+        }
+    }
 
     fun setSpeedUnit(unit: SpeedUnit) {
         viewModelScope.launch {

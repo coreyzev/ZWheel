@@ -139,6 +139,13 @@ If gpt-5.5 runs out of context: add `-c model="o3"` and re-dispatch. Do NOT take
 **Stall triage:** If Codex has not committed after 10 min, check `ps aux | grep codex`.
 If blocked on Gradle daemon: `rm -rf /tmp/gradle-home && GRADLE_USER_HOME=/tmp/gradle-home ./gradlew`.
 
+**Disk management (/tmp is 3.8 GB tmpfs — it fills fast):**
+- Always pass `GRADLE_USER_HOME=/tmp/gradle-home` and `--no-daemon` to every `./gradlew` call.
+- Remove worktrees as soon as a lane is done: `git -C /root/ZWheel worktree remove /tmp/zwheel-codex-<lane> --force`.
+- Never add Roborazzi or screenshot-test deps — Roborazzi 1.64.0 requires Kotlin 2.3.0; project uses 2.0.21.
+- If /tmp fills: `rm -rf /tmp/zwheel-gradle /tmp/gradle-home /tmp/gradle-wrapper-cache` frees ~2.5 GB.
+- Commit gate files before creating worktrees (untracked files don't appear in `git worktree add` trees).
+
 ## 6. Memory (append-only; agent maintains)
 - 2026-06: Project initialized from Fable design package. Reference protocol sources:
   ponewheel issue #86 (Gemini unlock), UWP-Onewheel docs, OWCE legacy OWBoard.cs,
@@ -279,4 +286,26 @@ If blocked on Gradle daemon: `rm -rf /tmp/gradle-home && GRADLE_USER_HOME=/tmp/g
   trivial mechanical tasks flagged "Gemini-OK" in a gate. Active backlog and priority
   order for the review issues (#78–#85) live in docs/HANDOFF.md §2a:
   **#79 → #80 → #81 → #78, then #84/#82/#83 parallel, then #85 (decision-gated).**
+- 2026-06-22/23: Dark redesign spec audit complete — all 28+ spec items implemented,
+  verified, and committed. Gates dispatched and merged: D1 (system insets / edge-to-edge),
+  D2 (pushback gradient bar), H1+H2 (full-screen map ride overlays). Gate archive committed
+  to docs/gates/ (11 files). Dead Roborazzi screenshot test removed (was blocking :app:test
+  with Kotlin version mismatch). CI failures #311 (GeminiStrategyTest) and #312
+  (BleDebugEventTest) both fixed — root cause was BleDebugRecorder constructor refactor.
+  Pattern for testability: add `internal constructor(salt, sessionId, startEpochMs)` that
+  delegates to primary ctor then overrides private vars — keeps public API clean while
+  allowing deterministic test injection. Release workflow triggered post-merge.
+- 2026-06-22/23: Intentional spec deviations (do not revert): (1) C2-4: No scanning ring
+  animation — Corey chose simple static UI. (2) B1-2: Samsung-only battery opt copy —
+  deliberate product decision. (3) S1: Tire calibration stays in Connected Board section,
+  not its own section — post-spec intentional change. (4) S4: Donate button is a TODO item.
+- 2026-06-22/23: /tmp disk management rules (3.8 GB tmpfs, fills fast):
+  Always use `GRADLE_USER_HOME=/tmp/gradle-home` and `--no-daemon`. Remove done Codex
+  worktrees immediately: `git -C /root/ZWheel worktree remove /tmp/zwheel-codex-<lane> --force`.
+  Periodic cleanup: `rm -rf /tmp/gradle-home/caches/8.10.2/kotlin-dsl`. Never add Roborazzi
+  or screenshot test deps (Roborazzi 1.64.0 requires Kotlin 2.3.0; project uses 2.0.21 —
+  mismatch crashes the build). If /tmp fills: `rm -rf /tmp/zwheel-gradle /tmp/gradle-home
+  /tmp/gradle-wrapper-cache` frees ~2.5 GB. Keep worktrees at /tmp/zwheel-codex-<lane>;
+  do NOT use /tmp/gradle, /tmp/zwheel-gradle, or /tmp/zwheel-home as alternate cache dirs —
+  those ghost directories cause confusion and waste space.
 - (append discoveries here…)

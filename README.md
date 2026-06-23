@@ -1,11 +1,11 @@
 # ZWheel
 
-> ## WORK IN PROGRESS - NOT RIDE READY
+> ## WORK IN PROGRESS — PRE-RELEASE
 >
-> ZWheel is under active development. The app builds, the core BLE/handshake
-> path has fixture tests, and debug APKs are published from `main`, but the
-> current build has not yet passed the real-board M1 hardware gate. Do not rely
-> on it as a finished ride companion.
+> ZWheel is under active development. The core BLE handshake has been verified
+> on real hardware (M1 gate passed — Gemini unlock confirmed on XR HW 4209),
+> but the app has not yet received a signed production release. Debug APKs are
+> published from `main`. Do not rely on it as a finished ride companion.
 
 ZWheel is a personal Android + Wear OS companion for stock Future Motion
 Onewheels. It is built offline-first: no account, no cloud sync, no analytics,
@@ -20,24 +20,22 @@ and no runtime network permission in v1.
 
 ```text
 Repo / Contracts        [####################] 100%  Done
-Core protocol model     [##################..]  90%  UUID map, ports, parser harness
-BLE library / transport [##############......]  70%  Kable transport exists; hardware gate open
-Gemini handshake        [################....]  80%  Fixture tests pass; board unlock unverified
-Debug screen            [##############......]  70%  Scan -> connect -> unlock -> dump path
+Core protocol model     [####################] 100%  UUID map, ports, parsers, board-type detection
+BLE library / transport [##################..]  90%  Kable transport; Gemini keep-alive; M1 verified
+Gemini handshake        [####################] 100%  Verified on XR HW 4209 FW 4134 (M1 PASSED)
+Dashboard UI            [##################..]  90%  Dark redesign complete; all spec items implemented
 Android permissions     [####################] 100%  Android 12+ BLE + location runtime flow
-Dashboard UI            [##############......]  70%  Live speed/battery/temp/GPS, ride history
 Ride data / service     [##################..]  90%  Session recorder, GPS, HA push, foreground service
 Wear OS                 [##################..]  90%  Full dashboard, ambient mode, standalone install
-CI / release            [##################..]  90%  CI, APK artifact, latest debug release
+CI / release            [##################..]  90%  CI, APK artifact, workflow_dispatch release
 Distribution            [####................]  20%  Debug APK only; no signed v1 release
-Overall                 [##############......]  70%  Feature-complete; awaiting hardware verification
+Overall                 [##################..]  85%  Hardware-verified; dark redesign shipped; pre-v1
 ```
 
-What "70%" means in practice: the full ride-companion feature set is implemented
-(BLE, live dashboard, GPS tracking, ride history with maps, Wear OS companion,
-Home Assistant battery push). The remaining gap is physical hardware
-verification — the M1 gate (real-board connect + 10-minute telemetry soak) has
-not been passed yet.
+What "85%" means in practice: the full ride-companion feature set is implemented and
+the dark instrument-cluster redesign is complete. BLE/Gemini handshake has been verified
+on real hardware (M1 gate passed). The remaining gaps are open-ride hardware testing
+(Wave 3 issues #102/#109), a signed production release, and a few minor open issues.
 
 ---
 
@@ -107,35 +105,33 @@ ADR-003.
 
 ## Current Milestone
 
-The project is between Phase 1 implementation and Gate M1.
+**M1 PASSED** — Gemini unlock verified on XR HW 4209 FW 4134. Telemetry confirmed
+flowing. Keep-alive write cadence (every 15 s) locks telemetry on indefinitely.
 
-Completed locally:
+### Completed (shipped to main)
 
 - Gradle modules for `core`, `app`, and `wear`.
-- CI for app/wear builds and unit tests.
-- Debug APK artifact upload.
-- `latest` GitHub Release workflow for debug APKs.
-- Core UUID map and parser test harness.
-- Kable BLE transport.
-- None and Gemini handshake strategies.
-- Gemini fixture tests without hardware.
-- Minimal debug screen for scan, connect, unlock, and characteristic dump.
-- Samsung battery advice UI.
-- Android 12+ BLE + location runtime permission request flow.
-- Live dashboard: speed, battery, cell voltage, temperatures, pitch/roll/yaw.
-- Foreground ride service with GPS capture, session recording, and top speed.
-- Ride history list and detail screen with speed-colored GPS map overlay.
-- Full-screen map tap-through from ride detail.
+- CI for app/wear builds and unit tests; `workflow_dispatch` release pipeline.
+- Core UUID map, parsers, board-type detection, and parser test harness.
+- Kable BLE transport with Gemini handshake + 15 s keep-alive.
+- Dark instrument-cluster redesign: dark theme, Saira + JetBrains Mono fonts,
+  all spec screens implemented (connect, permissions, dashboard, history list +
+  detail + full-screen map, settings, Wear OS).
+- Edge-to-edge layout; pushback headroom bar with lime→amber→red gradient;
+  ride-detail full-screen map with speed-colored route overlay and stats.
+- Samsung battery advice UI; Android 12+ BLE + location runtime permission flow.
+- Foreground ride service: GPS capture, session recording, top speed, range estimate.
 - Home Assistant battery push via REST API (no custom component).
 - Wear OS companion with ambient always-on mode and standalone distribution.
+- BLE debug logging toggle in Settings with JSONL export / upload.
 
-Still required for M1:
+### Open (Wave 3)
 
-- Connect to Corey's XR HW 4029.
-- Verify Gemini unlock on real hardware.
-- Keep telemetry flowing for 10+ minutes.
-- Capture the characteristic dump and commit it as test fixtures.
-- Confirm open questions around the RPM and lights characteristics.
+- **#102** Orphan session recovery on START_STICKY restart.
+- **#109** BLE auto-reconnect on unexpected disconnection.
+- **#104** Remaining test coverage gaps (SettingsRepository, ConnectionManager, Wear).
+- Signed production release (Phase 5).
+- Confirm LIGHTS_FRONT / LIGHTS_BACK writability (#AGENTS.md open question).
 
 ---
 

@@ -1,16 +1,25 @@
 package com.zwheel.app.ui.connect
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -23,8 +32,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -49,49 +60,99 @@ fun ConnectScreen(
     modifier: Modifier = Modifier,
 ) {
     val c = LocalZWheelColors.current
+    val scanning = connectionState == ConnectionState.Scanning
 
-    LazyColumn(
+    Box(
         modifier = modifier
             .fillMaxSize()
             .background(c.screenBg),
-        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 22.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    text = "Connect your board",
-                    fontFamily = SairaFamily,
-                    fontWeight = FontWeight.W800,
-                    fontSize = 26.sp,
-                    letterSpacing = (-0.4).sp,
-                    color = c.textPrimary,
-                )
-                Text(
-                    text = "Power on your Onewheel and keep it nearby.",
-                    fontFamily = SairaFamily,
-                    fontWeight = FontWeight.W400,
-                    fontSize = 14.sp,
-                    lineHeight = 21.sp,
-                    color = c.textMuted,
-                )
+        LazyColumn(
+            contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 22.dp, bottom = 96.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = "Connect your board",
+                        fontFamily = SairaFamily,
+                        fontWeight = FontWeight.W800,
+                        fontSize = 26.sp,
+                        letterSpacing = (-0.4).sp,
+                        color = c.textPrimary,
+                    )
+                    Text(
+                        text = "Power on your Onewheel and keep it nearby.",
+                        fontFamily = SairaFamily,
+                        fontWeight = FontWeight.W400,
+                        fontSize = 14.sp,
+                        lineHeight = 21.sp,
+                        color = c.textMuted,
+                    )
+                }
+            }
+            item { BleStateChips(connectionState) }
+            items(devices) { device ->
+                DeviceRow(device = device, connectionState = connectionState, onConnect = onConnect)
             }
         }
-        item { BleStateChips(connectionState) }
-        item {
-            if (connectionState == ConnectionState.Scanning) {
-                ScanningIndicator()
-            }
-        }
-        items(devices) { device ->
-            DeviceRow(device = device, connectionState = connectionState, onConnect = onConnect)
-        }
-        item {
-            val scannable = connectionState != ConnectionState.Scanning && connectionState != ConnectionState.Connected
-            if (devices.isEmpty() && scannable) {
-                EmptyDeviceState(onScan = onScan)
-            }
-        }
+
+        ScanButton(
+            scanning = scanning,
+            onScan = onScan,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp, vertical = 16.dp),
+        )
+    }
+}
+
+@Composable
+private fun ScanButton(
+    scanning: Boolean,
+    onScan: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val c = LocalZWheelColors.current
+    val infiniteTransition = rememberInfiniteTransition(label = "scan")
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "icon_rotation",
+    )
+
+    Button(
+        onClick = onScan,
+        enabled = !scanning,
+        shape = RoundedCornerShape(999.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = c.lime,
+            contentColor = c.screenBg,
+            disabledContainerColor = c.cardElevated,
+            disabledContentColor = c.textSecondary,
+        ),
+        modifier = modifier,
+    ) {
+        Icon(
+            Icons.Filled.BluetoothSearching,
+            contentDescription = null,
+            modifier = Modifier
+                .size(18.dp)
+                .then(if (scanning) Modifier.rotate(rotation) else Modifier),
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            if (scanning) "Searching..." else "Scan for boards",
+            fontFamily = SairaFamily,
+            fontWeight = FontWeight.W700,
+            fontSize = 15.sp,
+        )
     }
 }
 
@@ -124,29 +185,6 @@ private fun BleStateChips(connectionState: ConnectionState) {
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun ScanningIndicator() {
-    val c = LocalZWheelColors.current
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Icon(
-            Icons.Filled.BluetoothSearching,
-            contentDescription = "Scanning",
-            tint = c.cyan,
-            modifier = Modifier.size(22.dp),
-        )
-        Text(
-            "Scanning for boards...",
-            fontFamily = SairaFamily,
-            fontWeight = FontWeight.W600,
-            fontSize = 15.sp,
-            color = c.cyan,
-        )
     }
 }
 
@@ -234,52 +272,6 @@ private fun DeviceRow(
                     fontSize = 13.sp,
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun EmptyDeviceState(onScan: () -> Unit) {
-    val c = LocalZWheelColors.current
-    Column(
-        Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Icon(
-            Icons.Filled.BluetoothSearching,
-            contentDescription = null,
-            tint = c.textDim,
-            modifier = Modifier.size(48.dp),
-        )
-        Text(
-            "No boards found",
-            fontFamily = SairaFamily,
-            fontWeight = FontWeight.W600,
-            fontSize = 16.sp,
-            color = c.textSecondary,
-        )
-        Text(
-            "Tap Scan to search for nearby boards.",
-            fontFamily = SairaFamily,
-            fontWeight = FontWeight.W400,
-            fontSize = 14.sp,
-            color = c.textMuted,
-        )
-        Button(
-            onClick = onScan,
-            shape = RoundedCornerShape(999.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = c.lime,
-                contentColor = c.screenBg,
-            ),
-        ) {
-            Text(
-                "Scan for boards",
-                fontFamily = SairaFamily,
-                fontWeight = FontWeight.W700,
-                fontSize = 14.sp,
-            )
         }
     }
 }

@@ -191,6 +191,7 @@ internal fun ConnectedBoardCard(
         }
 
         // ── Disconnect / Forget ───────────────────────────────────────────────
+        val connected = boardState.identity != null
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -199,8 +200,12 @@ internal fun ConnectedBoardCard(
         ) {
             TextButton(
                 onClick = onDisconnect,
+                enabled = connected,
                 modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.textButtonColors(contentColor = c.rampDanger),
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = c.rampDanger,
+                    disabledContentColor = c.textDim,
+                ),
             ) {
                 Text("Disconnect", fontFamily = SairaFamily, fontWeight = FontWeight.W600, fontSize = 14.sp)
             }

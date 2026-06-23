@@ -7,9 +7,10 @@ enum class BoardType(
     ONEWHEEL_V1("Onewheel V1", 11.5),
     PLUS("Onewheel+", 11.5),
     XR("Onewheel+ XR", 11.5),
+    XRC("Onewheel XR Classic", 11.5),
     PINT("Onewheel Pint", 10.5),
     PINT_X("Onewheel Pint X", 10.5),
-    UNKNOWN("Unknown stock Onewheel", 11.5),
+    UNKNOWN("Unknown Onewheel", 11.5),
 }
 
 enum class ConnectionState {

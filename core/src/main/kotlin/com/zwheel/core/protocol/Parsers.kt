@@ -11,6 +11,7 @@ object Parsers {
             BoardType.ONEWHEEL_V1 -> 0.0009
             BoardType.PLUS -> 0.0018
             BoardType.XR,
+            BoardType.XRC,
             BoardType.PINT,
             BoardType.PINT_X -> 0.002
             BoardType.UNKNOWN -> throw IllegalArgumentException(
@@ -80,7 +81,7 @@ object Parsers {
                 3 -> RideMode.ELEVATED
                 else -> RideMode.UNKNOWN
             }
-            BoardType.PLUS, BoardType.XR -> when (value.uint16BigEndian()) {
+            BoardType.PLUS, BoardType.XR, BoardType.XRC -> when (value.uint16BigEndian()) {
                 4 -> RideMode.SEQUOIA
                 5 -> RideMode.CRUZ
                 6 -> RideMode.MISSION

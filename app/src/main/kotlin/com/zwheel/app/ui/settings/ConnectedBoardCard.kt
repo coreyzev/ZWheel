@@ -333,6 +333,7 @@ private fun BoardTypeBadge(type: BoardType) {
     val c = LocalZWheelColors.current
     val label = when (type) {
         BoardType.PINT_X -> "PINT X"
+        BoardType.XRC -> "XRC"
         BoardType.XR -> "XR"
         BoardType.PINT -> "PINT"
         BoardType.PLUS -> "PLUS"

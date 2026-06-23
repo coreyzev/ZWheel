@@ -101,7 +101,8 @@ object DefaultRangeEstimator : RangeEstimator {
 
     private val BoardType.defaultKilometersPerBatteryPercent: Double
         get() = when (this) {
-            BoardType.XR -> 0.16
+            BoardType.XR,
+            BoardType.XRC -> 0.16
             BoardType.PLUS -> 0.14
             BoardType.PINT -> 0.10
             BoardType.PINT_X -> 0.12

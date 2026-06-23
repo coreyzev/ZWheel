@@ -234,9 +234,10 @@ private fun DeviceRow(
                     if (knownBoardType != null && knownBoardType != BoardType.UNKNOWN) {
                         val label = when (knownBoardType) {
                             BoardType.PINT_X -> "PINT X"
+                            BoardType.XRC -> "XRC"
                             BoardType.XR -> "XR"
                             BoardType.PINT -> "PINT"
-                            BoardType.PLUS -> "+"
+                            BoardType.PLUS -> "PLUS"
                             BoardType.ONEWHEEL_V1 -> "OW V1"
                             BoardType.UNKNOWN -> ""
                         }

@@ -28,6 +28,7 @@ object CellThresholds {
  */
 fun BoardType.modelTopSpeedMph(): Float = when (this) {
     BoardType.PINT_X -> 20.0f
+    BoardType.XRC,
     BoardType.XR -> 20.0f
     BoardType.PINT -> 16.0f
     BoardType.PLUS -> 19.0f

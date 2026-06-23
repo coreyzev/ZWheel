@@ -119,7 +119,8 @@ class ConnectionManager @Inject constructor(
         val fwBytes = transport.read(OwUuids.FIRMWARE_REVISION)
         val hwRev = Parsers.hardwareRevision(hwBytes)
         val fwRev = Parsers.firmwareRevision(fwBytes)
-        val boardType = BoardTypeDetector.detect(hwRev)
+        val boardType = scanResult?.displayName?.let { BoardTypeDetector.detectFromBleName(it) }
+            ?: BoardTypeDetector.detect(hwRev)
         val serialNumber = runCatching {
             Parsers.serialNumber(transport.read(OwUuids.SERIAL_NUMBER))
         }.getOrNull()

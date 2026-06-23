@@ -136,11 +136,8 @@ class ConnectionManager @Inject constructor(
         )
 
         val savedPrefs = settingsRepository.preferences.first()
-        val tireDiameter = if (savedPrefs.hasCustomTireDiameter) {
-            savedPrefs.tireDiameterInches
-        } else {
-            boardType.stockTireDiameterInches
-        }
+        val tireDiameter = savedPrefs.lastConnectedTireDiameterInches
+            ?: boardType.stockTireDiameterInches
         val service = BoardStateServiceImpl(
             transport = transport,
             clock = clock,

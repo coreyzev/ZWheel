@@ -6,11 +6,13 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -24,12 +26,16 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.NetworkWifi3Bar
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -50,13 +56,17 @@ import com.zwheel.app.ui.SairaFamily
 import com.zwheel.core.model.BoardState
 import com.zwheel.core.model.BoardType
 
+private val TIRE_DIAMETER_RANGE = 8f..13f
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun ConnectedBoardCard(
     boardState: BoardState,
     rssi: Int?,
     customBoardName: String?,
+    tireDiameterInches: Double,
     onSaveName: (String?) -> Unit,
+    onSaveTireDiameter: (Double) -> Unit,
     onDisconnect: () -> Unit,
     onForgetBoard: () -> Unit,
     modifier: Modifier = Modifier,
@@ -70,11 +80,14 @@ internal fun ConnectedBoardCard(
         fontSize = 10.sp,
         fontFeatureSettings = "tnum",
     )
-    var editing by remember { mutableStateOf(false) }
+    var editingName by remember { mutableStateOf(false) }
     var editText by remember(displayName) { mutableStateOf(displayName) }
+    var editingTire by remember { mutableStateOf(false) }
+    var sliderValue by remember(tireDiameterInches) { mutableFloatStateOf(tireDiameterInches.toFloat()) }
 
-    androidx.compose.foundation.layout.Column(modifier = modifier) {
-        if (editing) {
+    Column(modifier = modifier) {
+        // ── Name row ──────────────────────────────────────────────────────────
+        if (editingName) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 BasicTextField(
                     value = editText,
@@ -89,7 +102,7 @@ internal fun ConnectedBoardCard(
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = {
                         onSaveName(editText.trim().ifBlank { null })
-                        editing = false
+                        editingName = false
                     }),
                     cursorBrush = SolidColor(c.lime),
                     modifier = Modifier
@@ -106,7 +119,7 @@ internal fun ConnectedBoardCard(
                         .size(20.dp)
                         .clickable {
                             onSaveName(editText.trim().ifBlank { null })
-                            editing = false
+                            editingName = false
                         },
                 )
             }
@@ -131,7 +144,7 @@ internal fun ConnectedBoardCard(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier
                         .weight(1f)
-                        .clickable { editing = true },
+                        .clickable { editingName = true },
                 )
                 Spacer(Modifier.width(8.dp))
                 Icon(
@@ -140,11 +153,12 @@ internal fun ConnectedBoardCard(
                     tint = c.textMuted,
                     modifier = Modifier
                         .size(16.dp)
-                        .clickable { editing = true },
+                        .clickable { editingName = true },
                 )
             }
         }
 
+        // ── Type / signal / fw chips ─────────────────────────────────────────
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -176,6 +190,7 @@ internal fun ConnectedBoardCard(
             }
         }
 
+        // ── Disconnect / Forget ───────────────────────────────────────────────
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -195,6 +210,108 @@ internal fun ConnectedBoardCard(
                 colors = ButtonDefaults.textButtonColors(contentColor = c.textSecondary),
             ) {
                 Text("Forget board", fontFamily = SairaFamily, fontWeight = FontWeight.W600, fontSize = 14.sp)
+            }
+        }
+
+        // ── Tire diameter ─────────────────────────────────────────────────────
+        HorizontalDivider(color = c.divider, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 8.dp))
+
+        if (editingTire) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "Tire diameter",
+                        style = TextStyle(fontFamily = SairaFamily, fontSize = 13.sp, fontWeight = FontWeight.W600),
+                        color = c.textSecondary,
+                    )
+                    Text(
+                        "%.1f in".format(sliderValue),
+                        style = TextStyle(
+                            fontFamily = JetBrainsMonoFamily,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.W700,
+                            fontFeatureSettings = "tnum",
+                        ),
+                        color = c.lime,
+                    )
+                }
+                Slider(
+                    value = sliderValue,
+                    onValueChange = { sliderValue = it },
+                    valueRange = TIRE_DIAMETER_RANGE,
+                    colors = SliderDefaults.colors(
+                        thumbColor = c.lime,
+                        activeTrackColor = c.lime,
+                        inactiveTrackColor = c.border,
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("8 in", style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 9.sp), color = c.textDim)
+                    Text("13 in", style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 9.sp), color = c.textDim)
+                }
+                Spacer(Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    TextButton(
+                        onClick = {
+                            sliderValue = tireDiameterInches.toFloat()
+                            editingTire = false
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.textButtonColors(contentColor = c.textSecondary),
+                    ) {
+                        Text("Cancel", fontFamily = SairaFamily, fontWeight = FontWeight.W600, fontSize = 14.sp)
+                    }
+                    TextButton(
+                        onClick = {
+                            onSaveTireDiameter(sliderValue.toDouble())
+                            editingTire = false
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.textButtonColors(contentColor = c.lime),
+                    ) {
+                        Text("Save", fontFamily = SairaFamily, fontWeight = FontWeight.W600, fontSize = 14.sp)
+                    }
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { editingTire = true },
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "Tire diameter",
+                    style = TextStyle(fontFamily = SairaFamily, fontSize = 13.sp, fontWeight = FontWeight.W600),
+                    color = c.textSecondary,
+                )
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        "%.1f in".format(tireDiameterInches),
+                        style = TextStyle(
+                            fontFamily = JetBrainsMonoFamily,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.W700,
+                            fontFeatureSettings = "tnum",
+                        ),
+                        color = c.lime,
+                    )
+                    Icon(
+                        imageVector = Icons.Filled.Edit,
+                        contentDescription = "Edit tire diameter",
+                        tint = c.textMuted,
+                        modifier = Modifier.size(14.dp),
+                    )
+                }
             }
         }
     }

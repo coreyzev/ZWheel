@@ -57,60 +57,6 @@ internal fun UnitsSection(
 }
 
 @Composable
-internal fun TireCalibrationSection(
-    prefs: UserPreferences,
-    onDiameterChanged: (Double) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val c = LocalZWheelColors.current
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        SectionEyebrow("TIRE CALIBRATION")
-        Text(
-            text = "Adjust if your speed or distance readings are off. The corrected value is applied to all speed calculations.",
-            style = TextStyle(fontFamily = SairaFamily, fontSize = 13.sp, fontWeight = FontWeight.W400),
-            color = c.textMuted,
-            lineHeight = 19.sp,
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                "Tire diameter",
-                style = TextStyle(fontFamily = SairaFamily, fontSize = 14.sp, fontWeight = FontWeight.W600),
-                color = c.textSecondary,
-            )
-            Text(
-                "%.1f in".format(prefs.tireDiameterInches),
-                style = TextStyle(
-                    fontFamily = JetBrainsMonoFamily,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.W700,
-                    fontFeatureSettings = "tnum",
-                ),
-                color = c.lime,
-            )
-        }
-        Slider(
-            value = prefs.tireDiameterInches.toFloat(),
-            onValueChange = { onDiameterChanged(it.toDouble()) },
-            valueRange = 8f..13f,
-            colors = SliderDefaults.colors(
-                thumbColor = c.lime,
-                activeTrackColor = c.lime,
-                inactiveTrackColor = c.border,
-            ),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("8 in", style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 9.sp), color = c.textDim)
-            Text("13 in", style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 9.sp), color = c.textDim)
-        }
-    }
-}
-
-@Composable
 internal fun DeveloperSection(modifier: Modifier = Modifier, onOpenBleDebug: () -> Unit) {
     val c = LocalZWheelColors.current
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {

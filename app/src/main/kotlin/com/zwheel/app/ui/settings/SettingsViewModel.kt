@@ -81,9 +81,17 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun saveBoardTireDiameter(diameter: Double) {
+        viewModelScope.launch {
+            repo.saveLastConnectedTireDiameter(diameter)
+        }
+    }
+
     fun forgetBoard() {
         viewModelScope.launch {
             repo.saveLastConnectedDeviceId(null)
+            repo.saveLastConnectedBoardType(null)
+            repo.saveLastConnectedTireDiameter(null)
         }
     }
 

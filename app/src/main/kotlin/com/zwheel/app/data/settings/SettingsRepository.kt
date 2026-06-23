@@ -53,6 +53,7 @@ class SettingsRepository(
             lastConnectedBoardType = prefs[LAST_BOARD_TYPE]?.let { name ->
                 enumValues<BoardType>().firstOrNull { it.name == name }
             },
+            lastConnectedTireDiameterInches = prefs[LAST_BOARD_TIRE_DIAMETER],
             hasRequestedBatteryOptimization = prefs[HAS_REQUESTED_BATTERY_OPT] ?: false,
             hasAttemptedLocationPermission = prefs[HAS_ATTEMPTED_LOCATION_PERM] ?: false,
             haUrl = prefs[HA_URL] ?: "",
@@ -123,8 +124,18 @@ class SettingsRepository(
         }
     }
 
-    suspend fun saveLastConnectedBoardType(type: BoardType) {
-        dataStore.edit { it[LAST_BOARD_TYPE] = type.name }
+    suspend fun saveLastConnectedBoardType(type: BoardType?) {
+        dataStore.edit { prefs ->
+            if (type != null) prefs[LAST_BOARD_TYPE] = type.name
+            else prefs.remove(LAST_BOARD_TYPE)
+        }
+    }
+
+    suspend fun saveLastConnectedTireDiameter(diameter: Double?) {
+        dataStore.edit { prefs ->
+            if (diameter != null) prefs[LAST_BOARD_TIRE_DIAMETER] = diameter.coerceIn(TIRE_DIAMETER_RANGE)
+            else prefs.remove(LAST_BOARD_TIRE_DIAMETER)
+        }
     }
 
     suspend fun setCustomBoardName(name: String?) {
@@ -144,6 +155,7 @@ class SettingsRepository(
         val TIRE_DIAMETER = doublePreferencesKey("tire_diameter")
         val LAST_DEVICE_ID = stringPreferencesKey("last_device_id")
         val LAST_BOARD_TYPE = stringPreferencesKey("last_board_type")
+        val LAST_BOARD_TIRE_DIAMETER = doublePreferencesKey("last_board_tire_diameter")
         val HAS_REQUESTED_BATTERY_OPT = booleanPreferencesKey("has_requested_battery_opt")
         val HAS_ATTEMPTED_LOCATION_PERM = booleanPreferencesKey("has_attempted_location_perm")
         val HAS_CUSTOM_TIRE_DIAMETER = booleanPreferencesKey("has_custom_tire_diameter")

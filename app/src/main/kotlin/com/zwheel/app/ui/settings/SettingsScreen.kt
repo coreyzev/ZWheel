@@ -2,6 +2,7 @@ package com.zwheel.app.ui.settings
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -13,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -52,9 +52,9 @@ fun SettingsScreen(
         boardState = boardState,
         rssi = rssi,
         onSaveBoardName = viewModel::setCustomBoardName,
+        onSaveBoardTireDiameter = viewModel::saveBoardTireDiameter,
         onSpeedUnitSelected = viewModel::setSpeedUnit,
         onTemperatureUnitSelected = viewModel::setTemperatureUnit,
-        onTireDiameterChanged = viewModel::setTireDiameter,
         onHaUrlChanged = viewModel::setHaUrl,
         onHaTokenChanged = viewModel::setHaToken,
         onTestHaConnection = viewModel::testHaConnection,
@@ -71,9 +71,9 @@ internal fun SettingsContent(
     boardState: BoardState,
     rssi: Int?,
     onSaveBoardName: (String?) -> Unit,
+    onSaveBoardTireDiameter: (Double) -> Unit,
     onSpeedUnitSelected: (SpeedUnit) -> Unit,
     onTemperatureUnitSelected: (TemperatureUnit) -> Unit,
-    onTireDiameterChanged: (Double) -> Unit,
     onHaUrlChanged: (String) -> Unit,
     onHaTokenChanged: (String) -> Unit,
     onTestHaConnection: () -> Unit,
@@ -83,6 +83,9 @@ internal fun SettingsContent(
 ) {
     val c = LocalZWheelColors.current
     val hasSavedBoard = boardState.identity != null || preferences.lastConnectedDeviceId != null
+    val effectiveTireDiameter = preferences.lastConnectedTireDiameterInches
+        ?: boardState.identity?.type?.stockTireDiameterInches
+        ?: 11.5
 
     LazyColumn(
         modifier = Modifier
@@ -120,11 +123,12 @@ internal fun SettingsContent(
                             boardState = boardState,
                             rssi = rssi,
                             customBoardName = preferences.customBoardName,
+                            tireDiameterInches = effectiveTireDiameter,
                             onSaveName = onSaveBoardName,
+                            onSaveTireDiameter = onSaveBoardTireDiameter,
                             onDisconnect = onDisconnect,
                             onForgetBoard = onForgetBoard,
                         )
-                        HorizontalDivider(color = c.divider, thickness = 0.5.dp)
                         DeviceInfoDisclosure(identity = boardState.identity, rssi = rssi)
                     }
                 }
@@ -138,14 +142,6 @@ internal fun SettingsContent(
                 onSpeedUnit = onSpeedUnitSelected,
                 onTempUnit = onTemperatureUnitSelected,
                 modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
-            )
-        }
-        item { Spacer(Modifier.height(22.dp)) }
-        item {
-            TireCalibrationSection(
-                prefs = preferences,
-                onDiameterChanged = onTireDiameterChanged,
-                modifier = Modifier.padding(horizontal = 18.dp),
             )
         }
         item { Spacer(Modifier.height(22.dp)) }

@@ -11,6 +11,7 @@ data class UserPreferences(
     val hasCustomTireDiameter: Boolean = false,
     val lastConnectedDeviceId: String? = null,
     val lastConnectedBoardType: BoardType? = null,
+    val lastConnectedTireDiameterInches: Double? = null,
     val hasRequestedBatteryOptimization: Boolean = false,
     val hasAttemptedLocationPermission: Boolean = false,
     val haUrl: String = "",

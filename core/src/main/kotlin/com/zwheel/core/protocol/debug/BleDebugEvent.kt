@@ -25,6 +25,13 @@ class BleDebugRecorder(
     private var sessionId: String = UUID.randomUUID().toString()
     private var startEpochMs: Long = System.currentTimeMillis()
 
+    // Test-only: allows injecting deterministic sessionId and startEpochMs without
+    // exposing them as public constructor params in production code.
+    internal constructor(salt: String, sessionId: String, startEpochMs: Long) : this(salt = salt) {
+        this.sessionId = sessionId
+        this.startEpochMs = startEpochMs
+    }
+
     val eventCount: Int get() = events.size
 
     fun reset() {

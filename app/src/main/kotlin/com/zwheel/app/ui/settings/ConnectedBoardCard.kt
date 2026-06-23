@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.sp
 import com.zwheel.app.ui.JetBrainsMonoFamily
 import com.zwheel.app.ui.LocalZWheelColors
 import com.zwheel.app.ui.SairaFamily
+import com.zwheel.core.model.BoardIdentity
 import com.zwheel.core.model.BoardState
 import com.zwheel.core.model.BoardType
 
@@ -62,6 +63,7 @@ private val TIRE_DIAMETER_RANGE = 8f..13f
 @Composable
 internal fun ConnectedBoardCard(
     boardState: BoardState,
+    effectiveIdentity: BoardIdentity?,
     rssi: Int?,
     customBoardName: String?,
     tireDiameterInches: Double,
@@ -73,7 +75,7 @@ internal fun ConnectedBoardCard(
 ) {
     val c = LocalZWheelColors.current
     val displayName = customBoardName?.takeIf { it.isNotBlank() }
-        ?: boardState.identity?.name
+        ?: effectiveIdentity?.name
         ?: "Not connected"
     val mono10 = TextStyle(
         fontFamily = JetBrainsMonoFamily,
@@ -169,7 +171,7 @@ internal fun ConnectedBoardCard(
             verticalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier.padding(top = 6.dp),
         ) {
-            val boardType = boardState.identity?.type ?: BoardType.UNKNOWN
+            val boardType = effectiveIdentity?.type ?: BoardType.UNKNOWN
             BoardTypeBadge(boardType)
             if (rssi != null) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -183,7 +185,7 @@ internal fun ConnectedBoardCard(
                     Text("$rssi dBm", style = mono10, color = c.textSecondary)
                 }
             }
-            val fw = boardState.identity?.firmwareRevision
+            val fw = effectiveIdentity?.firmwareRevision
             val cells = boardState.cellVoltages.size.takeIf { it > 0 }
             if (fw != null || cells != null) {
                 val label = buildString {

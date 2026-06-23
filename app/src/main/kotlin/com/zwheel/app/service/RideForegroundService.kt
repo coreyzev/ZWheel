@@ -95,11 +95,7 @@ class RideForegroundService : LifecycleService() {
             lifecycleScope.launch {
                 settingsRepository.saveLastConnectedDeviceId(deviceId)
                 runCatching { connectionManager.connect(deviceId) }
-                    .onSuccess {
-                        connectionManager.boardState.value.identity?.type?.let { type ->
-                            settingsRepository.saveLastConnectedBoardType(type)
-                        }
-                    }
+                    .onSuccess { persistConnectedIdentity() }
                     .onFailure { notifications.notify("Connection failed", null) }
             }
         } else {
@@ -107,11 +103,7 @@ class RideForegroundService : LifecycleService() {
                 val lastId = settingsRepository.preferences.first().lastConnectedDeviceId
                 if (lastId != null) {
                     runCatching { connectionManager.connect(lastId) }
-                        .onSuccess {
-                            connectionManager.boardState.value.identity?.type?.let { type ->
-                                settingsRepository.saveLastConnectedBoardType(type)
-                            }
-                        }
+                        .onSuccess { persistConnectedIdentity() }
                         .onFailure { notifications.notify("Connection failed", null) }
                 }
             }
@@ -131,6 +123,17 @@ class RideForegroundService : LifecycleService() {
         connectionManager.disconnect()
         if (wakelock.isHeld) wakelock.release()
         super.onDestroy()
+    }
+
+    private suspend fun persistConnectedIdentity() {
+        val identity = connectionManager.boardState.value.identity ?: return
+        settingsRepository.saveLastConnectedBoardType(identity.type)
+        settingsRepository.saveLastConnectedIdentityDetails(
+            serial = identity.serialNumber,
+            batterySerial = identity.batterySerialNumber,
+            hardwareRev = identity.hardwareRevision,
+            firmwareRev = identity.firmwareRevision,
+        )
     }
 
     private fun trackSpeedUnitPreference() {

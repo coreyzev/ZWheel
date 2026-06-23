@@ -30,7 +30,9 @@ import com.zwheel.app.service.HaPushResult
 import com.zwheel.app.ui.JetBrainsMonoFamily
 import com.zwheel.app.ui.LocalZWheelColors
 import com.zwheel.app.ui.SairaFamily
+import com.zwheel.core.model.BoardIdentity
 import com.zwheel.core.model.BoardState
+import com.zwheel.core.model.BoardType
 import com.zwheel.core.model.SpeedUnit
 import com.zwheel.core.model.TemperatureUnit
 
@@ -83,8 +85,19 @@ internal fun SettingsContent(
 ) {
     val c = LocalZWheelColors.current
     val hasSavedBoard = boardState.identity != null || preferences.lastConnectedDeviceId != null
+    val effectiveIdentity = boardState.identity ?: preferences.lastConnectedDeviceId?.let { id ->
+        BoardIdentity(
+            boardId = id,
+            name = preferences.lastConnectedBoardType?.displayName ?: "Unknown board",
+            type = preferences.lastConnectedBoardType ?: BoardType.UNKNOWN,
+            serialNumber = preferences.lastConnectedSerial,
+            batterySerialNumber = preferences.lastConnectedBatterySerial,
+            hardwareRevision = preferences.lastConnectedHardwareRev,
+            firmwareRevision = preferences.lastConnectedFirmwareRev,
+        )
+    }
     val effectiveTireDiameter = preferences.lastConnectedTireDiameterInches
-        ?: boardState.identity?.type?.stockTireDiameterInches
+        ?: effectiveIdentity?.type?.stockTireDiameterInches
         ?: 11.5
 
     LazyColumn(
@@ -121,6 +134,7 @@ internal fun SettingsContent(
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         ConnectedBoardCard(
                             boardState = boardState,
+                            effectiveIdentity = effectiveIdentity,
                             rssi = rssi,
                             customBoardName = preferences.customBoardName,
                             tireDiameterInches = effectiveTireDiameter,
@@ -129,7 +143,7 @@ internal fun SettingsContent(
                             onDisconnect = onDisconnect,
                             onForgetBoard = onForgetBoard,
                         )
-                        DeviceInfoDisclosure(identity = boardState.identity, rssi = rssi)
+                        DeviceInfoDisclosure(identity = effectiveIdentity, rssi = rssi)
                     }
                 }
             }

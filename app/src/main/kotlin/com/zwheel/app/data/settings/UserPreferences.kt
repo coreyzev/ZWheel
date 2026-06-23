@@ -12,6 +12,7 @@ data class UserPreferences(
     val lastConnectedDeviceId: String? = null,
     val lastConnectedBoardType: BoardType? = null,
     val lastConnectedTireDiameterInches: Double? = null,
+    val lastConnectedBoardName: String? = null,
     val lastConnectedSerial: String? = null,
     val lastConnectedBatterySerial: String? = null,
     val lastConnectedHardwareRev: String? = null,

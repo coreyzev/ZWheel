@@ -88,7 +88,9 @@ internal fun SettingsContent(
     val effectiveIdentity = boardState.identity ?: preferences.lastConnectedDeviceId?.let { id ->
         BoardIdentity(
             boardId = id,
-            name = preferences.lastConnectedBoardType?.displayName ?: "Unknown board",
+            name = preferences.lastConnectedBoardName
+                ?: preferences.lastConnectedBoardType?.displayName
+                ?: "Unknown board",
             type = preferences.lastConnectedBoardType ?: BoardType.UNKNOWN,
             serialNumber = preferences.lastConnectedSerial,
             batterySerialNumber = preferences.lastConnectedBatterySerial,

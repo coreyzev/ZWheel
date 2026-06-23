@@ -54,6 +54,7 @@ class SettingsRepository(
                 enumValues<BoardType>().firstOrNull { it.name == name }
             },
             lastConnectedTireDiameterInches = prefs[LAST_BOARD_TIRE_DIAMETER],
+            lastConnectedBoardName = prefs[LAST_BOARD_NAME],
             lastConnectedSerial = prefs[LAST_BOARD_SERIAL],
             lastConnectedBatterySerial = prefs[LAST_BOARD_BATTERY_SERIAL],
             lastConnectedHardwareRev = prefs[LAST_BOARD_HW_REV],
@@ -136,12 +137,14 @@ class SettingsRepository(
     }
 
     suspend fun saveLastConnectedIdentityDetails(
+        name: String?,
         serial: String?,
         batterySerial: String?,
         hardwareRev: String?,
         firmwareRev: String?,
     ) {
         dataStore.edit { prefs ->
+            if (name != null) prefs[LAST_BOARD_NAME] = name else prefs.remove(LAST_BOARD_NAME)
             if (serial != null) prefs[LAST_BOARD_SERIAL] = serial else prefs.remove(LAST_BOARD_SERIAL)
             if (batterySerial != null) prefs[LAST_BOARD_BATTERY_SERIAL] = batterySerial else prefs.remove(LAST_BOARD_BATTERY_SERIAL)
             if (hardwareRev != null) prefs[LAST_BOARD_HW_REV] = hardwareRev else prefs.remove(LAST_BOARD_HW_REV)
@@ -174,6 +177,7 @@ class SettingsRepository(
         val LAST_DEVICE_ID = stringPreferencesKey("last_device_id")
         val LAST_BOARD_TYPE = stringPreferencesKey("last_board_type")
         val LAST_BOARD_TIRE_DIAMETER = doublePreferencesKey("last_board_tire_diameter")
+        val LAST_BOARD_NAME = stringPreferencesKey("last_board_name")
         val LAST_BOARD_SERIAL = stringPreferencesKey("last_board_serial")
         val LAST_BOARD_BATTERY_SERIAL = stringPreferencesKey("last_board_battery_serial")
         val LAST_BOARD_HW_REV = stringPreferencesKey("last_board_hw_rev")

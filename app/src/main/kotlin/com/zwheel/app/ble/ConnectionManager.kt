@@ -102,7 +102,8 @@ class ConnectionManager @Inject constructor(
     suspend fun connect(deviceId: String) {
         connectJob?.cancelAndJoin()
         connectJob = coroutineContext[Job]
-        _rssi.value = _devices.value.firstOrNull { it.deviceKey() == deviceId.lowercase() }?.rssi
+        val scanResult = _devices.value.firstOrNull { it.deviceKey() == deviceId.lowercase() }
+        _rssi.value = scanResult?.rssi
         stopScan()
         stateMirrorJob?.cancel()
         keepAliveJob?.cancel()
@@ -127,7 +128,7 @@ class ConnectionManager @Inject constructor(
         }.getOrNull()
         val identity = BoardIdentity(
             boardId = deviceId,
-            name = boardType.displayName,
+            name = scanResult?.displayName ?: boardType.displayName,
             type = boardType,
             serialNumber = serialNumber,
             batterySerialNumber = batterySerialNumber,

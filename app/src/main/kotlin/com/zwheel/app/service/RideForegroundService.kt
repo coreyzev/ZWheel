@@ -129,6 +129,7 @@ class RideForegroundService : LifecycleService() {
         val identity = connectionManager.boardState.value.identity ?: return
         settingsRepository.saveLastConnectedBoardType(identity.type)
         settingsRepository.saveLastConnectedIdentityDetails(
+            name = identity.name,
             serial = identity.serialNumber,
             batterySerial = identity.batterySerialNumber,
             hardwareRev = identity.hardwareRevision,

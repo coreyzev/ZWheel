@@ -32,7 +32,7 @@ class GeminiStrategyTest {
         //   3. Receive the CRX challenge on UART_READ.
         //   4. Compute MD5 response and write to UART_WRITE.
         val challenge = "43:52:58:7f:9e:5c:14:df:42:e2:62:82:62:62:62:62:62:77:f6:9c".strategyHexBytes()
-        val recorder = BleDebugRecorder(salt = "test-salt", sessionId = "session-1", startEpochMs = 0)
+        val recorder = BleDebugRecorder(salt = "test-salt")
         val io = FakeGattIo(
             reads = mapOf(OwUuids.FIRMWARE_REVISION to firmwareRevisionBytes),
             notifications = mapOf(OwUuids.UART_READ to listOf(challenge)),
@@ -88,7 +88,7 @@ class GeminiStrategyTest {
             "17:83",
             "82:1e",
         ).map { it.strategyHexBytes() }
-        val recorder = BleDebugRecorder(salt = "test-salt", sessionId = "session-1", startEpochMs = 0)
+        val recorder = BleDebugRecorder(salt = "test-salt")
         val io = FakeGattIo(
             reads = mapOf(OwUuids.FIRMWARE_REVISION to firmwareRevisionBytes),
             notifications = mapOf(OwUuids.UART_READ to listOf(legacyAck) + fragments),

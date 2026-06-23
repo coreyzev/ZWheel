@@ -8,11 +8,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -29,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -39,9 +43,18 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.zwheel.app.data.ride.RideRepository
+import com.zwheel.app.data.settings.SettingsRepository
 import com.zwheel.app.ui.JetBrainsMonoFamily
 import com.zwheel.app.ui.LocalZWheelColors
+import com.zwheel.app.ui.SairaFamily
+import com.zwheel.core.calc.UnitConversions
+import com.zwheel.core.model.RideSession
+import com.zwheel.core.model.SpeedUnit
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -53,35 +66,69 @@ import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 
+data class MapFullScreenUiState(
+    val gpsPoints: List<Triple<Double, Double, Double?>>,
+    val rideTimeLabel: String, val distanceLabel: String, val durationLabel: String, val topSpeedLabel: String,
+)
+
 @HiltViewModel
 class MapFullScreenViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: RideRepository,
+    private val prefs: SettingsRepository,
 ) : ViewModel() {
 
     private val sessionId: String = checkNotNull(savedStateHandle["sessionId"])
 
-    private val _gpsPoints = MutableStateFlow<List<Triple<Double, Double, Double?>>>(emptyList())
-    val gpsPoints: StateFlow<List<Triple<Double, Double, Double?>>> = _gpsPoints.asStateFlow()
+    private val _state = MutableStateFlow<MapFullScreenUiState?>(null)
+    val state: StateFlow<MapFullScreenUiState?> = _state.asStateFlow()
 
     init {
         viewModelScope.launch {
+            val session = repository.getSession(sessionId) ?: return@launch
+            val speedUnit = prefs.preferences.first().speedUnit
             val points = repository.getPointsForSession(sessionId).first()
-            _gpsPoints.value = points.mapNotNull { p ->
+            val gpsPoints = points.mapNotNull { p ->
                 val lat = p.latitude ?: return@mapNotNull null
                 val lon = p.longitude ?: return@mapNotNull null
                 Triple(lat, lon, p.speedMetersPerSecondCorrected)
             }
+            _state.value = session.toMapUiState(speedUnit, gpsPoints)
         }
     }
-}
 
+    private fun RideSession.toMapUiState(
+        speedUnit: SpeedUnit,
+        gpsPoints: List<Triple<Double, Double, Double?>>,
+    ): MapFullScreenUiState {
+        val isMph = speedUnit == SpeedUnit.MPH
+        val durationMillis = (endEpochMillis ?: startEpochMillis) - startEpochMillis
+        val minutes = TimeUnit.MILLISECONDS.toMinutes(durationMillis)
+        val seconds = TimeUnit.MILLISECONDS.toSeconds(durationMillis) % 60
+        return MapFullScreenUiState(
+            gpsPoints = gpsPoints,
+            rideTimeLabel = SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date(startEpochMillis)),
+            distanceLabel = if (isMph) {
+                "%.2f mi".format(UnitConversions.metersToMiles(distanceMetersCorrected))
+            } else {
+                "%.2f km".format(UnitConversions.metersToKilometers(distanceMetersCorrected))
+            },
+            durationLabel = "%d:%02d".format(minutes, seconds),
+            topSpeedLabel = if (isMph) {
+                "↑ %.1f mph".format(UnitConversions.metersPerSecondToMph(maxSpeedMetersPerSecondCorrected))
+            } else {
+                "↑ %.1f kph".format(maxSpeedMetersPerSecondCorrected * 3.6)
+            },
+        )
+    }
+}
 @Composable
 fun MapFullScreenScreen(
     viewModel: MapFullScreenViewModel = hiltViewModel(),
     onBack: () -> Unit = {},
 ) {
-    val gpsPoints by viewModel.gpsPoints.collectAsStateWithLifecycle()
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val gpsPoints = state?.gpsPoints.orEmpty()
     val c = LocalZWheelColors.current
     val view = LocalView.current
     DisposableEffect(view) {
@@ -147,6 +194,23 @@ fun MapFullScreenScreen(
                     )
                 }
             }
+            state?.rideTimeLabel?.let { rideTimeLabel ->
+                Surface(
+                    color = c.legendCard.copy(alpha = 0.7f),
+                    shape = RoundedCornerShape(999.dp),
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(10.dp),
+                ) {
+                    Text(
+                        rideTimeLabel,
+                        fontFamily = JetBrainsMonoFamily,
+                        fontSize = 10.sp,
+                        color = c.textMuted,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                    )
+                }
+            }
         }
 
         Box(
@@ -194,7 +258,43 @@ fun MapFullScreenScreen(
                         )
                     }
                 }
+                state?.let { mapState ->
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        MapStatChip(
+                            value = mapState.distanceLabel,
+                            label = "DIST",
+                        )
+                        MapStatChip(
+                            value = mapState.durationLabel,
+                            label = "TIME",
+                        )
+                        MapStatChip(
+                            value = mapState.topSpeedLabel,
+                            label = "TOP",
+                            isTopSpeed = true,
+                        )
+                    }
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun MapStatChip(value: String, label: String, isTopSpeed: Boolean = false) {
+    val c = LocalZWheelColors.current
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            value, fontFamily = SairaFamily, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp,
+            color = if (isTopSpeed) c.rampCaution else c.textPrimary,
+        )
+        Text(
+            label, fontFamily = JetBrainsMonoFamily, fontSize = 9.sp,
+            letterSpacing = 1.5.sp, color = c.textLabel,
+        )
     }
 }

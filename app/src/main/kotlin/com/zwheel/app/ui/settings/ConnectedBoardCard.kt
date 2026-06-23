@@ -80,6 +80,7 @@ internal fun ConnectedBoardCard(
         fontSize = 10.sp,
         fontFeatureSettings = "tnum",
     )
+    val connected = boardState.identity != null
     var editingName by remember { mutableStateOf(false) }
     var editText by remember(displayName) { mutableStateOf(displayName) }
     var editingTire by remember { mutableStateOf(false) }
@@ -124,12 +125,16 @@ internal fun ConnectedBoardCard(
                 )
             }
         } else {
+            val dotColor = if (connected) c.rampGood else c.textDim
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
                         .size(8.dp)
-                        .drawBehind { drawCircle(c.rampGood.copy(alpha = 0.35f), radius = 14.dp.toPx()) }
-                        .background(c.rampGood, CircleShape),
+                        .then(
+                            if (connected) Modifier.drawBehind { drawCircle(c.rampGood.copy(alpha = 0.35f), radius = 14.dp.toPx()) }
+                            else Modifier
+                        )
+                        .background(dotColor, CircleShape),
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
@@ -191,7 +196,6 @@ internal fun ConnectedBoardCard(
         }
 
         // ── Disconnect / Forget ───────────────────────────────────────────────
-        val connected = boardState.identity != null
         Row(
             modifier = Modifier
                 .fillMaxWidth()

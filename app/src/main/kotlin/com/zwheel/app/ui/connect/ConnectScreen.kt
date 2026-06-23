@@ -48,12 +48,15 @@ import com.zwheel.app.ui.JetBrainsMonoFamily
 import com.zwheel.app.ui.LocalZWheelColors
 import com.zwheel.app.ui.SairaFamily
 import com.zwheel.app.ui.ZWheelTheme
+import com.zwheel.core.model.BoardType
 import com.zwheel.core.ports.ScanResult
 
 @Composable
 fun ConnectScreen(
     connectionState: ConnectionState,
     devices: List<ScanResult>,
+    savedBoardDeviceId: String?,
+    savedBoardType: BoardType?,
     onScan: () -> Unit,
     onConnect: (String) -> Unit,
     onDisconnect: () -> Unit,
@@ -94,7 +97,8 @@ fun ConnectScreen(
             }
             item { BleStateChips(connectionState) }
             items(devices) { device ->
-                DeviceRow(device = device, connectionState = connectionState, onConnect = onConnect)
+                val knownType = if (device.deviceId.equals(savedBoardDeviceId, ignoreCase = true)) savedBoardType else null
+                DeviceRow(device = device, connectionState = connectionState, knownBoardType = knownType, onConnect = onConnect)
             }
         }
 
@@ -192,6 +196,7 @@ private fun BleStateChips(connectionState: ConnectionState) {
 private fun DeviceRow(
     device: ScanResult,
     connectionState: ConnectionState,
+    knownBoardType: BoardType?,
     onConnect: (String) -> Unit,
 ) {
     val c = LocalZWheelColors.current
@@ -226,6 +231,30 @@ private fun DeviceRow(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false),
                     )
+                    if (knownBoardType != null && knownBoardType != BoardType.UNKNOWN) {
+                        val label = when (knownBoardType) {
+                            BoardType.PINT_X -> "PINT X"
+                            BoardType.XR -> "XR"
+                            BoardType.PINT -> "PINT"
+                            BoardType.PLUS -> "+"
+                            BoardType.ONEWHEEL_V1 -> "OW V1"
+                            BoardType.UNKNOWN -> ""
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(5.dp),
+                            color = Color.Transparent,
+                            border = BorderStroke(1.dp, c.borderLime),
+                        ) {
+                            Text(
+                                label,
+                                fontFamily = JetBrainsMonoFamily,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.W700,
+                                color = c.lime,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            )
+                        }
+                    }
                 }
                 Text(
                     device.rssi?.let { "$it dBm" } ?: "-",
@@ -269,6 +298,8 @@ private fun ConnectScreenPreview() {
                 ScanResult("board-1", "Corey's Pint X", -57),
                 ScanResult("board-2", null, -71),
             ),
+            savedBoardDeviceId = "board-1",
+            savedBoardType = BoardType.PINT_X,
             onScan = {},
             onConnect = {},
             onDisconnect = {},

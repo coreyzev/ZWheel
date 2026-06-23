@@ -1,5 +1,6 @@
 package com.zwheel.app.data.settings
 
+import com.zwheel.core.model.BoardType
 import com.zwheel.core.model.SpeedUnit
 import com.zwheel.core.model.TemperatureUnit
 
@@ -9,6 +10,7 @@ data class UserPreferences(
     val tireDiameterInches: Double = 11.5,
     val hasCustomTireDiameter: Boolean = false,
     val lastConnectedDeviceId: String? = null,
+    val lastConnectedBoardType: BoardType? = null,
     val hasRequestedBatteryOptimization: Boolean = false,
     val hasAttemptedLocationPermission: Boolean = false,
     val haUrl: String = "",

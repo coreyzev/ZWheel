@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
+import com.zwheel.core.model.BoardType
 import com.zwheel.core.model.SpeedUnit
 import com.zwheel.core.model.TemperatureUnit
 import kotlinx.coroutines.flow.Flow
@@ -49,6 +50,9 @@ class SettingsRepository(
             tireDiameterInches = prefs[TIRE_DIAMETER]?.coerceIn(TIRE_DIAMETER_RANGE) ?: DEFAULT_TIRE_DIAMETER,
             hasCustomTireDiameter = prefs[HAS_CUSTOM_TIRE_DIAMETER] ?: false,
             lastConnectedDeviceId = prefs[LAST_DEVICE_ID],
+            lastConnectedBoardType = prefs[LAST_BOARD_TYPE]?.let { name ->
+                enumValues<BoardType>().firstOrNull { it.name == name }
+            },
             hasRequestedBatteryOptimization = prefs[HAS_REQUESTED_BATTERY_OPT] ?: false,
             hasAttemptedLocationPermission = prefs[HAS_ATTEMPTED_LOCATION_PERM] ?: false,
             haUrl = prefs[HA_URL] ?: "",
@@ -119,6 +123,10 @@ class SettingsRepository(
         }
     }
 
+    suspend fun saveLastConnectedBoardType(type: BoardType) {
+        dataStore.edit { it[LAST_BOARD_TYPE] = type.name }
+    }
+
     suspend fun setCustomBoardName(name: String?) {
         // Local-only display override. Never write this value to the board.
         dataStore.edit { preferences ->
@@ -135,6 +143,7 @@ class SettingsRepository(
         val TEMPERATURE_UNIT = stringPreferencesKey("temperature_unit")
         val TIRE_DIAMETER = doublePreferencesKey("tire_diameter")
         val LAST_DEVICE_ID = stringPreferencesKey("last_device_id")
+        val LAST_BOARD_TYPE = stringPreferencesKey("last_board_type")
         val HAS_REQUESTED_BATTERY_OPT = booleanPreferencesKey("has_requested_battery_opt")
         val HAS_ATTEMPTED_LOCATION_PERM = booleanPreferencesKey("has_attempted_location_perm")
         val HAS_CUSTOM_TIRE_DIAMETER = booleanPreferencesKey("has_custom_tire_diameter")

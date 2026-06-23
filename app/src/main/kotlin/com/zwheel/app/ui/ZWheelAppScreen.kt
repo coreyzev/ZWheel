@@ -43,6 +43,7 @@ import com.zwheel.app.ui.onboarding.batteryAdviceForManufacturer
 import com.zwheel.app.ui.permissions.PermissionsScreen
 import com.zwheel.app.ui.settings.SettingsScreen
 import com.zwheel.app.ui.settings.SettingsViewModel
+import com.zwheel.core.model.BoardType
 import com.zwheel.core.ports.ScanResult
 
 @Composable
@@ -135,6 +136,7 @@ fun ZWheelAppScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
     val devices by viewModel.devices.collectAsStateWithLifecycle()
+    val settingsPreferences by settingsViewModel.preferences.collectAsStateWithLifecycle()
     val onScan = {
         if (permissionsGranted) {
             if (!locationGranted) requestLocationPermission()
@@ -188,6 +190,8 @@ fun ZWheelAppScreen(
                     state = state,
                     locationGranted = locationGranted,
                     locationPermanentlyDenied = locationPermanentlyDenied,
+                    savedBoardDeviceId = settingsPreferences.lastConnectedDeviceId,
+                    savedBoardType = settingsPreferences.lastConnectedBoardType,
                     onGrantPermissions = ::requestBlePermissions,
                     onOpenBleSettings = { context.openAppSettings() },
                     onScan = onScan,
@@ -248,6 +252,8 @@ private fun RideTabContent(
     state: DashboardUiState,
     locationGranted: Boolean,
     locationPermanentlyDenied: Boolean,
+    savedBoardDeviceId: String?,
+    savedBoardType: BoardType?,
     onGrantPermissions: () -> Unit,
     onOpenBleSettings: () -> Unit,
     onScan: () -> Unit,
@@ -270,6 +276,8 @@ private fun RideTabContent(
         ConnectScreen(
             connectionState = connectionState,
             devices = devices,
+            savedBoardDeviceId = savedBoardDeviceId,
+            savedBoardType = savedBoardType,
             onScan = onScan,
             onConnect = onConnect,
             onDisconnect = onDisconnect,

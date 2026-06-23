@@ -108,6 +108,23 @@ fun SpeedSlab(state: DashboardUiState, modifier: Modifier = Modifier) {
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
                         )
                     }
+                } else {
+                    Surface(
+                        shape = RoundedCornerShape(5.dp),
+                        color = c.screenBg,
+                        border = BorderStroke(1.dp, c.border),
+                    ) {
+                        Text(
+                            text = "UNCORRECTED",
+                            color = c.textDim,
+                            style = TextStyle(
+                                fontFamily = JetBrainsMonoFamily,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                            ),
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                        )
+                    }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(

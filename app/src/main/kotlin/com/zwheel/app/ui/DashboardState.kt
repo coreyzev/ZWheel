@@ -5,6 +5,7 @@ import com.zwheel.app.ui.dashboard.CellThresholds
 import com.zwheel.core.calc.UnitConversions
 import com.zwheel.core.model.BoardState
 import com.zwheel.core.model.BoardType
+import com.zwheel.core.model.RideMode
 import com.zwheel.core.model.SpeedUnit
 import com.zwheel.core.model.TemperatureUnit
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -117,7 +118,7 @@ fun BoardState.toDashboardUiState(
         firmwareLabel = identity?.firmwareRevision?.let { "FW $it" } ?: "FW --",
         speedMph = speed,
         isSpeedCorrected = isSpeedCorrected,
-        speedUnitLabel = if (isSpeedCorrected) prefs.speedUnit.name else "${prefs.speedUnit.name}\nUNCORRECTED",
+        speedUnitLabel = prefs.speedUnit.name,
         topSpeedMph = topSpeed,
         estimatedRangeMiles = range,
         rangeUnitLabel = if (prefs.speedUnit == SpeedUnit.MPH) "MI" else "KM",
@@ -139,7 +140,7 @@ fun BoardState.toDashboardUiState(
         regenAmpHours = tripRegenAmpHours ?: 0.0,
         boardType = identity?.type ?: BoardType.UNKNOWN,
         gpsLocked = gpsLocked,
-        rideMode = rideMode.name,
+        rideMode = if (rideMode == RideMode.UNKNOWN) "--" else rideMode.name,
         lightsOn = lightsOn ?: false,
         lightsLabel = when (lightsOn) {
             true -> "ON"

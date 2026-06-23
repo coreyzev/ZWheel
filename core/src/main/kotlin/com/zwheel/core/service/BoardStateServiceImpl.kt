@@ -9,6 +9,7 @@ import com.zwheel.core.ports.BoardStateService
 import com.zwheel.core.ports.Clock
 import com.zwheel.core.protocol.OwUuids
 import com.zwheel.core.protocol.Parsers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -151,12 +152,24 @@ class BoardStateServiceImpl(
     }
 
     private suspend fun collectBatteryPercent() {
-        transport.notifications(OwUuids.BATTERY_PERCENT).collect { bytes ->
-            try {
-                _state.update { it.copy(batteryPercent = Parsers.batteryPercent(bytes)) }
-            } catch (e: Exception) {
-                println("[BoardStateServiceImpl] BATTERY_PERCENT: ${e.message}")
+        try {
+            val initial = transport.read(OwUuids.BATTERY_PERCENT)
+            _state.update { it.copy(batteryPercent = Parsers.batteryPercent(initial)) }
+        } catch (e: Exception) {
+            println("[BoardStateServiceImpl] BATTERY_PERCENT initial read: ${e.message}")
+        }
+        try {
+            transport.notifications(OwUuids.BATTERY_PERCENT).collect { bytes ->
+                try {
+                    _state.update { it.copy(batteryPercent = Parsers.batteryPercent(bytes)) }
+                } catch (e: Exception) {
+                    println("[BoardStateServiceImpl] BATTERY_PERCENT parse: ${e.message}")
+                }
             }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            println("[BoardStateServiceImpl] BATTERY_PERCENT subscribe failed: ${e.message}")
         }
     }
 
@@ -207,12 +220,24 @@ class BoardStateServiceImpl(
     }
 
     private suspend fun collectRideMode() {
-        transport.notifications(OwUuids.RIDE_MODE).collect { bytes ->
-            try {
-                _state.update { it.copy(rideMode = Parsers.rideMode(bytes, boardType)) }
-            } catch (e: Exception) {
-                println("[BoardStateServiceImpl] RIDE_MODE: ${e.message}")
+        try {
+            val initial = transport.read(OwUuids.RIDE_MODE)
+            _state.update { it.copy(rideMode = Parsers.rideMode(initial, boardType)) }
+        } catch (e: Exception) {
+            println("[BoardStateServiceImpl] RIDE_MODE initial read: ${e.message}")
+        }
+        try {
+            transport.notifications(OwUuids.RIDE_MODE).collect { bytes ->
+                try {
+                    _state.update { it.copy(rideMode = Parsers.rideMode(bytes, boardType)) }
+                } catch (e: Exception) {
+                    println("[BoardStateServiceImpl] RIDE_MODE parse: ${e.message}")
+                }
             }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            println("[BoardStateServiceImpl] RIDE_MODE subscribe failed: ${e.message}")
         }
     }
 

@@ -1,6 +1,5 @@
 package com.zwheel.app.ui.history
 
-import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -31,12 +30,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -130,14 +127,6 @@ fun MapFullScreenScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val gpsPoints = state?.gpsPoints.orEmpty()
     val c = LocalZWheelColors.current
-    val view = LocalView.current
-    DisposableEffect(view) {
-        val window = (view.context as? Activity)?.window
-        if (window != null) WindowCompat.setDecorFitsSystemWindows(window, false)
-        onDispose {
-            if (window != null) WindowCompat.setDecorFitsSystemWindows(window, true)
-        }
-    }
 
     Box(modifier = Modifier.fillMaxSize().background(c.mapBg)) {
         if (gpsPoints.isNotEmpty()) {

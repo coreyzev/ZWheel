@@ -3,7 +3,9 @@ package com.zwheel.app.ui.dashboard
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,23 +30,23 @@ import com.zwheel.app.ui.ramp
 fun BatteryBand(state: DashboardUiState, modifier: Modifier = Modifier) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
-        modifier = modifier,
+        modifier = modifier.height(IntrinsicSize.Min),
     ) {
-        Box(modifier = Modifier.weight(1f)) {
-            BatteryCard(state)
+        Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+            BatteryCard(state, modifier = Modifier.fillMaxHeight())
         }
-        Box(modifier = Modifier.weight(1f)) {
-            RangeCard(state)
+        Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+            RangeCard(state, modifier = Modifier.fillMaxHeight())
         }
     }
 }
 
 @Composable
-private fun BatteryCard(state: DashboardUiState) {
+private fun BatteryCard(state: DashboardUiState, modifier: Modifier = Modifier) {
     val c = LocalZWheelColors.current
     val batteryFraction = (state.batteryPercent / 100f).coerceIn(0f, 1f)
     val batteryColor = c.ramp(batteryFraction)
-    DashboardCard {
+    DashboardCard(modifier = modifier, shape = RoundedCornerShape(18.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Label("BATTERY")
             Text(
@@ -67,7 +69,7 @@ private fun BatteryCard(state: DashboardUiState) {
                     .clip(RoundedCornerShape(999.dp)),
             )
             Text(
-                text = "%.1fV · %dS PACK".format(state.packVoltage, state.cellVoltages.size),
+                text = "%dS PACK".format(state.cellVoltages.size),
                 color = c.textLabel,
                 style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 9.sp),
             )
@@ -76,9 +78,9 @@ private fun BatteryCard(state: DashboardUiState) {
 }
 
 @Composable
-private fun RangeCard(state: DashboardUiState) {
+private fun RangeCard(state: DashboardUiState, modifier: Modifier = Modifier) {
     val c = LocalZWheelColors.current
-    DashboardCard {
+    DashboardCard(modifier = modifier, shape = RoundedCornerShape(18.dp)) {
         Column {
             Label("EST. REMAINING")
             Text(

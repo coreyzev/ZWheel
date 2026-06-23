@@ -68,7 +68,7 @@ fun mockDashboardState(): DashboardUiState = DashboardUiState(
     temperatureUnitLabel = "F",
     cellVoltages = List(16) { index ->
         val volts = if (index == 7) 3.86 else 3.94 + (index % 3) * 0.01
-        CellVoltageUiState(label = "C${index + 1}", volts = volts, isLow = volts < CellThresholds.LOW_VOLTS)
+        CellVoltageUiState(label = "C%02d".format(index + 1), volts = volts, isLow = volts < CellThresholds.LOW_VOLTS)
     },
     tripMiles = 3.42,
     tripAmpHours = 2.14,
@@ -130,7 +130,7 @@ fun BoardState.toDashboardUiState(
         batteryTempF = batteryTemp,
         temperatureUnitLabel = if (prefs.temperatureUnit == TemperatureUnit.FAHRENHEIT) "F" else "C",
         cellVoltages = cellVoltages.mapIndexed { index, volts ->
-            CellVoltageUiState(label = "C${index + 1}", volts = volts, isLow = volts < CellThresholds.LOW_VOLTS)
+            CellVoltageUiState(label = "C%02d".format(index + 1), volts = volts, isLow = volts < CellThresholds.LOW_VOLTS)
         },
         tripMiles = when (prefs.speedUnit) {
             SpeedUnit.MPH -> tripDistanceMeters / 1_609.344

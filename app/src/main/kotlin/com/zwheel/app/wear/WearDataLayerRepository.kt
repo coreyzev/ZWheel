@@ -99,7 +99,8 @@ private fun toWatchPayload(
 ): WatchPayload {
     val coreConnectionState = when (connectionState) {
         ConnectionState.Connected -> com.zwheel.core.model.ConnectionState.SUBSCRIBED
-        ConnectionState.Scanning -> com.zwheel.core.model.ConnectionState.SCANNING
+        ConnectionState.Scanning,
+        ConnectionState.Connecting -> com.zwheel.core.model.ConnectionState.SCANNING
         ConnectionState.Disconnected -> com.zwheel.core.model.ConnectionState.DISCONNECTED
         ConnectionState.Idle -> com.zwheel.core.model.ConnectionState.IDLE
     }

@@ -84,7 +84,7 @@ fun BoardHeader(state: DashboardUiState, modifier: Modifier = Modifier) {
                 tint = c.textMuted,
                 modifier = Modifier.size(12.dp),
             )
-            Text(state.rssi?.let { "$it dBm" } ?: "--", style = mono11, color = c.textMuted)
+            Text(state.rssi?.let { "${it}dBm" } ?: "--", style = mono11, color = c.textMuted)
         }
     }
 }

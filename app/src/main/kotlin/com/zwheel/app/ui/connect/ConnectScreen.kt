@@ -170,6 +170,7 @@ private fun BleStateChips(connectionState: ConnectionState) {
         listOf(
             ConnectionState.Idle,
             ConnectionState.Scanning,
+            ConnectionState.Connecting,
             ConnectionState.Connected,
             ConnectionState.Disconnected,
         ).forEach { state ->

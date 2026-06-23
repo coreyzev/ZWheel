@@ -39,7 +39,7 @@ fun RideRow(
         modifier = modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(14.dp),
         color = c.card,
         border = BorderStroke(1.dp, c.border),
     ) {

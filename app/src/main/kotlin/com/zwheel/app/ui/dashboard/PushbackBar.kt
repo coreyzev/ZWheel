@@ -11,8 +11,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -25,7 +27,7 @@ import com.zwheel.app.ui.LocalZWheelColors
 fun PushbackBar(state: DashboardUiState, modifier: Modifier = Modifier) {
     val c = LocalZWheelColors.current
     val fraction = speedFraction(state.speedMph, state.boardType.modelTopSpeedMph())
-    val barColor = when {
+    val labelColor = when {
         fraction >= PushbackThresholds.DANGER_FRACTION -> c.rampDanger
         fraction >= PushbackThresholds.CAUTION_FRACTION -> c.rampCaution
         else -> c.rampGood
@@ -40,7 +42,7 @@ fun PushbackBar(state: DashboardUiState, modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 18.dp),
+            .padding(horizontal = 18.dp, vertical = 8.dp),
     ) {
         Row(
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -58,7 +60,7 @@ fun PushbackBar(state: DashboardUiState, modifier: Modifier = Modifier) {
             )
             Text(
                 text = statusLabel,
-                color = barColor,
+                color = labelColor,
                 style = TextStyle(
                     fontFamily = JetBrainsMonoFamily,
                     fontSize = 10.sp,
@@ -71,12 +73,25 @@ fun PushbackBar(state: DashboardUiState, modifier: Modifier = Modifier) {
                 .fillMaxWidth()
                 .height(8.dp),
         ) {
-            drawRect(c.border, topLeft = Offset.Zero, size = size)
-            drawRect(
-                barColor,
-                topLeft = Offset.Zero,
-                size = Size((fraction * size.width).coerceIn(0f, size.width), size.height),
-            )
+            val radius = CornerRadius(size.height / 2)
+            drawRoundRect(c.border, topLeft = Offset.Zero, size = size, cornerRadius = radius)
+            val fillWidth = (fraction * size.width).coerceIn(0f, size.width)
+            if (fillWidth > 0f) {
+                val fillBrush = Brush.horizontalGradient(
+                    PushbackThresholds.CAUTION_FRACTION - 0.05f to c.rampGood,
+                    PushbackThresholds.CAUTION_FRACTION + 0.03f to c.rampCaution,
+                    PushbackThresholds.DANGER_FRACTION - 0.03f to c.rampCaution,
+                    PushbackThresholds.DANGER_FRACTION + 0.02f to c.rampDanger,
+                    startX = 0f,
+                    endX = size.width,
+                )
+                drawRoundRect(
+                    brush = fillBrush,
+                    topLeft = Offset.Zero,
+                    size = Size(fillWidth, size.height),
+                    cornerRadius = radius,
+                )
+            }
         }
     }
 }

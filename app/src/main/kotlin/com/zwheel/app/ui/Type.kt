@@ -28,7 +28,7 @@ val ZWheelTypography = Typography(
         fontWeight = FontWeight.Black,
         fontSize = 96.sp,
         lineHeight = 96.sp,
-        letterSpacing = (-3).sp,
+        letterSpacing = (-6).sp,
         fontFeatureSettings = "tnum",
     ),
     headlineLarge = TextStyle(

@@ -26,19 +26,21 @@ import androidx.compose.ui.unit.sp
 
 @Composable
 fun DashboardCard(
+    modifier: Modifier = Modifier,
+    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(16.dp),
     color: Color = LocalZWheelColors.current.card,
     contentColor: Color = LocalZWheelColors.current.textPrimary,
     content: @Composable () -> Unit,
 ) {
     val colors = LocalZWheelColors.current
     Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        modifier = modifier.fillMaxWidth(),
+        shape = shape,
         color = color,
         contentColor = contentColor,
         border = BorderStroke(1.dp, colors.border),
     ) {
-        Box(modifier = Modifier.padding(18.dp)) {
+        Box(modifier = Modifier.padding(14.dp)) {
             content()
         }
     }

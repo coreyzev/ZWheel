@@ -3,8 +3,12 @@ package com.zwheel.app.ui.dashboard
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Lightbulb
@@ -25,21 +29,25 @@ import com.zwheel.app.ui.SairaFamily
 
 @Composable
 fun StatRow(state: DashboardUiState, modifier: Modifier = Modifier) {
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = modifier) {
-        Box(modifier = Modifier.weight(1f)) {
-            DashboardCard {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = modifier.height(IntrinsicSize.Min),
+    ) {
+        val tileShape = RoundedCornerShape(14.dp)
+        Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+            DashboardCard(modifier = Modifier.fillMaxHeight(), shape = tileShape) {
                 Column {
                     DrawTile(state)
                 }
             }
         }
-        Box(modifier = Modifier.weight(1f)) {
-            DashboardCard {
+        Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+            DashboardCard(modifier = Modifier.fillMaxHeight(), shape = tileShape) {
                 ModeTile(state)
             }
         }
-        Box(modifier = Modifier.weight(1f)) {
-            DashboardCard {
+        Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+            DashboardCard(modifier = Modifier.fillMaxHeight(), shape = tileShape) {
                 Column {
                     LightsTile(state)
                 }

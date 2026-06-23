@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -44,7 +45,7 @@ fun SpeedSlab(state: DashboardUiState, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .background(Brush.verticalGradient(listOf(c.legendCard, c.screenBg)))
+            .background(Brush.verticalGradient(listOf(Color(0xFF13160D), c.screenBg)))
             .padding(top = 4.dp, bottom = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -58,6 +59,7 @@ fun SpeedSlab(state: DashboardUiState, modifier: Modifier = Modifier) {
                         fontSize = 96.sp,
                         fontWeight = FontWeight.Black,
                         lineHeight = 96.sp,
+                        letterSpacing = (-6).sp,
                         fontFeatureSettings = "tnum",
                         platformStyle = PlatformTextStyle(includeFontPadding = false),
                     ),
@@ -67,9 +69,10 @@ fun SpeedSlab(state: DashboardUiState, modifier: Modifier = Modifier) {
                     color = c.textSecondary,
                     style = TextStyle(
                         fontFamily = SairaFamily,
-                        fontSize = 48.sp,
+                        fontSize = 38.sp,
                         fontWeight = FontWeight.Black,
-                        lineHeight = 48.sp,
+                        lineHeight = 38.sp,
+                        letterSpacing = (-6).sp,
                         fontFeatureSettings = "tnum",
                         platformStyle = PlatformTextStyle(includeFontPadding = false),
                     ),
@@ -80,7 +83,7 @@ fun SpeedSlab(state: DashboardUiState, modifier: Modifier = Modifier) {
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 40.dp),
+                    .padding(horizontal = 18.dp),
             ) {
                 Text(
                     text = state.speedUnitLabel,

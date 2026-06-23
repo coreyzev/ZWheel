@@ -81,22 +81,20 @@ fun CellStrip(cells: List<CellVoltageUiState>, modifier: Modifier = Modifier) {
                 modifier = Modifier.graphicsLayer { rotationZ = chevronRotation },
             )
         }
-        AnimatedVisibility(visible = !expanded) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(3.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-            ) {
-                cells.forEach { cell ->
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(32.dp)
-                            .clip(RoundedCornerShape(3.dp))
-                            .background(cellVoltageColor(cell.volts, c)),
-                    )
-                }
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(3.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
+        ) {
+            cells.forEach { cell ->
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(32.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(cellVoltageColor(cell.volts, c)),
+                )
             }
         }
         AnimatedVisibility(visible = expanded) {

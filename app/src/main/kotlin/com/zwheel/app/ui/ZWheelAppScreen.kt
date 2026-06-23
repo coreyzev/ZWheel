@@ -199,6 +199,7 @@ fun ZWheelAppScreen(
                     onConnect = onConnect,
                     onDisconnect = viewModel::disconnect,
                     onRequestLocation = ::requestLocationPermission,
+                    onOpenLocationSettings = { context.openAppSettings() },
                 )
             }
             composable("history") {
@@ -325,6 +326,7 @@ private fun RideTabContent(
     onConnect: (String) -> Unit,
     onDisconnect: () -> Unit,
     onRequestLocation: () -> Unit,
+    onOpenLocationSettings: () -> Unit,
 ) {
     if (!permissionsGranted) {
         PermissionsScreen(
@@ -335,6 +337,7 @@ private fun RideTabContent(
             onRequestBle = onGrantPermissions,
             onOpenBleSettings = onOpenBleSettings,
             onRequestLocation = onRequestLocation,
+            onOpenLocationSettings = onOpenLocationSettings,
             onSkipLocation = onScan,
         )
     } else if (connectionState != ConnectionState.Connected) {

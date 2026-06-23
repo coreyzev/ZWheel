@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -46,6 +45,7 @@ fun PermissionsScreen(
     onRequestBle: () -> Unit,
     onOpenBleSettings: () -> Unit,
     onRequestLocation: () -> Unit,
+    onOpenLocationSettings: () -> Unit,
     onSkipLocation: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -55,7 +55,6 @@ fun PermissionsScreen(
         modifier
             .fillMaxSize()
             .background(c.screenBg)
-            .systemBarsPadding()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 18.dp, vertical = 22.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -90,7 +89,7 @@ fun PermissionsScreen(
             granted = locationGranted,
             permanentlyDenied = locationPermanentlyDenied,
             onRequest = onRequestLocation,
-            onOpenSettings = onRequestLocation,
+            onOpenSettings = onOpenLocationSettings,
         )
         PermissionLegend()
         Spacer(Modifier.height(32.dp))
@@ -123,7 +122,11 @@ private fun PermissionCard(
     Surface(
         shape = RoundedCornerShape(16.dp),
         color = c.card,
-        border = BorderStroke(1.dp, if (granted) c.borderGreen else c.borderRed),
+        border = BorderStroke(1.dp, when {
+            granted -> c.borderGreen
+            permanentlyDenied -> c.borderRed
+            else -> c.border
+        }),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -167,7 +170,7 @@ private fun PermissionCard(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
-                        if (permanentlyDenied) "Open in settings" else "Grant permission",
+                        if (permanentlyDenied) "Open settings" else "Grant permission",
                         fontFamily = SairaFamily,
                         fontWeight = FontWeight.W700,
                         fontSize = 14.sp,
@@ -233,6 +236,7 @@ private fun PermissionsScreenPreview() {
             onRequestBle = {},
             onOpenBleSettings = {},
             onRequestLocation = {},
+            onOpenLocationSettings = {},
             onSkipLocation = {},
         )
     }

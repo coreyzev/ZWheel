@@ -114,7 +114,7 @@ internal fun DeveloperSection(
                         .background(dotColor, CircleShape),
                 )
                 Text(
-                    "BLE debug logging",
+                    "BLE debug view",
                     style = TextStyle(
                         fontFamily = SairaFamily,
                         fontSize = 14.sp,
@@ -159,7 +159,7 @@ internal fun DeveloperSection(
                         cursorBrush = SolidColor(c.lime),
                         modifier = Modifier
                             .weight(1f)
-                            .border(1.dp, c.buttonBorder, RoundedCornerShape(8.dp))
+                            .border(1.dp, c.buttonBorder, RoundedCornerShape(10.dp))
                             .padding(horizontal = 10.dp, vertical = 6.dp),
                     )
                 }

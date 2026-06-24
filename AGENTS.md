@@ -286,6 +286,10 @@ If blocked on Gradle daemon: `rm -rf /tmp/gradle-home && GRADLE_USER_HOME=/tmp/g
   trivial mechanical tasks flagged "Gemini-OK" in a gate. Active backlog and priority
   order for the review issues (#78–#85) live in docs/HANDOFF.md §2a:
   **#79 → #80 → #81 → #78, then #84/#82/#83 parallel, then #85 (decision-gated).**
+- 2026-06-23: OWCE reference clone lives at `/tmp/OWCE_App` on the dev server. Used for
+  protocol cross-referencing (parsers, BLE characteristic behavior). **Remove before any
+  production build or release pipeline runs** — it must not be bundled, referenced, or
+  linked from the app. Keep only one copy; `/tmp/OWCE_App_m2` was deleted.
 - 2026-06-22/23: Dark redesign spec audit complete — all 28+ spec items implemented,
   verified, and committed. Gates dispatched and merged: D1 (system insets / edge-to-edge),
   D2 (pushback gradient bar), H1+H2 (full-screen map ride overlays). Gate archive committed

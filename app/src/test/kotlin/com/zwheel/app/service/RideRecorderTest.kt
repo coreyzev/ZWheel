@@ -185,6 +185,14 @@ private class FakeRideDao : RideDao {
 
     override fun getPointsForSession(sessionId: String): Flow<List<RideDataPointEntity>> =
         flowOf(points.filter { it.sessionId == sessionId })
+
+    override suspend fun deletePointsForSession(sessionId: String) {
+        points.removeAll { it.sessionId == sessionId }
+    }
+
+    override suspend fun deleteSession(sessionId: String) {
+        if (openSession?.id == sessionId) openSession = null
+    }
 }
 
 private class FakeClock : Clock {

@@ -39,7 +39,7 @@ jobs:
           echo "run_id=$run_id" >> $GITHUB_OUTPUT
           echo "Latest CI run $run_id is green — proceeding"
 
-      - name: Download APK from CI
+      - name: Download APKs from CI
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -47,7 +47,12 @@ jobs:
             --repo ${{ github.repository }} \
             --name=zwheel-debug \
             --dir=./artifacts
+          gh run download ${{ steps.ci-run.outputs.run_id }} \
+            --repo ${{ github.repository }} \
+            --name=zwheel-wear-debug \
+            --dir=./artifacts
           mv artifacts/app-debug.apk zwheel-debug.apk
+          mv artifacts/wear-debug.apk zwheel-wear-debug.apk
 
       - name: Tag build
         run: |
@@ -60,7 +65,9 @@ jobs:
           tag_name: "build-${{ github.run_number }}"
           name: "Debug Build #${{ github.run_number }}"
           body: "Built from CI run ${{ steps.ci-run.outputs.run_id }} on `main`."
-          files: zwheel-debug.apk
+          files: |
+            zwheel-debug.apk
+            zwheel-wear-debug.apk
           prerelease: true
           make_latest: true
         env:

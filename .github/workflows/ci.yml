@@ -47,8 +47,14 @@ jobs:
           KEY_PASSWORD: ${{ secrets.DEBUG_KEY_PASSWORD }}
         run: gradle clean check :app:assembleDebug :wear:assembleDebug
 
-      - name: Upload debug APK
+      - name: Upload app APK
         uses: actions/upload-artifact@v4
         with:
           name: zwheel-debug
           path: app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Upload wear APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: zwheel-wear-debug
+          path: wear/build/outputs/apk/debug/wear-debug.apk

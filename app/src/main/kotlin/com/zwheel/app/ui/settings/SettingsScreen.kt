@@ -208,20 +208,18 @@ internal fun SettingsContent(
                     color = c.card,
                     border = BorderStroke(1.dp, c.border),
                 ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        ConnectedBoardCard(
-                            boardState = boardState,
-                            effectiveIdentity = effectiveIdentity,
-                            rssi = rssi,
-                            customBoardName = preferences.customBoardName,
-                            tireDiameterInches = effectiveTireDiameter,
-                            onSaveName = onSaveBoardName,
-                            onSaveTireDiameter = onSaveBoardTireDiameter,
-                            onDisconnect = onDisconnect,
-                            onForgetBoard = onForgetBoard,
-                        )
-                        DeviceInfoDisclosure(identity = effectiveIdentity, rssi = rssi)
-                    }
+                    ConnectedBoardCard(
+                        boardState = boardState,
+                        effectiveIdentity = effectiveIdentity,
+                        rssi = rssi,
+                        customBoardName = preferences.customBoardName,
+                        tireDiameterInches = effectiveTireDiameter,
+                        onSaveName = onSaveBoardName,
+                        onSaveTireDiameter = onSaveBoardTireDiameter,
+                        onDisconnect = onDisconnect,
+                        onForgetBoard = onForgetBoard,
+                        modifier = Modifier.padding(16.dp),
+                    )
                 }
             }
             item { Spacer(Modifier.height(22.dp)) }

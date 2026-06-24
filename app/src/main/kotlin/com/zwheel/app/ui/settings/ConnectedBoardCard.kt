@@ -1,5 +1,8 @@
 package com.zwheel.app.ui.settings
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -7,10 +10,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -24,7 +27,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.NetworkWifi3Bar
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -41,9 +45,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -58,8 +64,8 @@ import com.zwheel.core.model.BoardState
 import com.zwheel.core.model.BoardType
 
 private val TIRE_DIAMETER_RANGE = 8f..13f
+private val disconnectBg = Color(0xFF1A0E0E)
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun ConnectedBoardCard(
     boardState: BoardState,
@@ -77,19 +83,33 @@ internal fun ConnectedBoardCard(
     val displayName = customBoardName?.takeIf { it.isNotBlank() }
         ?: effectiveIdentity?.name
         ?: "Not connected"
-    val mono10 = TextStyle(
-        fontFamily = JetBrainsMonoFamily,
-        fontSize = 10.sp,
-        fontFeatureSettings = "tnum",
-    )
     val connected = boardState.identity != null
     var editingName by remember { mutableStateOf(false) }
     var editText by remember(displayName) { mutableStateOf(displayName) }
     var editingTire by remember { mutableStateOf(false) }
     var sliderValue by remember(tireDiameterInches) { mutableFloatStateOf(tireDiameterInches.toFloat()) }
+    var deviceInfoExpanded by remember { mutableStateOf(false) }
+    val chevronRotation by animateFloatAsState(
+        targetValue = if (deviceInfoExpanded) 180f else 0f,
+        animationSpec = tween(durationMillis = 220),
+        label = "device-info-chevron",
+    )
+
+    val monoLabel = TextStyle(
+        fontFamily = JetBrainsMonoFamily,
+        fontSize = 9.sp,
+        letterSpacing = 1.sp,
+    )
+    val monoValue = TextStyle(
+        fontFamily = JetBrainsMonoFamily,
+        fontSize = 13.sp,
+        fontWeight = FontWeight.W700,
+        fontFeatureSettings = "tnum",
+    )
 
     Column(modifier = modifier) {
-        // ── Name row ──────────────────────────────────────────────────────────
+
+        // ── 1. Identity row ───────────────────────────────────────────────────
         if (editingName) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 BasicTextField(
@@ -127,18 +147,20 @@ internal fun ConnectedBoardCard(
                 )
             }
         } else {
-            val dotColor = if (connected) c.rampGood else c.textDim
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                val dotColor = if (connected) c.rampGood else c.textDim
                 Box(
                     modifier = Modifier
                         .size(8.dp)
                         .then(
                             if (connected) Modifier.drawBehind { drawCircle(c.rampGood.copy(alpha = 0.35f), radius = 14.dp.toPx()) }
-                            else Modifier
+                            else Modifier,
                         )
                         .background(dotColor, CircleShape),
                 )
-                Spacer(Modifier.width(8.dp))
                 Text(
                     text = displayName,
                     style = TextStyle(
@@ -153,7 +175,7 @@ internal fun ConnectedBoardCard(
                         .weight(1f)
                         .clickable { editingName = true },
                 )
-                Spacer(Modifier.width(8.dp))
+                BoardTypeBadge(effectiveIdentity?.type ?: BoardType.UNKNOWN)
                 Icon(
                     imageVector = Icons.Filled.Edit,
                     contentDescription = "Edit board name",
@@ -165,120 +187,62 @@ internal fun ConnectedBoardCard(
             }
         }
 
-        // ── Type / signal / fw chips ─────────────────────────────────────────
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-            modifier = Modifier.padding(top = 6.dp),
-        ) {
-            val boardType = effectiveIdentity?.type ?: BoardType.UNKNOWN
-            BoardTypeBadge(boardType)
-            if (rssi != null) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Filled.NetworkWifi3Bar,
-                        contentDescription = "Signal",
-                        tint = c.textSecondary,
-                        modifier = Modifier.size(12.dp),
-                    )
-                    Spacer(Modifier.width(3.dp))
-                    Text("$rssi dBm", style = mono10, color = c.textSecondary)
-                }
-            }
-            val fw = effectiveIdentity?.firmwareRevision
-            val cells = boardState.cellVoltages.size.takeIf { it > 0 }
-            if (fw != null || cells != null) {
-                val label = buildString {
-                    if (fw != null) append("Fw $fw")
-                    if (fw != null && cells != null) append(" · ")
-                    if (cells != null) append("${cells}S")
-                }
-                Text(label, style = mono10, color = c.textSecondary)
-            }
-        }
-
-        // ── Lifetime stats ────────────────────────────────────────────────────
+        // ── 2. Stats band ─────────────────────────────────────────────────────
         val lifetimeMiles = effectiveIdentity?.lifetimeMiles
-        val lifetimeAmpHours = effectiveIdentity?.lifetimeAmpHours
-        if (lifetimeMiles != null || lifetimeAmpHours != null) {
-            HorizontalDivider(color = c.divider, thickness = 0.5.dp, modifier = Modifier.padding(top = 10.dp, bottom = 6.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(24.dp),
-            ) {
-                if (lifetimeMiles != null) {
-                    Column {
-                        Text(
-                            "LIFETIME ODO",
-                            style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 9.sp, letterSpacing = 1.sp),
-                            color = c.textDim,
-                        )
-                        Text(
-                            "$lifetimeMiles mi",
-                            style = TextStyle(
-                                fontFamily = JetBrainsMonoFamily,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.W700,
-                                fontFeatureSettings = "tnum",
-                            ),
-                            color = c.textPrimary,
-                        )
-                    }
-                }
-                if (lifetimeAmpHours != null) {
-                    Column {
-                        Text(
-                            "LIFETIME AH",
-                            style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 9.sp, letterSpacing = 1.sp),
-                            color = c.textDim,
-                        )
-                        Text(
-                            "%.1f Ah".format(lifetimeAmpHours),
-                            style = TextStyle(
-                                fontFamily = JetBrainsMonoFamily,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.W700,
-                                fontFeatureSettings = "tnum",
-                            ),
-                            color = c.textPrimary,
-                        )
-                    }
-                }
-            }
-        }
-
-        // ── Disconnect / Forget ───────────────────────────────────────────────
+        val lifetimeAh = effectiveIdentity?.lifetimeAmpHours
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(top = 12.dp)
+                .height(IntrinsicSize.Min)
+                .clip(RoundedCornerShape(10.dp))
+                .background(c.insetRow),
         ) {
-            TextButton(
-                onClick = onDisconnect,
-                enabled = connected,
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.textButtonColors(
-                    contentColor = c.rampDanger,
-                    disabledContentColor = c.textDim,
-                ),
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Text("Disconnect", fontFamily = SairaFamily, fontWeight = FontWeight.W600, fontSize = 14.sp)
+                Text("LIFETIME ODO", style = monoLabel, color = c.textDimmest)
+                Text(
+                    text = if (lifetimeMiles != null) "$lifetimeMiles mi" else "—",
+                    style = monoValue.copy(fontSize = 20.sp),
+                    color = if (lifetimeMiles != null) c.textPrimary else c.textDim,
+                )
             }
-            TextButton(
-                onClick = onForgetBoard,
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.textButtonColors(contentColor = c.textSecondary),
+            Box(
+                modifier = Modifier
+                    .width(0.5.dp)
+                    .fillMaxHeight()
+                    .background(c.divider),
+            )
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Text("Forget board", fontFamily = SairaFamily, fontWeight = FontWeight.W600, fontSize = 14.sp)
+                Text("LIFETIME AH", style = monoLabel, color = c.textDimmest)
+                Text(
+                    text = if (lifetimeAh != null) "%.1f Ah".format(lifetimeAh) else "—",
+                    style = monoValue.copy(fontSize = 20.sp),
+                    color = if (lifetimeAh != null) c.textPrimary else c.textDim,
+                )
             }
         }
 
-        // ── Tire diameter ─────────────────────────────────────────────────────
-        HorizontalDivider(color = c.divider, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 8.dp))
-
+        // ── 3. Tire diameter row (bordered top + bottom) ──────────────────────
+        HorizontalDivider(
+            color = c.divider,
+            thickness = 0.5.dp,
+            modifier = Modifier.padding(top = 12.dp),
+        )
         if (editingTire) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(
+                modifier = Modifier.padding(vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -289,16 +253,7 @@ internal fun ConnectedBoardCard(
                         style = TextStyle(fontFamily = SairaFamily, fontSize = 13.sp, fontWeight = FontWeight.W600),
                         color = c.textSecondary,
                     )
-                    Text(
-                        "%.1f in".format(sliderValue),
-                        style = TextStyle(
-                            fontFamily = JetBrainsMonoFamily,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.W700,
-                            fontFeatureSettings = "tnum",
-                        ),
-                        color = c.lime,
-                    )
+                    Text("%.1f in".format(sliderValue), style = monoValue, color = c.lime)
                 }
                 Slider(
                     value = sliderValue,
@@ -312,8 +267,8 @@ internal fun ConnectedBoardCard(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("8 in", style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 9.sp), color = c.textDim)
-                    Text("13 in", style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 9.sp), color = c.textDim)
+                    Text("8 in", style = monoLabel, color = c.textDim)
+                    Text("13 in", style = monoLabel, color = c.textDim)
                 }
                 Spacer(Modifier.height(4.dp))
                 Row(
@@ -346,7 +301,8 @@ internal fun ConnectedBoardCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { editingTire = true },
+                    .clickable { editingTire = true }
+                    .padding(vertical = 10.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -355,15 +311,13 @@ internal fun ConnectedBoardCard(
                     style = TextStyle(fontFamily = SairaFamily, fontSize = 13.sp, fontWeight = FontWeight.W600),
                     color = c.textSecondary,
                 )
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
                     Text(
                         "%.1f in".format(tireDiameterInches),
-                        style = TextStyle(
-                            fontFamily = JetBrainsMonoFamily,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.W700,
-                            fontFeatureSettings = "tnum",
-                        ),
+                        style = monoValue,
                         color = c.lime,
                     )
                     Icon(
@@ -375,6 +329,121 @@ internal fun ConnectedBoardCard(
                 }
             }
         }
+        HorizontalDivider(color = c.divider, thickness = 0.5.dp)
+
+        // ── 4. Action buttons ─────────────────────────────────────────────────
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Button(
+                onClick = onDisconnect,
+                enabled = connected,
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = disconnectBg,
+                    contentColor = c.rampDanger,
+                    disabledContainerColor = c.cardElevated,
+                    disabledContentColor = c.textDim,
+                ),
+            ) {
+                Text("Disconnect", fontFamily = SairaFamily, fontWeight = FontWeight.W600, fontSize = 13.sp)
+            }
+            Button(
+                onClick = onForgetBoard,
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = c.cardElevated,
+                    contentColor = c.textLabel,
+                ),
+            ) {
+                Text("Forget board", fontFamily = SairaFamily, fontWeight = FontWeight.W600, fontSize = 13.sp)
+            }
+        }
+
+        // ── 5. Device Info expander ───────────────────────────────────────────
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 14.dp)
+                .clickable { deviceInfoExpanded = !deviceInfoExpanded },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                "DEVICE INFO",
+                style = TextStyle(
+                    fontFamily = JetBrainsMonoFamily,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.W400,
+                    letterSpacing = 2.sp,
+                ),
+                color = c.textDimmest,
+            )
+            Icon(
+                Icons.Filled.ExpandMore,
+                contentDescription = if (deviceInfoExpanded) "Collapse" else "Expand",
+                tint = c.textMuted,
+                modifier = Modifier.graphicsLayer { rotationZ = chevronRotation },
+            )
+        }
+        AnimatedVisibility(visible = deviceInfoExpanded) {
+            val cellCount = boardState.cellVoltages.size.takeIf { it > 0 }
+            val rows = listOf(
+                "Serial" to (effectiveIdentity?.serialNumber ?: "—"),
+                "Battery serial" to (effectiveIdentity?.batterySerialNumber ?: "—"),
+                "Battery cells" to (cellCount?.let { "${it}S" } ?: "—"),
+                "Hardware rev" to (effectiveIdentity?.hardwareRevision ?: "—"),
+                "Firmware" to (effectiveIdentity?.firmwareRevision ?: "—"),
+                "RSSI" to (rssi?.let { "$it dBm" } ?: "—"),
+            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(c.insetRow),
+            ) {
+                rows.forEachIndexed { index, (label, value) ->
+                    DeviceInfoRow(label = label, value = value)
+                    if (index < rows.lastIndex) {
+                        HorizontalDivider(color = c.divider, thickness = 0.5.dp)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DeviceInfoRow(label: String, value: String) {
+    val c = LocalZWheelColors.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            label,
+            style = TextStyle(fontFamily = SairaFamily, fontSize = 13.sp, fontWeight = FontWeight.W400),
+            color = c.textMuted,
+        )
+        Text(
+            value,
+            style = TextStyle(
+                fontFamily = JetBrainsMonoFamily,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.W700,
+                fontFeatureSettings = "tnum",
+            ),
+            color = c.textPrimary,
+        )
     }
 }
 

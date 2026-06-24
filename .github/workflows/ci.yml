@@ -30,10 +30,17 @@ jobs:
         with:
           gradle-version: "8.10.2"
 
+      - name: Decode keystore
+        run: echo "${{ secrets.DEBUG_KEYSTORE_BASE64 }}" | base64 -d > keystore.jks
+
       - name: Build and test
         env:
           VERSION_CODE: ${{ github.run_number }}
           VERSION_NAME: "0.1.${{ github.run_number }}"
+          KEYSTORE_PATH: ${{ github.workspace }}/keystore.jks
+          KEYSTORE_PASSWORD: ${{ secrets.DEBUG_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.DEBUG_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.DEBUG_KEY_PASSWORD }}
         run: gradle clean check :app:assembleDebug :wear:assembleDebug
 
       - name: Upload debug APK

@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 @HiltViewModel
 class RideHistoryViewModel @Inject constructor(
@@ -71,6 +72,12 @@ class RideHistoryViewModel @Inject constructor(
     val isBoardConnected: StateFlow<Boolean> = connectionManager.connectionState
         .map { it == ConnectionState.Connected }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    fun deleteSession(sessionId: String) {
+        viewModelScope.launch {
+            repository.deleteSession(sessionId)
+        }
+    }
 
     private suspend fun loadThumbnailPoints(
         sessions: List<RideSession>,

@@ -16,18 +16,24 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BluetoothSearching
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DirectionsRun
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -51,14 +57,17 @@ fun RideHistoryScreen(
         sessions = sessions,
         isBoardConnected = isBoardConnected,
         onRideClick = onRideClick,
+        onDeleteSession = viewModel::deleteSession,
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun HistoryListContent(
     sessions: List<RideHistoryItem>,
     isBoardConnected: Boolean,
     onRideClick: (String) -> Unit,
+    onDeleteSession: (String) -> Unit = {},
 ) {
     val c = LocalZWheelColors.current
     if (sessions.isEmpty()) {
@@ -106,7 +115,50 @@ internal fun HistoryListContent(
                 )
             }
             items(items, key = { it.id }) { item ->
-                RideRow(item = item, onClick = { onRideClick(item.id) })
+                val dismissState = rememberSwipeToDismissBoxState(
+                    confirmValueChange = { value ->
+                        if (value == SwipeToDismissBoxValue.EndToStart ||
+                            value == SwipeToDismissBoxValue.StartToEnd
+                        ) {
+                            onDeleteSession(item.id)
+                            true
+                        } else {
+                            false
+                        }
+                    },
+                    positionalThreshold = { totalDistance -> totalDistance * 0.4f },
+                )
+
+                SwipeToDismissBox(
+                    state = dismissState,
+                    backgroundContent = {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(vertical = 4.dp)
+                                .background(
+                                    color = Color(0xFFB00020),
+                                    shape = RoundedCornerShape(12.dp),
+                                ),
+                            contentAlignment = if (dismissState.dismissDirection ==
+                                SwipeToDismissBoxValue.EndToStart
+                            ) {
+                                Alignment.CenterEnd
+                            } else {
+                                Alignment.CenterStart
+                            },
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete ride",
+                                tint = Color.White,
+                                modifier = Modifier.padding(horizontal = 20.dp),
+                            )
+                        }
+                    },
+                ) {
+                    RideRow(item = item, onClick = { onRideClick(item.id) })
+                }
             }
         }
     }

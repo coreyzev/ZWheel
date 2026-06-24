@@ -30,6 +30,12 @@ interface RideDao {
     @Query("SELECT * FROM ride_session ORDER BY startEpochMillis DESC")
     fun getAllSessions(): Flow<List<RideSessionEntity>>
 
+    @Query("DELETE FROM ride_point WHERE sessionId = :sessionId")
+    suspend fun deletePointsForSession(sessionId: String)
+
+    @Query("DELETE FROM ride_session WHERE id = :sessionId")
+    suspend fun deleteSession(sessionId: String)
+
     @Insert
     suspend fun insertPoint(point: RideDataPointEntity)
 

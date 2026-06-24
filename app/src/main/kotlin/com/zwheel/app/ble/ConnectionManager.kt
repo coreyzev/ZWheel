@@ -59,6 +59,10 @@ class ConnectionManager @Inject constructor(
     private val _rssi = MutableStateFlow<Int?>(null)
     val rssi: StateFlow<Int?> = _rssi.asStateFlow()
 
+    private val _staleTelemetry = MutableStateFlow(false)
+    val staleTelemetry: StateFlow<Boolean> = _staleTelemetry.asStateFlow()
+    private var staleTelemetryJob: Job? = null
+
     private val _boardState = MutableStateFlow(BoardState())
     val boardState: StateFlow<BoardState> = _boardState.asStateFlow()
 
@@ -100,6 +104,8 @@ class ConnectionManager @Inject constructor(
     }
 
     suspend fun connect(deviceId: String) {
+        _staleTelemetry.value = false
+        staleTelemetryJob?.cancel()
         connectJob?.cancelAndJoin()
         connectJob = coroutineContext[Job]
         val scanResult = _devices.value.firstOrNull { it.deviceKey() == deviceId.lowercase() }
@@ -160,6 +166,7 @@ class ConnectionManager @Inject constructor(
             boardIdentity = identity,
         )
         service.start(scope)
+        startStaleTelemetryWatcher()
         stateMirrorJob = scope.launch {
             service.state.collect { state ->
                 _boardState.value = state
@@ -172,6 +179,9 @@ class ConnectionManager @Inject constructor(
         stopScan()
         stateMirrorJob?.cancel()
         stateMirrorJob = null
+        staleTelemetryJob?.cancel()
+        staleTelemetryJob = null
+        _staleTelemetry.value = false
         keepAliveJob?.cancel()
         keepAliveJob = null
         scope.coroutineContext.cancelChildren()
@@ -211,5 +221,27 @@ class ConnectionManager @Inject constructor(
 
         deviceLastSeen.keys.removeAll(staleDeviceKeys)
         _devices.value = _devices.value.filterNot { result -> result.deviceKey() in staleDeviceKeys }
+    }
+
+    private fun startStaleTelemetryWatcher() {
+        staleTelemetryJob?.cancel()
+        staleTelemetryJob = scope.launch {
+            var hadNonZeroVoltage = false
+            var pendingStaleJob: Job? = null
+            _boardState.collect { state ->
+                if (connectionState.value != ConnectionState.Connected) return@collect
+                if ((state.packVoltage ?: 0.0) > 0.0) {
+                    hadNonZeroVoltage = true
+                    pendingStaleJob?.cancel()
+                    pendingStaleJob = null
+                    _staleTelemetry.value = false
+                } else if (hadNonZeroVoltage && pendingStaleJob?.isActive != true) {
+                    pendingStaleJob = launch {
+                        delay(3_000L)
+                        _staleTelemetry.value = true
+                    }
+                }
+            }
+        }
     }
 }

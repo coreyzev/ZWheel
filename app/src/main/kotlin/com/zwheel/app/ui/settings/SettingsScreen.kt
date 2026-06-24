@@ -73,6 +73,7 @@ fun SettingsScreen(
         onHaUrlChanged = viewModel::setHaUrl,
         onHaTokenChanged = viewModel::setHaToken,
         onTestHaConnection = viewModel::testHaConnection,
+        onClearHaSensors = viewModel::clearHaSensors,
         onDisconnect = onDisconnect,
         onForgetBoard = onForgetBoard,
         onToggleDebugLogging = viewModel::setDebugLogging,
@@ -99,6 +100,7 @@ internal fun SettingsContent(
     onHaUrlChanged: (String) -> Unit,
     onHaTokenChanged: (String) -> Unit,
     onTestHaConnection: () -> Unit,
+    onClearHaSensors: () -> Unit,
     onDisconnect: () -> Unit,
     onForgetBoard: () -> Unit,
     onToggleDebugLogging: (Boolean) -> Unit,
@@ -242,6 +244,7 @@ internal fun SettingsContent(
                 onUrlChanged = onHaUrlChanged,
                 onTokenChanged = onHaTokenChanged,
                 onTestConnection = onTestHaConnection,
+                onClearSensors = onClearHaSensors,
                 modifier = Modifier.padding(horizontal = 18.dp),
             )
         }

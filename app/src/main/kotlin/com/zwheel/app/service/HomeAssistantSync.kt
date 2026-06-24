@@ -1,6 +1,7 @@
 package com.zwheel.app.service
 
 import com.zwheel.app.data.settings.SettingsRepository
+import com.zwheel.app.service.haEntitySlug
 import com.zwheel.core.model.BoardState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
@@ -20,9 +21,12 @@ internal class HomeAssistantSync(
                 val url = prefs.haUrl.takeIf { it.isNotBlank() } ?: return@collect
                 val token = prefs.haToken.takeIf { it.isNotBlank() } ?: return@collect
                 val pct = boardState.batteryPercent ?: return@collect
+                val serial = boardState.identity?.serialNumber ?: return@collect
                 if (pct == lastPushedPercent) return@collect
                 lastPushedPercent = pct
-                HomeAssistantPusher.push(url, token, pct)
+                val entitySlug = haEntitySlug(serial)
+                val friendlyName = "${boardState.identity?.name ?: "Onewheel"} Battery"
+                HomeAssistantPusher.push(url, token, pct, entitySlug, friendlyName)
             }
         }
     }

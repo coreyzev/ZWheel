@@ -41,6 +41,7 @@ internal fun HomeAssistantSection(
     onUrlChanged: (String) -> Unit,
     onTokenChanged: (String) -> Unit,
     onTestConnection: () -> Unit,
+    onClearSensors: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val c = LocalZWheelColors.current
@@ -110,17 +111,17 @@ internal fun HomeAssistantSection(
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                val canAct = localUrl.isNotBlank() && localToken.isNotBlank()
                 Button(
                     onClick = {
-                        // Flush drafts before testing so the VM has the current values
                         onUrlChanged(localUrl)
                         onTokenChanged(localToken)
                         onTestConnection()
                     },
-                    enabled = localUrl.isNotBlank() && localToken.isNotBlank(),
+                    enabled = canAct,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = c.cardElevated,
                         contentColor = c.lime,
@@ -128,7 +129,23 @@ internal fun HomeAssistantSection(
                         disabledContentColor = c.textDim,
                     ),
                 ) {
-                    Text("Test connection", fontFamily = SairaFamily, fontWeight = FontWeight.W600)
+                    Text("Test", fontFamily = SairaFamily, fontWeight = FontWeight.W600)
+                }
+                Button(
+                    onClick = {
+                        onUrlChanged(localUrl)
+                        onTokenChanged(localToken)
+                        onClearSensors()
+                    },
+                    enabled = canAct,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = c.cardElevated,
+                        contentColor = c.rampDanger,
+                        disabledContainerColor = c.cardElevated,
+                        disabledContentColor = c.textDim,
+                    ),
+                ) {
+                    Text("Clear sensors", fontFamily = SairaFamily, fontWeight = FontWeight.W600)
                 }
                 if (haTestResult != null) {
                     Text(

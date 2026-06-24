@@ -169,6 +169,17 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun clearHaSensors() {
+        val prefs = preferences.value
+        _haTestResult.value = null
+        viewModelScope.launch {
+            _haTestResult.value = HomeAssistantPusher.clearLegacySensor(
+                haUrl = prefs.haUrl,
+                haToken = prefs.haToken,
+            )
+        }
+    }
+
     fun clearHaTestResult() {
         _haTestResult.value = null
     }

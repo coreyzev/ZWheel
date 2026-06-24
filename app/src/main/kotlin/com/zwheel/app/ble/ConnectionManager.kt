@@ -197,14 +197,6 @@ class ConnectionManager @Inject constructor(
         )
         service.start(scope)
         startStaleTelemetryWatcher()
-        scope.launch {
-            runCatching {
-                transport.notifications(OwUuids.LAST_ERROR_CODE).collect { bytes ->
-                    val code = Parsers.lastErrorCode(bytes)
-                    if (code != null) _lastErrorCode.value = code
-                }
-            }
-        }
         stateMirrorJob = scope.launch {
             service.state.collect { state ->
                 _boardState.value = state

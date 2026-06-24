@@ -52,4 +52,33 @@ internal object HomeAssistantPusher {
             }
         }
     }
+
+    // Verify credentials without writing any sensor data — GET /api/ returns 200
+    // when the token is valid and HA is reachable, 401/403 on bad token.
+    suspend fun test(haUrl: String, haToken: String): HaPushResult {
+        val url = haUrl.trimEnd('/')
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            return HaPushResult.BadUrl
+        }
+        return withContext(Dispatchers.IO) {
+            try {
+                val connection = URL("$url/api/").openConnection() as HttpURLConnection
+                connection.requestMethod = "GET"
+                connection.setRequestProperty("Authorization", "Bearer $haToken")
+                connection.connectTimeout = 5_000
+                connection.readTimeout = 5_000
+                val code = connection.responseCode
+                connection.disconnect()
+                when {
+                    code in 200..299 -> HaPushResult.Success
+                    code == 401 || code == 403 -> HaPushResult.AuthFailed
+                    else -> HaPushResult.Unreachable
+                }
+            } catch (_: MalformedURLException) {
+                HaPushResult.BadUrl
+            } catch (_: Exception) {
+                HaPushResult.Unreachable
+            }
+        }
+    }
 }

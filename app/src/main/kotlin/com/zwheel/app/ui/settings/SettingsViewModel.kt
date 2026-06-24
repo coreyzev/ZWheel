@@ -162,10 +162,9 @@ class SettingsViewModel @Inject constructor(
         val prefs = preferences.value
         _haTestResult.value = null
         viewModelScope.launch {
-            _haTestResult.value = HomeAssistantPusher.push(
+            _haTestResult.value = HomeAssistantPusher.test(
                 haUrl = prefs.haUrl,
                 haToken = prefs.haToken,
-                batteryPercent = 50,
             )
         }
     }

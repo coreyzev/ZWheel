@@ -225,6 +225,66 @@ release pipeline and v1.0.0 tag are Phase 5 work.
 
 ---
 
+## Home Assistant Integration
+
+ZWheel can push your board's battery percentage to a Home Assistant instance
+whenever it changes. No custom component is required — ZWheel uses the standard
+HA REST API to write a sensor state directly.
+
+### What gets pushed
+
+ZWheel writes to `sensor.onewheel_battery` each time the battery percent changes
+while connected. The entity is created automatically on the first push; you do not
+need to pre-configure it in HA.
+
+Payload written per push:
+```json
+{
+  "state": "<battery_pct>",
+  "attributes": {
+    "unit_of_measurement": "%",
+    "device_class": "battery",
+    "friendly_name": "Onewheel Battery"
+  }
+}
+```
+
+### Home Assistant setup
+
+1. In Home Assistant, go to your **Profile** (bottom-left avatar) → scroll to
+   **Long-Lived Access Tokens** → click **Create Token**.
+2. Give it a name (e.g., `ZWheel`) and copy the token — it is shown **only once**.
+3. Note your HA base URL. Examples:
+   - Local network: `http://homeassistant.local:8123`
+   - Remote/HTTPS: `https://your-ha.duckdns.org`
+   - Nabu Casa: `https://abcdef1234567890.ui.nabu.casa`
+
+> The URL must be reachable from your phone at ride time. If you ride outside
+> your home network, use a remote URL (HTTPS strongly recommended).
+
+### App setup
+
+1. Open **Settings** in ZWheel → scroll to **Home Assistant (Optional)**.
+2. Toggle **Push battery % to HA** on.
+3. Enter your **HA URL** (include the scheme and port if non-standard).
+4. Enter your **Long-Lived Access Token**.
+5. Tap **Test connection** — a live 50% test push is sent. A green confirmation
+   means HA accepted it and `sensor.onewheel_battery` now exists.
+
+Once set up, ZWheel pushes automatically while the foreground ride service is
+running (i.e., while connected to the board).
+
+### Using the sensor in Home Assistant
+
+After the first push, `sensor.onewheel_battery` is available in:
+
+- **Dashboard cards** — add an Entities or Gauge card pointing to
+  `sensor.onewheel_battery`.
+- **Automations** — e.g., notify when battery drops below 20%.
+- **History** — HA records every state change automatically.
+
+---
+
 ## License
 
 ZWheel is licensed under GPLv3. See `LICENSE` and `NOTICE.md`.

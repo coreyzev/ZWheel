@@ -118,7 +118,16 @@ class ConnectionManager @Inject constructor(
             debugRecorder = recorder,
             debugDeviceId = { deviceId },
         )
-        val unlockResult = handshakeStrategy.unlock(transport)
+        // The board won't re-issue the Gemini challenge without a power cycle.
+        // If unlock fails (timeout or otherwise), disconnect the transport so the
+        // connection state returns to Disconnected — prevents the dashboard from
+        // showing indefinitely with zero data.
+        val unlockResult = try {
+            handshakeStrategy.unlock(transport)
+        } catch (e: Exception) {
+            runCatching { transport.disconnect() }
+            throw e
+        }
         check(unlockResult.unlocked) { "Board unlock failed: ${unlockResult.strategyName}" }
 
         val hwBytes = transport.read(OwUuids.HARDWARE_REVISION)
@@ -237,7 +246,7 @@ class ConnectionManager @Inject constructor(
                     _staleTelemetry.value = false
                 } else if (hadNonZeroVoltage && pendingStaleJob?.isActive != true) {
                     pendingStaleJob = launch {
-                        delay(3_000L)
+                        delay(500L)
                         _staleTelemetry.value = true
                     }
                 }

@@ -2,22 +2,33 @@ package com.zwheel.app.ui.settings
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -115,6 +126,27 @@ internal fun SettingsContent(
     val effectiveTireDiameter = preferences.lastConnectedTireDiameterInches
         ?: effectiveIdentity?.type?.stockTireDiameterInches
         ?: 11.5
+    var showBoardTooltip by remember { mutableStateOf(false) }
+    if (showBoardTooltip) {
+        AlertDialog(
+            onDismissRequest = { showBoardTooltip = false },
+            confirmButton = {
+                TextButton(onClick = { showBoardTooltip = false }) {
+                    Text("OK", fontFamily = SairaFamily)
+                }
+            },
+            title = { Text("About board data", fontFamily = SairaFamily, fontWeight = FontWeight.W700) },
+            text = {
+                Text(
+                    "Lifetime ODO and Ah are reported by the board controller, not calculated by ZWheel. " +
+                        "Swapping tires doesn't reset the ODO. Replacing the battery doesn't reset Ah. " +
+                        "These values reflect what the controller has recorded since the factory.",
+                    fontFamily = SairaFamily,
+                    fontSize = 14.sp,
+                )
+            },
+        )
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -136,7 +168,35 @@ internal fun SettingsContent(
             )
         }
         if (hasSavedBoard) {
-            item { SectionEyebrowRow("CONNECTED BOARD", modifier = Modifier.padding(horizontal = 18.dp)) }
+            item {
+                Row(
+                    modifier = Modifier
+                        .padding(horizontal = 18.dp)
+                        .padding(bottom = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text(
+                        text = "CONNECTED BOARD",
+                        style = TextStyle(
+                            fontFamily = JetBrainsMonoFamily,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.W400,
+                            letterSpacing = 2.sp,
+                        ),
+                        color = c.textDimmest,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = "About board data",
+                        tint = c.textDimmest,
+                        modifier = Modifier
+                            .size(14.dp)
+                            .clickable { showBoardTooltip = true },
+                    )
+                }
+            }
             item {
                 Surface(
                     modifier = Modifier

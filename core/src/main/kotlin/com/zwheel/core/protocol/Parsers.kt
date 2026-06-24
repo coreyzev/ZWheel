@@ -136,4 +136,13 @@ object Parsers {
         require(size == expected) { "Expected $expected byte(s), got $size." }
         return this
     }
+
+    fun lifetimeOdometer(bytes: ByteArray): Int = unsignedInt16(bytes)
+
+    fun lifetimeAmpHours(bytes: ByteArray): Double = unsignedInt16(bytes) / 10.0
+
+    fun customName(bytes: ByteArray): String? {
+        val nullIndex = bytes.indexOfFirst { it == 0.toByte() }.let { if (it < 0) bytes.size else it }
+        return bytes.copyOf(nullIndex).decodeToString().trim().takeIf { it.isNotBlank() }
+    }
 }

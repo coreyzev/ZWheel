@@ -197,6 +197,56 @@ internal fun ConnectedBoardCard(
             }
         }
 
+        // ── Lifetime stats ────────────────────────────────────────────────────
+        val lifetimeMiles = effectiveIdentity?.lifetimeMiles
+        val lifetimeAmpHours = effectiveIdentity?.lifetimeAmpHours
+        if (lifetimeMiles != null || lifetimeAmpHours != null) {
+            HorizontalDivider(color = c.divider, thickness = 0.5.dp, modifier = Modifier.padding(top = 10.dp, bottom = 6.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(24.dp),
+            ) {
+                if (lifetimeMiles != null) {
+                    Column {
+                        Text(
+                            "LIFETIME ODO",
+                            style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 9.sp, letterSpacing = 1.sp),
+                            color = c.textDim,
+                        )
+                        Text(
+                            "$lifetimeMiles mi",
+                            style = TextStyle(
+                                fontFamily = JetBrainsMonoFamily,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.W700,
+                                fontFeatureSettings = "tnum",
+                            ),
+                            color = c.textPrimary,
+                        )
+                    }
+                }
+                if (lifetimeAmpHours != null) {
+                    Column {
+                        Text(
+                            "LIFETIME AH",
+                            style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 9.sp, letterSpacing = 1.sp),
+                            color = c.textDim,
+                        )
+                        Text(
+                            "%.1f Ah".format(lifetimeAmpHours),
+                            style = TextStyle(
+                                fontFamily = JetBrainsMonoFamily,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.W700,
+                                fontFeatureSettings = "tnum",
+                            ),
+                            color = c.textPrimary,
+                        )
+                    }
+                }
+            }
+        }
+
         // ── Disconnect / Forget ───────────────────────────────────────────────
         Row(
             modifier = Modifier

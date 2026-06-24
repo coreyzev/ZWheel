@@ -178,6 +178,7 @@ class RideForegroundService : LifecycleService() {
                 rideServiceRepository.markRideStopped()
                 topSpeedTracker = DefaultTopSpeedTracker()
                 rideServiceRepository.updateTopSpeed(0.0)
+                connectionManager.refreshLifetimeStats()
             }
         }
         rideRecorder = recorder

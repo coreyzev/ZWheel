@@ -45,6 +45,8 @@ data class BoardIdentity(
     val batterySerialNumber: String? = null,
     val firmwareRevision: String? = null,
     val hardwareRevision: String? = null,
+    val lifetimeMiles: Int? = null,
+    val lifetimeAmpHours: Double? = null,
 )
 
 data class BoardState(

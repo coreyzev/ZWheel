@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -142,6 +143,15 @@ class ConnectionManager @Inject constructor(
         val batterySerialNumber = runCatching {
             Parsers.batterySerialNumber(transport.read(OwUuids.BATTERY_SERIAL))
         }.getOrNull()
+        val lifetimeMiles = runCatching {
+            Parsers.lifetimeOdometer(transport.read(OwUuids.LIFETIME_ODOMETER))
+        }.getOrNull()
+        val lifetimeAmpHours = runCatching {
+            Parsers.lifetimeAmpHours(transport.read(OwUuids.LIFETIME_AMP_HOURS))
+        }.getOrNull()
+        val boardCustomName = runCatching {
+            Parsers.customName(transport.read(OwUuids.CUSTOM_NAME))
+        }.getOrNull()
         val identity = BoardIdentity(
             boardId = deviceId,
             name = scanResult?.displayName ?: boardType.displayName,
@@ -150,6 +160,8 @@ class ConnectionManager @Inject constructor(
             batterySerialNumber = batterySerialNumber,
             firmwareRevision = fwRev.toString(),
             hardwareRevision = hwRev.toString(),
+            lifetimeMiles = lifetimeMiles,
+            lifetimeAmpHours = lifetimeAmpHours,
         )
 
         // Persist identity now, inside connect(), so settings are always saved before
@@ -162,6 +174,11 @@ class ConnectionManager @Inject constructor(
             hardwareRev = identity.hardwareRevision,
             firmwareRev = identity.firmwareRevision,
         )
+
+        val currentCustomName = settingsRepository.preferences.first().customBoardName
+        if (currentCustomName == null && boardCustomName != null) {
+            settingsRepository.setCustomBoardName(boardCustomName)
+        }
 
         val savedPrefs = settingsRepository.preferences.first()
         val tireDiameter = savedPrefs.lastConnectedTireDiameterInches
@@ -198,6 +215,28 @@ class ConnectionManager @Inject constructor(
         _rssi.value = null
         scope.launch {
             runCatching { transport.disconnect() }
+        }
+    }
+
+    fun refreshLifetimeStats() {
+        scope.launch {
+            val currentIdentity = _boardState.value.identity ?: return@launch
+            val newMiles = runCatching {
+                Parsers.lifetimeOdometer(transport.read(OwUuids.LIFETIME_ODOMETER))
+            }.getOrNull()
+            val newAh = runCatching {
+                Parsers.lifetimeAmpHours(transport.read(OwUuids.LIFETIME_AMP_HOURS))
+            }.getOrNull()
+            if (newMiles != null || newAh != null) {
+                _boardState.update { state ->
+                    state.copy(
+                        identity = state.identity?.copy(
+                            lifetimeMiles = newMiles ?: currentIdentity.lifetimeMiles,
+                            lifetimeAmpHours = newAh ?: currentIdentity.lifetimeAmpHours,
+                        ),
+                    )
+                }
+            }
         }
     }
 

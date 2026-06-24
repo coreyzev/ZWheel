@@ -55,8 +55,9 @@ internal fun HomeAssistantSection(
     if (!urlInitialized && haUrl.isNotEmpty()) { localUrl = haUrl; urlInitialized = true }
     if (!tokenInitialized && haToken.isNotEmpty()) { localToken = haToken; tokenInitialized = true }
 
-    val haEnabled = localUrl.isNotBlank() && localToken.isNotBlank()
-    var expanded by remember(haEnabled) { mutableStateOf(haEnabled) }
+    // Expand by default if already configured; otherwise collapsed until user opens it.
+    // Independent of localUrl/localToken so toggling off doesn't destroy the draft values.
+    var expanded by remember { mutableStateOf(haUrl.isNotBlank() && haToken.isNotBlank()) }
     var showToken by remember { mutableStateOf(false) }
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         SectionEyebrow("HOME ASSISTANT (OPTIONAL)")
@@ -71,16 +72,8 @@ internal fun HomeAssistantSection(
                 color = c.textSecondary,
             )
             Switch(
-                checked = haEnabled || expanded,
-                onCheckedChange = { on ->
-                    expanded = on
-                    if (!on) {
-                        localUrl = ""
-                        localToken = ""
-                        onUrlChanged("")
-                        onTokenChanged("")
-                    }
-                },
+                checked = expanded,
+                onCheckedChange = { expanded = it },
                 colors = settingsSwitchColors(),
             )
         }

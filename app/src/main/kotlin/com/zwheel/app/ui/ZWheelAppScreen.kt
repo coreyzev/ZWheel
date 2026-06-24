@@ -136,6 +136,7 @@ fun ZWheelAppScreen(
 
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
+    val staleTelemetry by viewModel.staleTelemetry.collectAsStateWithLifecycle()
     val devices by viewModel.devices.collectAsStateWithLifecycle()
     val settingsPreferences by settingsViewModel.preferences.collectAsStateWithLifecycle()
     val onScan = {
@@ -187,6 +188,7 @@ fun ZWheelAppScreen(
                     permissionsGranted = permissionsGranted,
                     permanentlyDenied = permanentlyDenied,
                     connectionState = connectionState,
+                    staleTelemetry = staleTelemetry,
                     devices = devices,
                     state = state,
                     locationGranted = locationGranted,
@@ -314,6 +316,7 @@ private fun RideTabContent(
     permissionsGranted: Boolean,
     permanentlyDenied: Boolean,
     connectionState: ConnectionState,
+    staleTelemetry: Boolean,
     devices: List<ScanResult>,
     state: DashboardUiState,
     locationGranted: Boolean,
@@ -340,22 +343,34 @@ private fun RideTabContent(
             onOpenLocationSettings = onOpenLocationSettings,
             onSkipLocation = onScan,
         )
-    } else if (connectionState != ConnectionState.Connected) {
-        ConnectScreen(
-            connectionState = connectionState,
-            devices = devices,
-            savedBoardDeviceId = savedBoardDeviceId,
-            savedBoardType = savedBoardType,
-            onScan = onScan,
-            onConnect = onConnect,
-            onDisconnect = onDisconnect,
-        )
     } else {
-        DashboardScreen(
-            state = state,
-            onRequestLocation = onRequestLocation,
-            locationGranted = locationGranted,
-            locationPermanentlyDenied = locationPermanentlyDenied,
-        )
+        var hadSuccessfulConnection by remember { mutableStateOf(false) }
+        if (connectionState == ConnectionState.Connected) hadSuccessfulConnection = true
+        if (connectionState == ConnectionState.Idle || connectionState == ConnectionState.Scanning) {
+            hadSuccessfulConnection = false
+        }
+
+        val isReconnecting = staleTelemetry ||
+            (connectionState == ConnectionState.Connecting && hadSuccessfulConnection)
+
+        if (!isReconnecting && connectionState != ConnectionState.Connected) {
+            ConnectScreen(
+                connectionState = connectionState,
+                devices = devices,
+                savedBoardDeviceId = savedBoardDeviceId,
+                savedBoardType = savedBoardType,
+                onScan = onScan,
+                onConnect = onConnect,
+                onDisconnect = onDisconnect,
+            )
+        } else {
+            DashboardScreen(
+                state = state,
+                onRequestLocation = onRequestLocation,
+                locationGranted = locationGranted,
+                locationPermanentlyDenied = locationPermanentlyDenied,
+                isReconnecting = isReconnecting,
+            )
+        }
     }
 }

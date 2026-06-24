@@ -24,6 +24,7 @@ fun DashboardScreen(
     onRequestLocation: () -> Unit = {},
     locationGranted: Boolean = true,
     locationPermanentlyDenied: Boolean = false,
+    isReconnecting: Boolean = false,
 ) {
     val c = LocalZWheelColors.current
 
@@ -86,6 +87,9 @@ fun DashboardScreen(
                         .padding(start = 18.dp, end = 18.dp, top = 10.dp),
                 )
             }
+        }
+        if (isReconnecting) {
+            ReconnectingOverlay()
         }
     }
 }

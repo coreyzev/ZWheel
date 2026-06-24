@@ -59,6 +59,7 @@ class DashboardViewModel @Inject constructor(
     )
 
     val connectionState: StateFlow<ConnectionState> = connectionManager.connectionState
+    val staleTelemetry: StateFlow<Boolean> = connectionManager.staleTelemetry
 
     // Scan is still UI-driven; scan results come from ConnectionManager until scan
     // is moved into the service in a future gate.

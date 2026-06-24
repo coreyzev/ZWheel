@@ -25,7 +25,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -178,6 +180,7 @@ class ConnectionManager @Inject constructor(
             hardwareRev = identity.hardwareRevision,
             firmwareRev = identity.firmwareRevision,
         )
+        settingsRepository.saveLastConnectedLifetimeStats(lifetimeMiles, lifetimeAmpHours)
 
         val currentCustomName = settingsRepository.preferences.first().customBoardName
         if (currentCustomName == null && boardCustomName != null) {
@@ -197,6 +200,13 @@ class ConnectionManager @Inject constructor(
         )
         service.start(scope)
         startStaleTelemetryWatcher()
+        scope.launch {
+            service.state
+                .map { it.cellVoltages.size }
+                .filter { it > 0 }
+                .first()
+                .let { count -> settingsRepository.saveLastConnectedCellCount(count) }
+        }
         stateMirrorJob = scope.launch {
             service.state.collect { state ->
                 _boardState.value = state
@@ -232,14 +242,19 @@ class ConnectionManager @Inject constructor(
                 Parsers.lifetimeAmpHours(transport.read(OwUuids.LIFETIME_AMP_HOURS))
             }.getOrNull()
             if (newMiles != null || newAh != null) {
+                val merged = Pair(
+                    newMiles ?: currentIdentity.lifetimeMiles,
+                    newAh ?: currentIdentity.lifetimeAmpHours,
+                )
                 _boardState.update { state ->
                     state.copy(
                         identity = state.identity?.copy(
-                            lifetimeMiles = newMiles ?: currentIdentity.lifetimeMiles,
-                            lifetimeAmpHours = newAh ?: currentIdentity.lifetimeAmpHours,
+                            lifetimeMiles = merged.first,
+                            lifetimeAmpHours = merged.second,
                         ),
                     )
                 }
+                settingsRepository.saveLastConnectedLifetimeStats(merged.first, merged.second)
             }
         }
     }

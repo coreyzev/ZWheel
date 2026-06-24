@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
@@ -59,6 +60,9 @@ class SettingsRepository(
             lastConnectedBatterySerial = prefs[LAST_BOARD_BATTERY_SERIAL],
             lastConnectedHardwareRev = prefs[LAST_BOARD_HW_REV],
             lastConnectedFirmwareRev = prefs[LAST_BOARD_FW_REV],
+            lastConnectedLifetimeMiles = prefs[LAST_BOARD_LIFETIME_MILES],
+            lastConnectedLifetimeAmpHours = prefs[LAST_BOARD_LIFETIME_AH],
+            lastConnectedCellCount = prefs[LAST_BOARD_CELL_COUNT],
             hasRequestedBatteryOptimization = prefs[HAS_REQUESTED_BATTERY_OPT] ?: false,
             hasAttemptedLocationPermission = prefs[HAS_ATTEMPTED_LOCATION_PERM] ?: false,
             haUrl = prefs[HA_URL] ?: "",
@@ -157,6 +161,22 @@ class SettingsRepository(
         }
     }
 
+    suspend fun saveLastConnectedLifetimeStats(lifetimeMiles: Int?, lifetimeAh: Double?) {
+        dataStore.edit { prefs ->
+            if (lifetimeMiles != null) prefs[LAST_BOARD_LIFETIME_MILES] = lifetimeMiles
+            else prefs.remove(LAST_BOARD_LIFETIME_MILES)
+            if (lifetimeAh != null) prefs[LAST_BOARD_LIFETIME_AH] = lifetimeAh
+            else prefs.remove(LAST_BOARD_LIFETIME_AH)
+        }
+    }
+
+    suspend fun saveLastConnectedCellCount(cellCount: Int?) {
+        dataStore.edit { prefs ->
+            if (cellCount != null) prefs[LAST_BOARD_CELL_COUNT] = cellCount
+            else prefs.remove(LAST_BOARD_CELL_COUNT)
+        }
+    }
+
     suspend fun saveLastConnectedTireDiameter(diameter: Double?) {
         dataStore.edit { prefs ->
             if (diameter != null) prefs[LAST_BOARD_TIRE_DIAMETER] = diameter.coerceIn(TIRE_DIAMETER_RANGE)
@@ -187,6 +207,9 @@ class SettingsRepository(
         val LAST_BOARD_BATTERY_SERIAL = stringPreferencesKey("last_board_battery_serial")
         val LAST_BOARD_HW_REV = stringPreferencesKey("last_board_hw_rev")
         val LAST_BOARD_FW_REV = stringPreferencesKey("last_board_fw_rev")
+        val LAST_BOARD_LIFETIME_MILES = intPreferencesKey("last_board_lifetime_miles")
+        val LAST_BOARD_LIFETIME_AH = doublePreferencesKey("last_board_lifetime_ah")
+        val LAST_BOARD_CELL_COUNT = intPreferencesKey("last_board_cell_count")
         val HAS_REQUESTED_BATTERY_OPT = booleanPreferencesKey("has_requested_battery_opt")
         val HAS_ATTEMPTED_LOCATION_PERM = booleanPreferencesKey("has_attempted_location_perm")
         val HAS_CUSTOM_TIRE_DIAMETER = booleanPreferencesKey("has_custom_tire_diameter")

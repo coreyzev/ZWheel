@@ -155,6 +155,8 @@ class SettingsViewModel @Inject constructor(
             repo.saveLastConnectedBoardType(null)
             repo.saveLastConnectedTireDiameter(null)
             repo.saveLastConnectedIdentityDetails(null, null, null, null, null)
+            repo.saveLastConnectedLifetimeStats(null, null)
+            repo.saveLastConnectedCellCount(null)
         }
     }
 

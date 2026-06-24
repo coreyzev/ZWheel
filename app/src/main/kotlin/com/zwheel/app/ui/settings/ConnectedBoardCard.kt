@@ -71,6 +71,7 @@ internal fun ConnectedBoardCard(
     boardState: BoardState,
     effectiveIdentity: BoardIdentity?,
     rssi: Int?,
+    cellCount: Int?,
     customBoardName: String?,
     tireDiameterInches: Double,
     onSaveName: (String?) -> Unit,
@@ -392,7 +393,6 @@ internal fun ConnectedBoardCard(
             )
         }
         AnimatedVisibility(visible = deviceInfoExpanded) {
-            val cellCount = boardState.cellVoltages.size.takeIf { it > 0 }
             val rows = listOf(
                 "Serial" to (effectiveIdentity?.serialNumber ?: "—"),
                 "Battery serial" to (effectiveIdentity?.batterySerialNumber ?: "—"),

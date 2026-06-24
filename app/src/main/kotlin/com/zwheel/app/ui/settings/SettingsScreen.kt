@@ -123,8 +123,12 @@ internal fun SettingsContent(
             batterySerialNumber = preferences.lastConnectedBatterySerial,
             hardwareRevision = preferences.lastConnectedHardwareRev,
             firmwareRevision = preferences.lastConnectedFirmwareRev,
+            lifetimeMiles = preferences.lastConnectedLifetimeMiles,
+            lifetimeAmpHours = preferences.lastConnectedLifetimeAmpHours,
         )
     }
+    val effectiveCellCount = boardState.cellVoltages.size.takeIf { it > 0 }
+        ?: preferences.lastConnectedCellCount
     val effectiveTireDiameter = preferences.lastConnectedTireDiameterInches
         ?: effectiveIdentity?.type?.stockTireDiameterInches
         ?: 11.5
@@ -212,6 +216,7 @@ internal fun SettingsContent(
                         boardState = boardState,
                         effectiveIdentity = effectiveIdentity,
                         rssi = rssi,
+                        cellCount = effectiveCellCount,
                         customBoardName = preferences.customBoardName,
                         tireDiameterInches = effectiveTireDiameter,
                         onSaveName = onSaveBoardName,

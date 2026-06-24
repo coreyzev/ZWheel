@@ -16,25 +16,28 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Find latest successful CI run on main
+      - name: Check latest CI run on main is green
         id: ci-run
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          run_id=$(gh run list \
+          read run_id conclusion <<< $(gh run list \
             --repo ${{ github.repository }} \
             --workflow=ci.yml \
             --branch=main \
-            --status=success \
             --limit=1 \
-            --json databaseId \
-            --jq '.[0].databaseId')
+            --json databaseId,conclusion \
+            --jq '.[0] | "\(.databaseId) \(.conclusion)"')
           if [ -z "$run_id" ] || [ "$run_id" = "null" ]; then
-            echo "No successful CI run found on main" >&2
+            echo "No CI run found on main" >&2
+            exit 1
+          fi
+          if [ "$conclusion" != "success" ]; then
+            echo "Latest CI run $run_id on main is '$conclusion', not 'success' — refusing to release" >&2
             exit 1
           fi
           echo "run_id=$run_id" >> $GITHUB_OUTPUT
-          echo "Using CI run $run_id"
+          echo "Latest CI run $run_id is green — proceeding"
 
       - name: Download APK from CI
         env:

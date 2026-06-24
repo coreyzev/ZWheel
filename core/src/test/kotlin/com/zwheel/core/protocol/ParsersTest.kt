@@ -71,15 +71,17 @@ class ParsersTest {
     }
 
     @Test
-    fun `cellVoltage old encoding parses cell index from byte 1 and voltage from byte 0`() {
-        // FW 4134 (< 4141): bytes[0]=200 -> 200*0.02=4.0V, bytes[1]=0x00 -> cell 0
-        assertEquals(Pair(0, 4.0), Parsers.cellVoltage(hex("c800"), 4134))
+    fun `cellVoltage old encoding parses cell index from byte 0 and voltage from byte 1`() {
+        // FW 4134 (< 4141): byte[0]=cell index, byte[1]=raw voltage*0.02.
+        // Confirmed from XR FW 4134 log: 05cc = cell 5, 0xcc*0.02=4.08V.
+        // 0x00cc -> cell 0, voltage = 204*0.02 = 4.08V
+        assertEquals(Pair(0, 4.08), Parsers.cellVoltage(hex("00cc"), 4134))
     }
 
     @Test
     fun `cellVoltage old encoding parses non-zero cell index`() {
-        // FW 4134: bytes[0]=202 -> 4.04V, bytes[1]=0x07 -> cell 7
-        assertEquals(Pair(7, 4.04), Parsers.cellVoltage(hex("ca07"), 4134))
+        // FW 4134: 0x07cc -> cell 7, voltage = 204*0.02 = 4.08V
+        assertEquals(Pair(7, 4.08), Parsers.cellVoltage(hex("07cc"), 4134))
     }
 
     @Test

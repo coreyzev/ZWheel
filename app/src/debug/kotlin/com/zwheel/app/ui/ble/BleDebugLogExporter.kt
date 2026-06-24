@@ -53,14 +53,31 @@ class BleDebugLogExporter(
             "Pair upload first"
         }
         val fileName = "zwheel-ble-${randomHex()}.jsonl"
+        val (payload, truncated) = fitToUploadLimit(jsonLines)
         val response = post(
             url = "${serverUrl.trimEnd('/')}/upload?filename=$fileName",
             contentType = "application/x-ndjson",
-            body = ensureTrailingNewline(jsonLines).encodeToByteArray(),
+            body = ensureTrailingNewline(payload).encodeToByteArray(),
             bearerToken = token,
         )
         val uploadId = response.body.extractJsonString("uploadId")
-        "Uploaded $uploadId"
+        if (truncated > 0) "Uploaded $uploadId (truncated $truncated lines — log too large)" else "Uploaded $uploadId"
+    }
+
+    private fun fitToUploadLimit(jsonLines: String): Pair<String, Int> {
+        val bytes = jsonLines.encodeToByteArray()
+        if (bytes.size <= MAX_UPLOAD_BYTES) return Pair(jsonLines, 0)
+        // Keep the first N lines that fit, so the session start metadata is always present.
+        val lines = jsonLines.lines().filter { it.isNotBlank() }
+        val kept = mutableListOf<String>()
+        var size = 0
+        for (line in lines) {
+            val lineBytes = (line + "\n").encodeToByteArray().size
+            if (size + lineBytes > MAX_UPLOAD_BYTES) break
+            kept.add(line)
+            size += lineBytes
+        }
+        return Pair(kept.joinToString("\n"), lines.size - kept.size)
     }
 
     private fun writeCacheFile(jsonLines: String): File {
@@ -108,6 +125,7 @@ class BleDebugLogExporter(
         const val CONNECT_TIMEOUT_MS = 10_000
         const val READ_TIMEOUT_MS = 20_000
         const val DEFAULT_RECEIVER_URL = "http://116.203.200.55:8765"
+        const val MAX_UPLOAD_BYTES = 900_000  // server limit is 1MB; leave headroom
     }
 }
 

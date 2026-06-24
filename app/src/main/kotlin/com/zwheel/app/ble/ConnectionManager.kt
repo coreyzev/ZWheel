@@ -25,6 +25,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -204,6 +206,8 @@ class ConnectionManager @Inject constructor(
             service.state
                 .map { it.cellVoltages.size }
                 .filter { it > 0 }
+                .distinctUntilChanged()
+                .debounce(3_000L)  // cells arrive one per notification; wait until they stop changing
                 .first()
                 .let { count -> settingsRepository.saveLastConnectedCellCount(count) }
         }

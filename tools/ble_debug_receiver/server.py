@@ -140,7 +140,7 @@ def main() -> None:
     host = os.environ.get("ZWHEEL_RECEIVER_HOST", "0.0.0.0")
     port = int(os.environ.get("ZWHEEL_RECEIVER_PORT", "8765"))
     upload_dir = Path(os.environ.get("ZWHEEL_UPLOAD_DIR", "/tmp/zwheel-ble-uploads"))
-    max_upload_bytes = int(os.environ.get("ZWHEEL_MAX_UPLOAD_BYTES", "1048576"))
+    max_upload_bytes = int(os.environ.get("ZWHEEL_MAX_UPLOAD_BYTES", "10485760"))
     token_file = Path(os.environ.get("ZWHEEL_TOKEN_FILE", str(upload_dir / ".upload_tokens")))
     state = ReceiverState(
         pairing_password=password,

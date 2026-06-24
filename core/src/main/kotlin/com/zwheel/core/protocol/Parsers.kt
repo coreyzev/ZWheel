@@ -40,12 +40,17 @@ object Parsers {
             val voltage = (raw and 0xFFF) * 0.0011
             Pair(cellIndex, voltage)
         } else {
+            // Confirmed on XR FW 4134: byte[0] = cell index, byte[1] = raw voltage * 0.02.
+            // OWCE docs label these data[0]/data[1] in the opposite order; empirical log
+            // analysis (rawValueHex cycling 05cc…0ecc, 0f02, 00cc…) resolved the ambiguity.
             val bytes = value.requireSize(2)
-            val cellIndex = bytes[1].toInt() and 0xFF
-            val voltage = (bytes[0].toInt() and 0xFF) * 0.02
+            val cellIndex = bytes[0].toInt() and 0xFF
+            val voltage = (bytes[1].toInt() and 0xFF) * 0.02
             Pair(cellIndex, voltage)
         }
     }
+
+    fun lightsOn(value: ByteArray): Boolean = value.uint16BigEndian() != 0
 
     fun pitch(value: ByteArray): Double = 0.1 * (1800 - value.uint16BigEndian())
 

@@ -137,6 +137,17 @@ class ConnectionManager @Inject constructor(
             hardwareRevision = hwRev.toString(),
         )
 
+        // Persist identity now, inside connect(), so settings are always saved before
+        // disconnect() clears boardState — avoids the race in persistConnectedIdentity().
+        settingsRepository.saveLastConnectedBoardType(identity.type)
+        settingsRepository.saveLastConnectedIdentityDetails(
+            name = identity.name,
+            serial = identity.serialNumber,
+            batterySerial = identity.batterySerialNumber,
+            hardwareRev = identity.hardwareRevision,
+            firmwareRev = identity.firmwareRevision,
+        )
+
         val savedPrefs = settingsRepository.preferences.first()
         val tireDiameter = savedPrefs.lastConnectedTireDiameterInches
             ?: boardType.stockTireDiameterInches

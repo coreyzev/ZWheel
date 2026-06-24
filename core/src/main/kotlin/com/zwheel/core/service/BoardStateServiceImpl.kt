@@ -44,6 +44,7 @@ class BoardStateServiceImpl(
         scope.launch { collectOdometer() }
         scope.launch { collectRpm() }
         scope.launch { collectCellVoltages() }
+        scope.launch { collectLights() }
         scope.launch { collectPitch() }
         scope.launch { collectRoll() }
         scope.launch { collectYaw() }
@@ -118,6 +119,23 @@ class BoardStateServiceImpl(
             } catch (e: Exception) {
                 println("[BoardStateServiceImpl] CELL_VOLTAGES: ${e.message}")
             }
+        }
+    }
+
+    private suspend fun collectLights() {
+        // XR doesn't push lights via notifications; read once at connect time.
+        runCatching {
+            val initial = transport.read(OwUuids.LIGHTS)
+            _state.update { it.copy(lightsOn = Parsers.lightsOn(initial)) }
+        }.onFailure { e ->
+            if (e !is CancellationException) println("[BoardStateServiceImpl] LIGHTS read: ${e.message}")
+        }
+        runCatching {
+            transport.notifications(OwUuids.LIGHTS).collect { bytes ->
+                _state.update { it.copy(lightsOn = Parsers.lightsOn(bytes)) }
+            }
+        }.onFailure { e ->
+            if (e !is CancellationException) println("[BoardStateServiceImpl] LIGHTS notify: ${e.message}")
         }
     }
 

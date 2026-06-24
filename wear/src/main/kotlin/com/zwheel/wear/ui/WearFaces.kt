@@ -222,3 +222,30 @@ private fun ProgressArc(
         }
     }
 }
+
+@Composable
+internal fun ErrorFace(errorCode: Int) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color(0xFFB00020)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text = "BOARD ERROR",
+                style = wearLabelStyle,
+                color = Color.White.copy(alpha = 0.7f),
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "ERR $errorCode",
+                style = wearSpeedStyle,
+                color = Color.White,
+            )
+        }
+    }
+}

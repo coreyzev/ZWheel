@@ -111,6 +111,7 @@ data class WatchPayload(
     val isRiding: Boolean,
     val connectionState: ConnectionState,
     val safetyHeadroom: Int? = null,
+    val lastErrorCode: Int? = null,
 )
 
 enum class SpeedUnit {

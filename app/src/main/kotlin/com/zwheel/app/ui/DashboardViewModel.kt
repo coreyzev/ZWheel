@@ -13,8 +13,10 @@ import com.zwheel.core.model.BoardType
 import com.zwheel.core.ports.ScanResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -60,6 +62,14 @@ class DashboardViewModel @Inject constructor(
 
     val connectionState: StateFlow<ConnectionState> = connectionManager.connectionState
     val staleTelemetry: StateFlow<Boolean> = connectionManager.staleTelemetry
+    val lastErrorCode: StateFlow<Int?> = connectionManager.lastErrorCode.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = null,
+    )
+
+    private val _dismissedErrorCode = MutableStateFlow<Int?>(null)
+    val dismissedErrorCode: StateFlow<Int?> = _dismissedErrorCode.asStateFlow()
 
     // Scan is still UI-driven; scan results come from ConnectionManager until scan
     // is moved into the service in a future gate.
@@ -75,6 +85,10 @@ class DashboardViewModel @Inject constructor(
 
     fun disconnect() {
         rideServiceController.disconnect()
+    }
+
+    fun dismissErrorCode() {
+        _dismissedErrorCode.value = lastErrorCode.value
     }
 
     // Persisted across sessions so the UI can show "GPS DENIED" from the start of a new

@@ -137,6 +137,9 @@ fun ZWheelAppScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
     val staleTelemetry by viewModel.staleTelemetry.collectAsStateWithLifecycle()
+    val lastErrorCode by viewModel.lastErrorCode.collectAsStateWithLifecycle()
+    val dismissedErrorCode by viewModel.dismissedErrorCode.collectAsStateWithLifecycle()
+    val activeErrorCode = lastErrorCode?.takeIf { it != dismissedErrorCode }
     val devices by viewModel.devices.collectAsStateWithLifecycle()
     val settingsPreferences by settingsViewModel.preferences.collectAsStateWithLifecycle()
     val onScan = {
@@ -193,6 +196,7 @@ fun ZWheelAppScreen(
                     state = state,
                     locationGranted = locationGranted,
                     locationPermanentlyDenied = locationPermanentlyDenied,
+                    errorCode = activeErrorCode,
                     savedBoardDeviceId = settingsPreferences.lastConnectedDeviceId,
                     savedBoardType = settingsPreferences.lastConnectedBoardType,
                     onGrantPermissions = ::requestBlePermissions,
@@ -202,6 +206,7 @@ fun ZWheelAppScreen(
                     onDisconnect = viewModel::disconnect,
                     onRequestLocation = ::requestLocationPermission,
                     onOpenLocationSettings = { context.openAppSettings() },
+                    onDismissError = viewModel::dismissErrorCode,
                 )
             }
             composable("history") {
@@ -321,6 +326,7 @@ private fun RideTabContent(
     state: DashboardUiState,
     locationGranted: Boolean,
     locationPermanentlyDenied: Boolean,
+    errorCode: Int?,
     savedBoardDeviceId: String?,
     savedBoardType: BoardType?,
     onGrantPermissions: () -> Unit,
@@ -330,6 +336,7 @@ private fun RideTabContent(
     onDisconnect: () -> Unit,
     onRequestLocation: () -> Unit,
     onOpenLocationSettings: () -> Unit,
+    onDismissError: () -> Unit,
 ) {
     if (!permissionsGranted) {
         PermissionsScreen(
@@ -370,6 +377,8 @@ private fun RideTabContent(
                 locationGranted = locationGranted,
                 locationPermanentlyDenied = locationPermanentlyDenied,
                 isReconnecting = isReconnecting,
+                errorCode = errorCode,
+                onDismissError = onDismissError,
             )
         }
     }

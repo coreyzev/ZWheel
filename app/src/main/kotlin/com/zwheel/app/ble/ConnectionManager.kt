@@ -64,6 +64,9 @@ class ConnectionManager @Inject constructor(
     val staleTelemetry: StateFlow<Boolean> = _staleTelemetry.asStateFlow()
     private var staleTelemetryJob: Job? = null
 
+    private val _lastErrorCode = MutableStateFlow<Int?>(null)
+    val lastErrorCode: StateFlow<Int?> = _lastErrorCode.asStateFlow()
+
     private val _boardState = MutableStateFlow(BoardState())
     val boardState: StateFlow<BoardState> = _boardState.asStateFlow()
 
@@ -106,6 +109,7 @@ class ConnectionManager @Inject constructor(
 
     suspend fun connect(deviceId: String) {
         _staleTelemetry.value = false
+        _lastErrorCode.value = null
         staleTelemetryJob?.cancel()
         connectJob?.cancelAndJoin()
         connectJob = coroutineContext[Job]
@@ -193,6 +197,14 @@ class ConnectionManager @Inject constructor(
         )
         service.start(scope)
         startStaleTelemetryWatcher()
+        scope.launch {
+            runCatching {
+                transport.notifications(OwUuids.LAST_ERROR_CODE).collect { bytes ->
+                    val code = Parsers.lastErrorCode(bytes)
+                    if (code != null) _lastErrorCode.value = code
+                }
+            }
+        }
         stateMirrorJob = scope.launch {
             service.state.collect { state ->
                 _boardState.value = state

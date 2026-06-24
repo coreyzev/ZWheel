@@ -14,6 +14,7 @@ import com.zwheel.core.model.KEY_BATTERY_PCT
 import com.zwheel.core.model.KEY_CONNECTION_STATE
 import com.zwheel.core.model.KEY_ESTIMATED_RANGE_M
 import com.zwheel.core.model.KEY_IS_RIDING
+import com.zwheel.core.model.KEY_LAST_ERROR_CODE
 import com.zwheel.core.model.KEY_SAFETY_HEADROOM
 import com.zwheel.core.model.KEY_SPEED_MPS_CORRECTED
 import com.zwheel.core.model.KEY_SPEED_UNIT
@@ -42,17 +43,34 @@ class WearDataLayerRepository @Inject constructor(
     fun startSync(scope: CoroutineScope) {
         scope.launch {
             combine(
-                connectionManager.boardState,
-                connectionManager.connectionState,
-                rideServiceRepository.isRiding,
-                settingsRepository.preferences,
-                rideServiceRepository.topSpeedMetersPerSecond,
-            ) { boardState, connectionState, isRiding, prefs, topSpeedMps ->
+                flows = listOf(
+                    connectionManager.boardState,
+                    connectionManager.connectionState,
+                    rideServiceRepository.isRiding,
+                    settingsRepository.preferences,
+                    rideServiceRepository.topSpeedMetersPerSecond,
+                    connectionManager.lastErrorCode,
+                ),
+            ) { values ->
+                val boardState = values[0] as BoardState
+                val connectionState = values[1] as ConnectionState
+                val isRiding = values[2] as Boolean
+                val prefs = values[3] as com.zwheel.app.data.settings.UserPreferences
+                val topSpeedMps = values[4] as Double
+                val errorCode = values[5] as Int?
                 val estimatedRangeMeters = DefaultRangeEstimator.estimateKilometersRemaining(
                     batteryPct = boardState.batteryPercent,
                     boardType = boardState.identity?.type ?: BoardType.UNKNOWN,
                 )?.let { it * 1000.0 }
-                toWatchPayload(boardState, connectionState, isRiding, prefs.speedUnit, topSpeedMps, estimatedRangeMeters)
+                toWatchPayload(
+                    boardState,
+                    connectionState,
+                    isRiding,
+                    prefs.speedUnit,
+                    topSpeedMps,
+                    estimatedRangeMeters,
+                    errorCode,
+                )
             }.collect { payload ->
                 if (payload != lastSentPayload) {
                     runCatching { putPayload(payload) }
@@ -73,6 +91,7 @@ class WearDataLayerRepository @Inject constructor(
             dataMap.putString(KEY_CONNECTION_STATE, payload.connectionState.name)
             // Sentinel: -1 = null/unknown (DataMap has no nullable int)
             dataMap.putInt(KEY_SAFETY_HEADROOM, payload.safetyHeadroom ?: -1)
+            dataMap.putInt(KEY_LAST_ERROR_CODE, payload.lastErrorCode ?: -1)
         }.asPutDataRequest().setUrgent()
         dataClient.putDataItem(request)
     }
@@ -87,6 +106,7 @@ internal fun WatchPayload.toDataEntries(): Map<String, Any> = mapOf(
     KEY_IS_RIDING to isRiding,
     KEY_CONNECTION_STATE to connectionState.name,
     KEY_SAFETY_HEADROOM to (safetyHeadroom ?: -1),
+    KEY_LAST_ERROR_CODE to (lastErrorCode ?: -1),
 )
 
 private fun toWatchPayload(
@@ -96,6 +116,7 @@ private fun toWatchPayload(
     speedUnit: SpeedUnit,
     topSpeedMetersPerSecond: Double,
     estimatedRangeMeters: Double?,
+    errorCode: Int?,
 ): WatchPayload {
     val coreConnectionState = when (connectionState) {
         ConnectionState.Connected -> com.zwheel.core.model.ConnectionState.SUBSCRIBED
@@ -116,5 +137,6 @@ private fun toWatchPayload(
         // the watch treats values <= 0 as "approaching pushback" and null as "unknown".
         // Verify the exact firmware zero-crossing on real hardware before shipping.
         safetyHeadroom = boardState.safetyHeadroom,
+        lastErrorCode = errorCode,
     )
 }

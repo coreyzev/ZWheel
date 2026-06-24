@@ -5,6 +5,7 @@ import com.zwheel.core.model.KEY_BATTERY_PCT
 import com.zwheel.core.model.KEY_CONNECTION_STATE
 import com.zwheel.core.model.KEY_ESTIMATED_RANGE_M
 import com.zwheel.core.model.KEY_IS_RIDING
+import com.zwheel.core.model.KEY_LAST_ERROR_CODE
 import com.zwheel.core.model.KEY_SPEED_MPS_CORRECTED
 import com.zwheel.core.model.KEY_SPEED_UNIT
 import com.zwheel.core.model.KEY_TOP_SPEED_MPS
@@ -23,6 +24,7 @@ class WearPayloadEncodeTest {
         speedUnit: SpeedUnit = SpeedUnit.MPH,
         isRiding: Boolean = true,
         connectionState: ConnectionState = ConnectionState.SUBSCRIBED,
+        lastErrorCode: Int? = null,
     ) = WatchPayload(
         speedMetersPerSecondCorrected = speedMps,
         topSpeedMetersPerSecond = topSpeedMps,
@@ -31,6 +33,7 @@ class WearPayloadEncodeTest {
         speedUnit = speedUnit,
         isRiding = isRiding,
         connectionState = connectionState,
+        lastErrorCode = lastErrorCode,
     )
 
     @Test
@@ -97,5 +100,11 @@ class WearPayloadEncodeTest {
             "DISCONNECTED",
             payload(connectionState = ConnectionState.DISCONNECTED).toDataEntries()[KEY_CONNECTION_STATE],
         )
+    }
+
+    @Test
+    fun `last error code encodes as int with sentinel`() {
+        assertEquals(23, payload(lastErrorCode = 23).toDataEntries()[KEY_LAST_ERROR_CODE] as Int)
+        assertEquals(-1, payload(lastErrorCode = null).toDataEntries()[KEY_LAST_ERROR_CODE] as Int)
     }
 }

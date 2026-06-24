@@ -17,15 +17,17 @@ class WearPayloadDecodeTest {
         isRiding: Boolean = true,
         connStateStr: String? = "SUBSCRIBED",
         safetyHeadroomRaw: Int = -1,
+        lastErrorCodeRaw: Int = -1,
     ) = decodeWatchPayload(
-        speedRaw,
-        topSpeedRaw,
-        batteryRaw,
-        rangeRaw,
-        speedUnitStr,
-        isRiding,
-        connStateStr,
-        safetyHeadroomRaw,
+        speedRaw = speedRaw,
+        topSpeedRaw = topSpeedRaw,
+        batteryRaw = batteryRaw,
+        rangeRaw = rangeRaw,
+        speedUnitStr = speedUnitStr,
+        isRiding = isRiding,
+        connStateStr = connStateStr,
+        safetyHeadroomRaw = safetyHeadroomRaw,
+        lastErrorCodeRaw = lastErrorCodeRaw,
     )
 
     @Test
@@ -122,5 +124,16 @@ class WearPayloadDecodeTest {
     @Test
     fun `safety headroom value decodes correctly`() {
         assertEquals(3, decode(safetyHeadroomRaw = 3).safetyHeadroom)
+    }
+
+    @Test
+    fun `last error code sentinel decodes to null`() {
+        assertNull(decode(lastErrorCodeRaw = -1).lastErrorCode)
+        assertNull(decode(lastErrorCodeRaw = 0).lastErrorCode)
+    }
+
+    @Test
+    fun `last error code value decodes correctly`() {
+        assertEquals(23, decode(lastErrorCodeRaw = 23).lastErrorCode)
     }
 }

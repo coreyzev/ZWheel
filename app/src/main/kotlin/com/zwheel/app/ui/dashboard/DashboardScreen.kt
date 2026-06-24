@@ -25,6 +25,8 @@ fun DashboardScreen(
     locationGranted: Boolean = true,
     locationPermanentlyDenied: Boolean = false,
     isReconnecting: Boolean = false,
+    errorCode: Int? = null,
+    onDismissError: () -> Unit = {},
 ) {
     val c = LocalZWheelColors.current
 
@@ -90,6 +92,12 @@ fun DashboardScreen(
         }
         if (isReconnecting) {
             ReconnectingOverlay()
+        }
+        if (errorCode != null) {
+            ErrorCodeOverlay(
+                errorCode = errorCode,
+                onDismiss = onDismissError,
+            )
         }
     }
 }

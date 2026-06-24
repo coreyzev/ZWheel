@@ -17,6 +17,7 @@ private const val METERS_TO_KM = 0.001
 fun ZWheelWearScreen(payload: WatchPayload?, isAmbient: Boolean = false) {
     val state = payload?.toUiState() ?: WearDashboardUiState.empty()
     when (state.activeFace(isAmbient)) {
+        WearDashboardUiState.Face.ERROR -> ErrorFace(state.lastErrorCode!!)
         WearDashboardUiState.Face.ACTIVE -> ActiveFace(state)
         WearDashboardUiState.Face.CAUTION -> CautionFace(state)
         WearDashboardUiState.Face.AMBIENT -> AmbientFace(state)
@@ -35,10 +36,12 @@ internal data class WearDashboardUiState(
     val connectionLabel: String,
     val pushbackApproaching: Boolean,
     val isConnected: Boolean,
+    val lastErrorCode: Int? = null,
 ) {
-    enum class Face { ACTIVE, CAUTION, AMBIENT, DISCONNECTED }
+    enum class Face { ERROR, ACTIVE, CAUTION, AMBIENT, DISCONNECTED }
 
     fun activeFace(isAmbient: Boolean): Face = when {
+        lastErrorCode != null -> Face.ERROR
         isAmbient -> Face.AMBIENT
         !isConnected -> Face.DISCONNECTED
         pushbackApproaching -> Face.CAUTION
@@ -57,6 +60,7 @@ internal data class WearDashboardUiState(
             connectionLabel = "SCANNING",
             pushbackApproaching = false,
             isConnected = false,
+            lastErrorCode = null,
         )
     }
 }
@@ -88,6 +92,7 @@ private fun WatchPayload.toUiState(): WearDashboardUiState {
         connectionLabel = connectionState.name,
         pushbackApproaching = pushbackApproaching,
         isConnected = connected,
+        lastErrorCode = lastErrorCode,
     )
 }
 
@@ -146,6 +151,7 @@ private fun previewPayload(
     isRiding: Boolean = true,
     connectionState: ConnectionState = ConnectionState.SUBSCRIBED,
     safetyHeadroom: Int? = null,
+    lastErrorCode: Int? = null,
 ) = WatchPayload(
     speedMetersPerSecondCorrected = speedMetersPerSecondCorrected,
     topSpeedMetersPerSecond = topSpeedMetersPerSecond,
@@ -155,4 +161,5 @@ private fun previewPayload(
     isRiding = isRiding,
     connectionState = connectionState,
     safetyHeadroom = safetyHeadroom,
+    lastErrorCode = lastErrorCode,
 )

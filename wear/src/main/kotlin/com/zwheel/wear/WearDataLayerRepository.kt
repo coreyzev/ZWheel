@@ -12,6 +12,7 @@ import com.zwheel.core.model.KEY_BATTERY_PCT
 import com.zwheel.core.model.KEY_CONNECTION_STATE
 import com.zwheel.core.model.KEY_ESTIMATED_RANGE_M
 import com.zwheel.core.model.KEY_IS_RIDING
+import com.zwheel.core.model.KEY_LAST_ERROR_CODE
 import com.zwheel.core.model.KEY_SAFETY_HEADROOM
 import com.zwheel.core.model.KEY_SPEED_MPS_CORRECTED
 import com.zwheel.core.model.KEY_SPEED_UNIT
@@ -67,6 +68,7 @@ internal fun decodeWatchPayload(
     isRiding: Boolean,
     connStateStr: String?,
     safetyHeadroomRaw: Int,
+    lastErrorCodeRaw: Int,
 ): WatchPayload = WatchPayload(
     speedMetersPerSecondCorrected = if (speedRaw < 0) null else speedRaw.toDouble(),
     topSpeedMetersPerSecond = topSpeedRaw.toDouble(),
@@ -84,6 +86,7 @@ internal fun decodeWatchPayload(
         ConnectionState.DISCONNECTED
     },
     safetyHeadroom = if (safetyHeadroomRaw < 0) null else safetyHeadroomRaw,
+    lastErrorCode = if (lastErrorCodeRaw <= 0) null else lastErrorCodeRaw,
 )
 
 private fun DataMap.toWatchPayload(): WatchPayload = decodeWatchPayload(
@@ -95,4 +98,5 @@ private fun DataMap.toWatchPayload(): WatchPayload = decodeWatchPayload(
     isRiding = getBoolean(KEY_IS_RIDING),
     connStateStr = getString(KEY_CONNECTION_STATE),
     safetyHeadroomRaw = getInt(KEY_SAFETY_HEADROOM, -1),
+    lastErrorCodeRaw = getInt(KEY_LAST_ERROR_CODE, -1),
 )

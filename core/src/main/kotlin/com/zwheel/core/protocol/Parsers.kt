@@ -116,6 +116,11 @@ object Parsers {
 
     fun batterySerialNumber(value: ByteArray): String = value.uint16BigEndian().toString()
 
+    fun lastErrorCode(bytes: ByteArray): Int? {
+        val code = unsignedInt16(bytes)
+        return if (code == 0) null else code
+    }
+
     private fun ByteArray.uint16BigEndian(): Int {
         val bytes = requireSize(2)
         return ((bytes[0].toInt() and 0xff) shl 8) or (bytes[1].toInt() and 0xff)

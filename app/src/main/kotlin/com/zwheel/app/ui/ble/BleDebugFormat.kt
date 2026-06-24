@@ -16,9 +16,11 @@ internal val dumpCharacteristics = listOf(
     OwUuids.TEMPERATURE,
     OwUuids.SAFETY_HEADROOM,
     OwUuids.STATUS_ERROR,
+    OwUuids.LAST_ERROR_CODE,  // investigation: emits constant notifications, not clear it's error codes
     OwUuids.PITCH,
     OwUuids.ROLL,
     OwUuids.YAW,
+    OwUuids.ODOMETER,
     OwUuids.RIDE_MODE,
 )
 
@@ -33,7 +35,14 @@ internal val telemetryProbeCharacteristics = listOf(
     ProbeCharacteristic("tmp", OwUuids.TEMPERATURE),
     ProbeCharacteristic("safe", OwUuids.SAFETY_HEADROOM),
     ProbeCharacteristic("err", OwUuids.STATUS_ERROR),
+    ProbeCharacteristic("last_err", OwUuids.LAST_ERROR_CODE),
     ProbeCharacteristic("pitch", OwUuids.PITCH),
+    ProbeCharacteristic("odo", OwUuids.ODOMETER),
+    ProbeCharacteristic("lt_odo", OwUuids.LIFETIME_ODOMETER),
+    ProbeCharacteristic("lt_ah", OwUuids.LIFETIME_AMP_HOURS),
+    ProbeCharacteristic("lights", OwUuids.LIGHTS),
+    ProbeCharacteristic("lights_f", OwUuids.LIGHTS_FRONT),
+    ProbeCharacteristic("lights_b", OwUuids.LIGHTS_BACK),
     ProbeCharacteristic("mode", OwUuids.RIDE_MODE),
 )
 

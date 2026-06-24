@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -43,7 +44,18 @@ internal fun HomeAssistantSection(
     modifier: Modifier = Modifier,
 ) {
     val c = LocalZWheelColors.current
-    val haEnabled = haUrl.isNotBlank() && haToken.isNotBlank()
+
+    // Local draft state — decoupled from the async DataStore/EncryptedSharedPreferences
+    // round-trip. Without this, every keystroke triggers an async write → re-read cycle
+    // that races the cursor and makes the token field appear uneditable.
+    var localUrl by remember { mutableStateOf("") }
+    var localToken by remember { mutableStateOf("") }
+    var urlInitialized by remember { mutableStateOf(false) }
+    var tokenInitialized by remember { mutableStateOf(false) }
+    if (!urlInitialized && haUrl.isNotEmpty()) { localUrl = haUrl; urlInitialized = true }
+    if (!tokenInitialized && haToken.isNotEmpty()) { localToken = haToken; tokenInitialized = true }
+
+    val haEnabled = localUrl.isNotBlank() && localToken.isNotBlank()
     var expanded by remember(haEnabled) { mutableStateOf(haEnabled) }
     var showToken by remember { mutableStateOf(false) }
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -60,9 +72,11 @@ internal fun HomeAssistantSection(
             )
             Switch(
                 checked = haEnabled || expanded,
-                onCheckedChange = {
-                    expanded = it
-                    if (!it) {
+                onCheckedChange = { on ->
+                    expanded = on
+                    if (!on) {
+                        localUrl = ""
+                        localToken = ""
                         onUrlChanged("")
                         onTokenChanged("")
                     }
@@ -72,19 +86,23 @@ internal fun HomeAssistantSection(
         }
         if (expanded) {
             OutlinedTextField(
-                value = haUrl,
-                onValueChange = onUrlChanged,
+                value = localUrl,
+                onValueChange = { localUrl = it },
                 label = { Text("Server URL") },
                 placeholder = { Text("http://homeassistant.local:8123") },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onFocusChanged { if (!it.isFocused) onUrlChanged(localUrl) },
                 singleLine = true,
                 colors = darkTextFieldColors(),
             )
             OutlinedTextField(
-                value = haToken,
-                onValueChange = onTokenChanged,
+                value = localToken,
+                onValueChange = { localToken = it },
                 label = { Text("Long-lived access token") },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onFocusChanged { if (!it.isFocused) onTokenChanged(localToken) },
                 singleLine = true,
                 visualTransformation = if (showToken) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
@@ -94,7 +112,7 @@ internal fun HomeAssistantSection(
                 },
                 colors = darkTextFieldColors(),
             )
-            if (haUrl.startsWith("http://")) {
+            if (localUrl.startsWith("http://")) {
                 WarningCallout("Token sent over unencrypted HTTP. Use https:// if available.")
             }
             Row(
@@ -103,8 +121,13 @@ internal fun HomeAssistantSection(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Button(
-                    onClick = onTestConnection,
-                    enabled = haUrl.isNotBlank() && haToken.isNotBlank(),
+                    onClick = {
+                        // Flush drafts before testing so the VM has the current values
+                        onUrlChanged(localUrl)
+                        onTokenChanged(localToken)
+                        onTestConnection()
+                    },
+                    enabled = localUrl.isNotBlank() && localToken.isNotBlank(),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = c.cardElevated,
                         contentColor = c.lime,

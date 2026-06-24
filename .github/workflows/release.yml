@@ -5,67 +5,46 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out
-        uses: actions/checkout@v4
-
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
-
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install SDK packages
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: "8.10.2"
-
-      - name: Decode keystore
-        run: echo "${{ secrets.DEBUG_KEYSTORE_BASE64 }}" | base64 -d > keystore.jks
-
-      - name: Build signed debug APK
-        env:
-          KEYSTORE_PATH: ${{ github.workspace }}/keystore.jks
-          KEYSTORE_PASSWORD: ${{ secrets.DEBUG_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.DEBUG_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.DEBUG_KEY_PASSWORD }}
-          VERSION_CODE: ${{ github.run_number }}
-          VERSION_NAME: "0.1.${{ github.run_number }}"
-        run: gradle clean check :app:assembleDebug :wear:assembleDebug
-
-      - name: Prepare release asset
-        run: cp app/build/outputs/apk/debug/app-debug.apk zwheel-debug.apk
-
-      - name: Upload release asset
-        uses: actions/upload-artifact@v4
-        with:
-          name: zwheel-debug
-          path: zwheel-debug.apk
-
   release:
     runs-on: ubuntu-latest
-    needs: [build]
     steps:
       - name: Check out
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Download release asset
-        uses: actions/download-artifact@v4
-        with:
-          name: zwheel-debug
-          path: .
+      - name: Find latest successful CI run on main
+        id: ci-run
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          run_id=$(gh run list \
+            --repo ${{ github.repository }} \
+            --workflow=ci.yml \
+            --branch=main \
+            --status=success \
+            --limit=1 \
+            --json databaseId \
+            --jq '.[0].databaseId')
+          if [ -z "$run_id" ] || [ "$run_id" = "null" ]; then
+            echo "No successful CI run found on main" >&2
+            exit 1
+          fi
+          echo "run_id=$run_id" >> $GITHUB_OUTPUT
+          echo "Using CI run $run_id"
+
+      - name: Download APK from CI
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh run download ${{ steps.ci-run.outputs.run_id }} \
+            --repo ${{ github.repository }} \
+            --name=zwheel-debug \
+            --dir=./artifacts
+          mv artifacts/app-debug.apk zwheel-debug.apk
 
       - name: Tag build
         run: |
@@ -77,6 +56,7 @@ jobs:
         with:
           tag_name: "build-${{ github.run_number }}"
           name: "Debug Build #${{ github.run_number }}"
+          body: "Built from CI run ${{ steps.ci-run.outputs.run_id }} on `main`."
           files: zwheel-debug.apk
           prerelease: true
           make_latest: true

@@ -27,6 +27,7 @@ internal class RideRecorder(
     private var speedAboveThresholdCounterSeconds: Int = 0
     private var maxSpeedMetersPerSecondCorrected: Double = 0.0
     private var distanceMetersCorrected: Double = 0.0
+    private var lastTripAmpHours: Double? = null
 
     suspend fun onTick(
         state: BoardState,
@@ -52,6 +53,7 @@ internal class RideRecorder(
         val sessionId = currentSessionId ?: return
         val correctedSpeed = state.speedMetersPerSecondCorrected
         distanceMetersCorrected += (correctedSpeed ?: 0.0) * 1.0
+        state.tripAmpHours?.let { lastTripAmpHours = it }
         _tripDistanceMeters.value = distanceMetersCorrected
         maxSpeedMetersPerSecondCorrected = maxOf(
             maxSpeedMetersPerSecondCorrected,
@@ -85,6 +87,7 @@ internal class RideRecorder(
                 endEpochMillis = clock.nowEpochMillis(),
                 maxSpeedMetersPerSecondCorrected = maxSpeedMetersPerSecondCorrected,
                 distanceMetersCorrected = distanceMetersCorrected,
+                wattHoursUsed = lastTripAmpHours?.let { it * 63.0 },
             ),
         )
         currentSessionId = null
@@ -92,6 +95,7 @@ internal class RideRecorder(
         speedAboveThresholdCounterSeconds = 0
         maxSpeedMetersPerSecondCorrected = 0.0
         distanceMetersCorrected = 0.0
+        lastTripAmpHours = null
         _tripDistanceMeters.value = 0.0
         onSessionChanged?.invoke(false)
     }

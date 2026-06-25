@@ -21,7 +21,7 @@ SAFE_FILENAME = re.compile(r"^[A-Za-z0-9._-]+\.jsonl$")
 class ReceiverState:
     pairing_password: str
     upload_dir: Path
-    max_upload_bytes: int = 1_048_576
+    max_upload_bytes: int = 26_214_400  # 25 MB
     token_file: Path | None = None
     tokens: set[str] = field(default_factory=set)
 
@@ -140,7 +140,7 @@ def main() -> None:
     host = os.environ.get("ZWHEEL_RECEIVER_HOST", "0.0.0.0")
     port = int(os.environ.get("ZWHEEL_RECEIVER_PORT", "8765"))
     upload_dir = Path(os.environ.get("ZWHEEL_UPLOAD_DIR", "/tmp/zwheel-ble-uploads"))
-    max_upload_bytes = int(os.environ.get("ZWHEEL_MAX_UPLOAD_BYTES", "10485760"))
+    max_upload_bytes = int(os.environ.get("ZWHEEL_MAX_UPLOAD_BYTES", "26214400"))  # 25 MB
     token_file = Path(os.environ.get("ZWHEEL_TOKEN_FILE", str(upload_dir / ".upload_tokens")))
     state = ReceiverState(
         pairing_password=password,

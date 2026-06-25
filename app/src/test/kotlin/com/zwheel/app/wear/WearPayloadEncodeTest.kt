@@ -6,6 +6,7 @@ import com.zwheel.core.model.KEY_CONNECTION_STATE
 import com.zwheel.core.model.KEY_ESTIMATED_RANGE_M
 import com.zwheel.core.model.KEY_IS_RIDING
 import com.zwheel.core.model.KEY_LAST_ERROR_CODE
+import com.zwheel.core.model.KEY_SAFETY_HEADROOM
 import com.zwheel.core.model.KEY_SPEED_MPS_CORRECTED
 import com.zwheel.core.model.KEY_SPEED_UNIT
 import com.zwheel.core.model.KEY_TOP_SPEED_MPS
@@ -24,6 +25,7 @@ class WearPayloadEncodeTest {
         speedUnit: SpeedUnit = SpeedUnit.MPH,
         isRiding: Boolean = true,
         connectionState: ConnectionState = ConnectionState.SUBSCRIBED,
+        safetyHeadroom: Int? = null,
         lastErrorCode: Int? = null,
     ) = WatchPayload(
         speedMetersPerSecondCorrected = speedMps,
@@ -33,6 +35,7 @@ class WearPayloadEncodeTest {
         speedUnit = speedUnit,
         isRiding = isRiding,
         connectionState = connectionState,
+        safetyHeadroom = safetyHeadroom,
         lastErrorCode = lastErrorCode,
     )
 
@@ -106,5 +109,12 @@ class WearPayloadEncodeTest {
     fun `last error code encodes as int with sentinel`() {
         assertEquals(23, payload(lastErrorCode = 23).toDataEntries()[KEY_LAST_ERROR_CODE] as Int)
         assertEquals(-1, payload(lastErrorCode = null).toDataEntries()[KEY_LAST_ERROR_CODE] as Int)
+    }
+
+    @Test
+    fun `safety headroom encodes with sentinel for null`() {
+        assertEquals(5, payload(safetyHeadroom = 5).toDataEntries()[KEY_SAFETY_HEADROOM] as Int)
+        assertEquals(0, payload(safetyHeadroom = 0).toDataEntries()[KEY_SAFETY_HEADROOM] as Int)
+        assertEquals(-1, payload(safetyHeadroom = null).toDataEntries()[KEY_SAFETY_HEADROOM] as Int)
     }
 }

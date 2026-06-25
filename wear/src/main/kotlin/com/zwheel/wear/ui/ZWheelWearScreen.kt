@@ -65,7 +65,7 @@ internal data class WearDashboardUiState(
     }
 }
 
-private fun WatchPayload.toUiState(): WearDashboardUiState {
+internal fun WatchPayload.toUiState(): WearDashboardUiState {
     val isMph = speedUnit == SpeedUnit.MPH
     val speedConversion = if (isMph) METERS_PER_SECOND_TO_MPH else METERS_PER_SECOND_TO_KPH
     val rangeConversion = if (isMph) METERS_TO_MILES else METERS_TO_KM

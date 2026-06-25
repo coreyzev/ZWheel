@@ -38,6 +38,18 @@ class WearDataLayerRepository @Inject constructor(
 
     fun register() {
         dataClient.addListener(this)
+        // Read existing DataItem on startup so the watch doesn't stay stuck on the
+        // searching screen when the activity launches after the phone is already
+        // connected. The listener only fires for *changes*, not the current value.
+        dataClient.getDataItems()
+            .addOnSuccessListener { items ->
+                for (item in items) {
+                    if (item.uri.path == "/zwheel/state") {
+                        onDataMapReceived(DataMapItem.fromDataItem(item).dataMap)
+                    }
+                }
+                items.release()
+            }
     }
 
     fun unregister() {

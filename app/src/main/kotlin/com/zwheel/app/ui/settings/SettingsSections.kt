@@ -296,6 +296,170 @@ internal fun SettingsFooter(modifier: Modifier = Modifier) {
 }
 
 @Composable
+internal fun AudioAlertsSection(
+    prefs: com.zwheel.app.data.settings.UserPreferences,
+    onAlertsEnabled: (Boolean) -> Unit,
+    onAlertType: (com.zwheel.core.alerts.AlertType) -> Unit,
+    onThresholdMph: (Int) -> Unit,
+    onThresholdHeadroom: (Int) -> Unit,
+    onAlertOutput: (com.zwheel.core.alerts.AlertOutput) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val c = LocalZWheelColors.current
+
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionEyebrow("AUDIO ALERTS")
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                "Speed alerts",
+                style = TextStyle(
+                    fontFamily = SairaFamily,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.W600,
+                ),
+                color = c.textSecondary,
+            )
+            Switch(
+                checked = prefs.audioAlertsEnabled,
+                onCheckedChange = onAlertsEnabled,
+                colors = settingsSwitchColors(),
+            )
+        }
+
+        AnimatedVisibility(visible = prefs.audioAlertsEnabled) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                HorizontalDivider(color = c.divider, thickness = 0.5.dp)
+
+                Text(
+                    "ALERT TYPE",
+                    style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 9.sp, letterSpacing = 1.5.sp),
+                    color = c.textDimmest,
+                )
+                SegmentedToggle(
+                    options = listOf(
+                        com.zwheel.core.alerts.AlertType.SPEED to "Speed",
+                        com.zwheel.core.alerts.AlertType.HEADROOM to "Headroom",
+                    ),
+                    selected = prefs.audioAlertType,
+                    onSelected = onAlertType,
+                )
+
+                val thresholdLabel = when (prefs.audioAlertType) {
+                    com.zwheel.core.alerts.AlertType.SPEED -> "THRESHOLD (mph)"
+                    com.zwheel.core.alerts.AlertType.HEADROOM -> "THRESHOLD (headroom <=)"
+                }
+                Text(
+                    thresholdLabel,
+                    style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 9.sp, letterSpacing = 1.5.sp),
+                    color = c.textDimmest,
+                )
+
+                when (prefs.audioAlertType) {
+                    com.zwheel.core.alerts.AlertType.SPEED -> {
+                        var sliderMph by remember(prefs.audioAlertThresholdMph) {
+                            mutableStateOf(prefs.audioAlertThresholdMph.toFloat())
+                        }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Slider(
+                                value = sliderMph,
+                                onValueChange = { sliderMph = it },
+                                onValueChangeFinished = { onThresholdMph(sliderMph.toInt()) },
+                                valueRange = 5f..40f,
+                                steps = 34,
+                                modifier = Modifier.weight(1f),
+                                colors = SliderDefaults.colors(
+                                    thumbColor = c.lime,
+                                    activeTrackColor = c.lime,
+                                    inactiveTrackColor = c.buttonBorder,
+                                ),
+                            )
+                            Text(
+                                "${sliderMph.toInt()} mph",
+                                style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 12.sp),
+                                color = c.textSecondary,
+                                modifier = Modifier.width(52.dp),
+                            )
+                        }
+                    }
+
+                    com.zwheel.core.alerts.AlertType.HEADROOM -> {
+                        var sliderHeadroom by remember(prefs.audioAlertThresholdHeadroom) {
+                            mutableStateOf(prefs.audioAlertThresholdHeadroom.toFloat())
+                        }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Slider(
+                                value = sliderHeadroom,
+                                onValueChange = { sliderHeadroom = it },
+                                onValueChangeFinished = { onThresholdHeadroom(sliderHeadroom.toInt()) },
+                                valueRange = -10f..10f,
+                                steps = 19,
+                                modifier = Modifier.weight(1f),
+                                colors = SliderDefaults.colors(
+                                    thumbColor = c.lime,
+                                    activeTrackColor = c.lime,
+                                    inactiveTrackColor = c.buttonBorder,
+                                ),
+                            )
+                            Text(
+                                "<= ${sliderHeadroom.toInt()}",
+                                style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 12.sp),
+                                color = c.textSecondary,
+                                modifier = Modifier.width(52.dp),
+                            )
+                        }
+                    }
+                }
+
+                Text(
+                    "OUTPUT",
+                    style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 9.sp, letterSpacing = 1.5.sp),
+                    color = c.textDimmest,
+                )
+                SegmentedToggle(
+                    options = listOf(
+                        com.zwheel.core.alerts.AlertOutput.AUTO to "Auto",
+                        com.zwheel.core.alerts.AlertOutput.WATCH to "Watch",
+                        com.zwheel.core.alerts.AlertOutput.PHONE to "Phone",
+                    ),
+                    selected = prefs.audioAlertOutput,
+                    onSelected = onAlertOutput,
+                )
+
+                val outputHint = when (prefs.audioAlertOutput) {
+                    com.zwheel.core.alerts.AlertOutput.AUTO ->
+                        "Plays through the watch speaker if connected, otherwise the phone."
+                    com.zwheel.core.alerts.AlertOutput.WATCH ->
+                        "Plays through the watch speaker. Falls back to phone if unavailable."
+                    com.zwheel.core.alerts.AlertOutput.PHONE ->
+                        "Plays through the phone's current audio route."
+                }
+                Text(
+                    outputHint,
+                    style = TextStyle(
+                        fontFamily = SairaFamily,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.W400,
+                    ),
+                    color = c.textMuted,
+                    lineHeight = 17.sp,
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun <T> SegmentedToggle(options: List<Pair<T, String>>, selected: T, onSelected: (T) -> Unit) {
     val c = LocalZWheelColors.current
     Row(

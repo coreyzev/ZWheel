@@ -119,6 +119,26 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun setAudioAlertsEnabled(enabled: Boolean) {
+        viewModelScope.launch { repo.setAudioAlertsEnabled(enabled) }
+    }
+
+    fun setAudioAlertType(type: com.zwheel.core.alerts.AlertType) {
+        viewModelScope.launch { repo.setAudioAlertType(type) }
+    }
+
+    fun setAudioAlertThresholdMph(mph: Int) {
+        viewModelScope.launch { repo.setAudioAlertThresholdMph(mph) }
+    }
+
+    fun setAudioAlertThresholdHeadroom(value: Int) {
+        viewModelScope.launch { repo.setAudioAlertThresholdHeadroom(value) }
+    }
+
+    fun setAudioAlertOutput(output: com.zwheel.core.alerts.AlertOutput) {
+        viewModelScope.launch { repo.setAudioAlertOutput(output) }
+    }
+
     fun setTireDiameter(value: Double) {
         viewModelScope.launch {
             repo.setTireDiameterInches(value)

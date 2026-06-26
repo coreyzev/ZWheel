@@ -28,14 +28,11 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.VolumeOff
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Watch
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -330,79 +327,29 @@ internal fun AudioAlertsSection(
     modifier: Modifier = Modifier,
 ) {
     val c = LocalZWheelColors.current
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SectionEyebrow("AUDIO ALERTS")
-        Surface(
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(18.dp),
-            color = c.card,
-            border = BorderStroke(1.dp, c.border),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Column {
-                // Enabled row
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(13.dp),
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        val on = prefs.audioAlertsEnabled
-                        Box(
-                            modifier = Modifier
-                                .size(42.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (on) Color(0xFF15190D) else c.legendCard)
-                                .border(1.dp, if (on) c.borderLime else c.border, RoundedCornerShape(12.dp)),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                imageVector = if (on) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
-                                contentDescription = null,
-                                tint = if (on) c.lime else c.textLabel,
-                                modifier = Modifier.size(23.dp),
-                            )
-                        }
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(
-                                "Alerts",
-                                style = TextStyle(fontFamily = SairaFamily, fontSize = 16.sp, fontWeight = FontWeight.W700),
-                                color = c.textPrimary,
-                            )
-                            Text(
-                                if (on) "On — you'll hear it while you ride" else "Off — silent while you ride",
-                                style = TextStyle(fontFamily = SairaFamily, fontSize = 12.sp),
-                                color = c.textMuted,
-                            )
-                        }
-                    }
-                    Switch(
-                        checked = prefs.audioAlertsEnabled,
-                        onCheckedChange = onAlertsEnabled,
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = c.screenBg,
-                            checkedTrackColor = c.lime,
-                            uncheckedTrackColor = c.buttonBorder,
-                            uncheckedThumbColor = c.screenBg,
-                        ),
-                    )
-                }
-
-                AnimatedVisibility(visible = prefs.audioAlertsEnabled) {
-                    Column {
-                        HorizontalDivider(color = c.divider, thickness = 1.dp)
-                        AlertTypeSection(prefs.audioAlertType, onAlertType)
-                        HorizontalDivider(color = c.divider, thickness = 1.dp)
-                        ThresholdSection(prefs, onThresholdMph, onThresholdHeadroom)
-                        HorizontalDivider(color = c.divider, thickness = 1.dp)
-                        OutputSection(prefs.audioAlertOutput, onAlertOutput)
-                    }
-                }
+            Text(
+                "Alerts",
+                style = TextStyle(fontFamily = SairaFamily, fontSize = 14.sp, fontWeight = FontWeight.W600),
+                color = c.textSecondary,
+            )
+            Switch(
+                checked = prefs.audioAlertsEnabled,
+                onCheckedChange = onAlertsEnabled,
+                colors = settingsSwitchColors(),
+            )
+        }
+        AnimatedVisibility(visible = prefs.audioAlertsEnabled) {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                AlertTypeSection(prefs.audioAlertType, onAlertType)
+                ThresholdSection(prefs, onThresholdMph, onThresholdHeadroom)
+                OutputSection(prefs.audioAlertOutput, onAlertOutput)
             }
         }
     }
@@ -411,10 +358,7 @@ internal fun AudioAlertsSection(
 @Composable
 private fun AlertTypeSection(type: AlertType, onType: (AlertType) -> Unit) {
     val c = LocalZWheelColors.current
-    Column(
-        modifier = Modifier.padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(11.dp),
-    ) {
+    Column(verticalArrangement = Arrangement.spacedBy(11.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(
                 "What should trigger an alert?",
@@ -444,7 +388,7 @@ private fun AlertTypeSection(type: AlertType, onType: (AlertType) -> Unit) {
 
 @Composable
 private fun ThresholdSection(prefs: UserPreferences, onMph: (Int) -> Unit, onHeadroom: (Int) -> Unit) {
-    Column(modifier = Modifier.padding(16.dp)) {
+    Column {
         when (prefs.audioAlertType) {
             AlertType.HEADROOM -> HeadroomThreshold(prefs.audioAlertThresholdHeadroom, onHeadroom)
             AlertType.SPEED -> SpeedThreshold(prefs.audioAlertThresholdMph, onMph)
@@ -590,10 +534,7 @@ private fun SpeedThreshold(thresholdMph: Int, onThreshold: (Int) -> Unit) {
 @Composable
 private fun OutputSection(output: AlertOutput, onOutput: (AlertOutput) -> Unit) {
     val c = LocalZWheelColors.current
-    Column(
-        modifier = Modifier.padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(11.dp),
-    ) {
+    Column(verticalArrangement = Arrangement.spacedBy(11.dp)) {
         Text(
             "Where should it play?",
             style = TextStyle(fontFamily = SairaFamily, fontSize = 14.sp, fontWeight = FontWeight.W700),
@@ -814,14 +755,18 @@ private fun <T> SegmentedToggle(options: List<Pair<T, String>>, selected: T, onS
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(999.dp))
-            .border(1.dp, c.buttonBorder, RoundedCornerShape(999.dp)),
+            .clip(RoundedCornerShape(11.dp))
+            .border(1.dp, c.border, RoundedCornerShape(11.dp))
+            .background(c.screenBg)
+            .padding(3.dp),
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
     ) {
         options.forEach { (option, label) ->
             val isSelected = option == selected
             Box(
                 modifier = Modifier
                     .weight(1f)
+                    .clip(RoundedCornerShape(8.dp))
                     .background(if (isSelected) c.lime else Color.Transparent)
                     .clickable { onSelected(option) }
                     .padding(vertical = 10.dp),
@@ -830,7 +775,7 @@ private fun <T> SegmentedToggle(options: List<Pair<T, String>>, selected: T, onS
                 Text(
                     text = label,
                     style = TextStyle(fontFamily = SairaFamily, fontSize = 14.sp, fontWeight = FontWeight.W700),
-                    color = if (isSelected) c.screenBg else c.textSecondary,
+                    color = if (isSelected) c.screenBg else c.textMuted,
                 )
             }
         }

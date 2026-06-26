@@ -1,0 +1,43 @@
+package com.zwheel.app.service
+
+import android.content.Context
+import android.util.Log
+import com.google.android.gms.wearable.Wearable
+import com.zwheel.core.alerts.AlertType
+
+internal const val WEAR_ALERT_PATH = "/zwheel/alert"
+
+internal class WearAlertDispatcher(private val context: Context) {
+    private val messageClient = Wearable.getMessageClient(context)
+    private val nodeClient = Wearable.getNodeClient(context)
+
+    /** Send alert to all connected watch nodes. Returns immediately; delivery is async. */
+    fun fire(type: AlertType) {
+        nodeClient.connectedNodes.addOnSuccessListener { nodes ->
+            nodes.forEach { node ->
+                messageClient.sendMessage(node.id, WEAR_ALERT_PATH, type.name.toByteArray())
+            }
+        }.addOnFailureListener { e ->
+            Log.w("WearAlertDispatcher", "Could not query nodes: ${e.message}")
+        }
+    }
+
+    /**
+     * AUTO mode: send to watch if any node is reachable, otherwise play on phone.
+     */
+    fun fireAutoWithFallback(type: AlertType, fallback: PhoneAudioPlayer) {
+        nodeClient.connectedNodes
+            .addOnSuccessListener { nodes ->
+                if (nodes.isNotEmpty()) {
+                    nodes.forEach { node ->
+                        messageClient.sendMessage(node.id, WEAR_ALERT_PATH, type.name.toByteArray())
+                    }
+                } else {
+                    fallback.play(type)
+                }
+            }
+            .addOnFailureListener {
+                fallback.play(type)
+            }
+    }
+}

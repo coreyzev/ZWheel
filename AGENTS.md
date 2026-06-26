@@ -85,6 +85,8 @@ the gate spec is the source of truth for your task.
   - `Changes requested — [specific issue]`
   Corey merges by default. Claude Code web/CLI may merge when Corey explicitly directs
   it. Codex does not merge.
+- **PR updates:** Prefer adding a comment (`gh pr comment`) over editing the PR body.
+  Take the path of least resistance — a comment is sufficient to communicate what changed.
 - Route work to Claude Code (not Codex) for: security-sensitive code, architecture
   violations, ADR authorship, or any task requiring cross-file design judgment.
   Everything else goes to Codex.

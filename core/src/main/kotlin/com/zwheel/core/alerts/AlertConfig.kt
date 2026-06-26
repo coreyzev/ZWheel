@@ -11,7 +11,7 @@ data class AlertConfig(
     val type: AlertType = AlertType.SPEED,
     /** Threshold in SI units. SPEED=m/s, HEADROOM=raw int as Double. */
     val threshold: Double = 7.152,
-    val output: AlertOutput = AlertOutput.AUTO,
+    val output: AlertOutput = AlertOutput.WATCH,
     /** How far the value must recover past the threshold before re-arming. Same unit as threshold. */
     val hysteresis: Double = 0.894,
     /** Minimum ms between repeated fires while still in the alert zone. */

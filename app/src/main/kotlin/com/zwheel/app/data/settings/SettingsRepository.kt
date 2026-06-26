@@ -75,7 +75,7 @@ class SettingsRepository(
             audioAlertType = prefs[AUDIO_ALERT_TYPE].toEnumOrDefault(AlertType.SPEED),
             audioAlertThresholdMph = prefs[AUDIO_ALERT_THRESHOLD_MPH] ?: 16,
             audioAlertThresholdHeadroom = prefs[AUDIO_ALERT_THRESHOLD_HEADROOM] ?: 0,
-            audioAlertOutput = prefs[AUDIO_ALERT_OUTPUT].toEnumOrDefault(AlertOutput.AUTO),
+            audioAlertOutput = prefs[AUDIO_ALERT_OUTPUT].toEnumOrDefault(AlertOutput.WATCH),
         )
     }
 
@@ -208,7 +208,7 @@ class SettingsRepository(
     }
 
     suspend fun setAudioAlertThresholdMph(mph: Int) {
-        dataStore.edit { it[AUDIO_ALERT_THRESHOLD_MPH] = mph.coerceIn(1, 60) }
+        dataStore.edit { it[AUDIO_ALERT_THRESHOLD_MPH] = mph.coerceIn(10, 35) }
     }
 
     suspend fun setAudioAlertThresholdHeadroom(value: Int) {

@@ -13,7 +13,7 @@ class AlertMonitorTest {
         enabled = true,
         type = AlertType.SPEED,
         threshold = 7.152,
-        output = AlertOutput.AUTO,
+        output = AlertOutput.WATCH,
         hysteresis = 0.894,
         cooldownMs = 10_000L,
     )
@@ -22,7 +22,7 @@ class AlertMonitorTest {
         enabled = true,
         type = AlertType.HEADROOM,
         threshold = 0.0,
-        output = AlertOutput.AUTO,
+        output = AlertOutput.WATCH,
         hysteresis = 2.0,
         cooldownMs = 10_000L,
     )

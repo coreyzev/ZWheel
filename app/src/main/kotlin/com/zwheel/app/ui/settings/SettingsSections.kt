@@ -2,14 +2,19 @@ package com.zwheel.app.ui.settings
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -18,11 +23,19 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Smartphone
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.VolumeOff
+import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.filled.Watch
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -36,8 +49,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -50,8 +70,12 @@ import com.zwheel.app.data.settings.UserPreferences
 import com.zwheel.app.ui.JetBrainsMonoFamily
 import com.zwheel.app.ui.LocalZWheelColors
 import com.zwheel.app.ui.SairaFamily
+import com.zwheel.app.ui.ZWheelColors
+import com.zwheel.core.alerts.AlertOutput
+import com.zwheel.core.alerts.AlertType
 import com.zwheel.core.model.SpeedUnit
 import com.zwheel.core.model.TemperatureUnit
+import kotlin.math.roundToInt
 
 @Composable
 internal fun UnitsSection(
@@ -290,170 +314,495 @@ internal fun SettingsFooter(modifier: Modifier = Modifier) {
                 fontSize = 10.sp,
                 fontWeight = FontWeight.W400,
             ),
-            color = Color(0xFF3A3E48), // spec §9 footer dim
+            color = Color(0xFF3A3E48),
         )
     }
 }
 
 @Composable
 internal fun AudioAlertsSection(
-    prefs: com.zwheel.app.data.settings.UserPreferences,
+    prefs: UserPreferences,
     onAlertsEnabled: (Boolean) -> Unit,
-    onAlertType: (com.zwheel.core.alerts.AlertType) -> Unit,
+    onAlertType: (AlertType) -> Unit,
     onThresholdMph: (Int) -> Unit,
     onThresholdHeadroom: (Int) -> Unit,
-    onAlertOutput: (com.zwheel.core.alerts.AlertOutput) -> Unit,
+    onAlertOutput: (AlertOutput) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val c = LocalZWheelColors.current
-
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         SectionEyebrow("AUDIO ALERTS")
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            color = c.card,
+            border = BorderStroke(1.dp, c.border),
+        ) {
+            Column {
+                // Enabled row
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(13.dp),
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        val on = prefs.audioAlertsEnabled
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (on) Color(0xFF15190D) else c.legendCard)
+                                .border(1.dp, if (on) c.borderLime else c.border, RoundedCornerShape(12.dp)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = if (on) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
+                                contentDescription = null,
+                                tint = if (on) c.lime else c.textLabel,
+                                modifier = Modifier.size(23.dp),
+                            )
+                        }
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(
+                                "Alerts",
+                                style = TextStyle(fontFamily = SairaFamily, fontSize = 16.sp, fontWeight = FontWeight.W700),
+                                color = c.textPrimary,
+                            )
+                            Text(
+                                if (on) "On — you'll hear it while you ride" else "Off — silent while you ride",
+                                style = TextStyle(fontFamily = SairaFamily, fontSize = 12.sp),
+                                color = c.textMuted,
+                            )
+                        }
+                    }
+                    Switch(
+                        checked = prefs.audioAlertsEnabled,
+                        onCheckedChange = onAlertsEnabled,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = c.screenBg,
+                            checkedTrackColor = c.lime,
+                            uncheckedTrackColor = c.buttonBorder,
+                            uncheckedThumbColor = c.screenBg,
+                        ),
+                    )
+                }
 
+                AnimatedVisibility(visible = prefs.audioAlertsEnabled) {
+                    Column {
+                        HorizontalDivider(color = c.divider, thickness = 1.dp)
+                        AlertTypeSection(prefs.audioAlertType, onAlertType)
+                        HorizontalDivider(color = c.divider, thickness = 1.dp)
+                        ThresholdSection(prefs, onThresholdMph, onThresholdHeadroom)
+                        HorizontalDivider(color = c.divider, thickness = 1.dp)
+                        OutputSection(prefs.audioAlertOutput, onAlertOutput)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AlertTypeSection(type: AlertType, onType: (AlertType) -> Unit) {
+    val c = LocalZWheelColors.current
+    Column(
+        modifier = Modifier.padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(11.dp),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(
+                "What should trigger an alert?",
+                style = TextStyle(fontFamily = SairaFamily, fontSize = 14.sp, fontWeight = FontWeight.W700),
+                color = c.textPrimary,
+            )
+            Text(
+                if (type == AlertType.HEADROOM)
+                    "Warns as your safety margin runs low — the headroom before the board gives out. Recommended."
+                else
+                    "Warns whenever you cross a top speed you set. Good for pacing, not for catching pushback.",
+                style = TextStyle(fontFamily = SairaFamily, fontSize = 12.sp),
+                color = c.textMuted,
+                lineHeight = 18.sp,
+            )
+        }
+        IconSegmented(
+            options = listOf(
+                Triple(AlertType.SPEED, Icons.Default.Speed, "Speed"),
+                Triple(AlertType.HEADROOM, Icons.Default.Shield, "Headroom"),
+            ),
+            selected = type,
+            onSelected = onType,
+        )
+    }
+}
+
+@Composable
+private fun ThresholdSection(prefs: UserPreferences, onMph: (Int) -> Unit, onHeadroom: (Int) -> Unit) {
+    Column(modifier = Modifier.padding(16.dp)) {
+        when (prefs.audioAlertType) {
+            AlertType.HEADROOM -> HeadroomThreshold(prefs.audioAlertThresholdHeadroom, onHeadroom)
+            AlertType.SPEED -> SpeedThreshold(prefs.audioAlertThresholdMph, onMph)
+        }
+    }
+}
+
+@Composable
+private fun HeadroomThreshold(threshold: Int, onThreshold: (Int) -> Unit) {
+    val c = LocalZWheelColors.current
+    var localVal by remember(threshold) { mutableStateOf(threshold.toFloat()) }
+    val rampColor = headroomRampColor(localVal.toInt(), c)
+
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.Bottom,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(
-                "Speed alerts",
-                style = TextStyle(
-                    fontFamily = SairaFamily,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.W600,
-                ),
-                color = c.textSecondary,
+            Column(
+                verticalArrangement = Arrangement.spacedBy(3.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 12.dp),
+            ) {
+                Text(
+                    "Alert when headroom falls to",
+                    style = TextStyle(fontFamily = SairaFamily, fontSize = 14.sp, fontWeight = FontWeight.W700),
+                    color = c.textPrimary,
+                )
+                Text(
+                    "0–100% · drag to set",
+                    style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 10.sp, letterSpacing = 1.sp),
+                    color = c.textLabel,
+                )
+            }
+            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    "${localVal.toInt()}",
+                    style = TextStyle(fontFamily = SairaFamily, fontSize = 38.sp, fontWeight = FontWeight.W900, lineHeight = 32.sp),
+                    color = rampColor,
+                )
+                Text(
+                    "%",
+                    style = TextStyle(fontFamily = SairaFamily, fontSize = 18.sp, fontWeight = FontWeight.W700),
+                    color = rampColor,
+                    modifier = Modifier.padding(bottom = 3.dp),
+                )
+            }
+        }
+
+        GradientSlider(
+            normalizedValue = localVal / 100f,
+            onNormalizedChange = { t -> localVal = (t * 100).roundToInt().coerceIn(0, 100).toFloat() },
+            onFinished = { onThreshold(localVal.toInt()) },
+            thumbRingColor = rampColor,
+            c = c,
+        )
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("0% floor", style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 9.sp), color = c.rampDanger)
+            Text("50%", style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 9.sp), color = c.textLabel)
+            Text("100% full", style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 9.sp), color = c.rampGood)
+        }
+
+        Text(
+            if (localVal.toInt() == 0)
+                "Only at 0% — the absolute floor, the instant before the board can no longer hold you up. Set it higher for an earlier heads-up."
+            else
+                "Fires the moment your reserve drops to ${localVal.toInt()}% or below. A higher number warns you sooner.",
+            style = TextStyle(fontFamily = SairaFamily, fontSize = 12.sp),
+            color = c.textMuted,
+            lineHeight = 18.sp,
+        )
+    }
+}
+
+@Composable
+private fun SpeedThreshold(thresholdMph: Int, onThreshold: (Int) -> Unit) {
+    val c = LocalZWheelColors.current
+    var localVal by remember(thresholdMph) { mutableStateOf(thresholdMph.toFloat()) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(3.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 12.dp),
+            ) {
+                Text(
+                    "Alert when I ride faster than",
+                    style = TextStyle(fontFamily = SairaFamily, fontSize = 14.sp, fontWeight = FontWeight.W700),
+                    color = c.textPrimary,
+                )
+                Text(
+                    "10–35 mph · drag to set",
+                    style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 10.sp, letterSpacing = 1.sp),
+                    color = c.textLabel,
+                )
+            }
+            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    "${localVal.toInt()}",
+                    style = TextStyle(fontFamily = SairaFamily, fontSize = 38.sp, fontWeight = FontWeight.W900, lineHeight = 32.sp),
+                    color = c.lime,
+                )
+                Text(
+                    "mph",
+                    style = TextStyle(fontFamily = SairaFamily, fontSize = 15.sp, fontWeight = FontWeight.W700),
+                    color = c.textSecondary,
+                    modifier = Modifier.padding(bottom = 5.dp),
+                )
+            }
+        }
+
+        SpeedSlider(
+            normalizedValue = (localVal - 10f) / 25f,
+            onNormalizedChange = { t -> localVal = (10 + t * 25).roundToInt().coerceIn(10, 35).toFloat() },
+            onFinished = { onThreshold(localVal.toInt()) },
+            c = c,
+        )
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("10", style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 9.sp), color = c.textLabel)
+            Text("22", style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 9.sp), color = c.textLabel)
+            Text("35 mph", style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 9.sp), color = c.textLabel)
+        }
+
+        Text(
+            "Fires once each time your speed climbs past ${localVal.toInt()} mph.",
+            style = TextStyle(fontFamily = SairaFamily, fontSize = 12.sp),
+            color = c.textMuted,
+            lineHeight = 18.sp,
+        )
+    }
+}
+
+@Composable
+private fun OutputSection(output: AlertOutput, onOutput: (AlertOutput) -> Unit) {
+    val c = LocalZWheelColors.current
+    Column(
+        modifier = Modifier.padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(11.dp),
+    ) {
+        Text(
+            "Where should it play?",
+            style = TextStyle(fontFamily = SairaFamily, fontSize = 14.sp, fontWeight = FontWeight.W700),
+            color = c.textPrimary,
+        )
+        IconSegmented(
+            options = listOf(
+                Triple(AlertOutput.WATCH, Icons.Default.Watch, "Watch"),
+                Triple(AlertOutput.PHONE, Icons.Default.Smartphone, "Phone"),
+            ),
+            selected = output,
+            onSelected = onOutput,
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .background(c.mapBg)
+                .border(1.dp, c.border, RoundedCornerShape(10.dp))
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Icon(
+                Icons.Default.Info,
+                contentDescription = null,
+                tint = c.cyan,
+                modifier = Modifier
+                    .size(16.dp)
+                    .padding(top = 1.dp),
             )
-            Switch(
-                checked = prefs.audioAlertsEnabled,
-                onCheckedChange = onAlertsEnabled,
-                colors = settingsSwitchColors(),
+            Text(
+                if (output == AlertOutput.WATCH)
+                    "Plays through the watch speaker. Falls back to the phone if the watch is unavailable."
+                else
+                    "Plays through the phone's current audio route — speaker, headphones, or car stereo.",
+                style = TextStyle(fontFamily = SairaFamily, fontSize = 12.sp),
+                color = c.textMuted,
+                lineHeight = 18.sp,
+            )
+        }
+    }
+}
+
+@Composable
+private fun GradientSlider(
+    normalizedValue: Float,
+    onNormalizedChange: (Float) -> Unit,
+    onFinished: () -> Unit,
+    thumbRingColor: Color,
+    c: ZWheelColors,
+) {
+    val thumbRadiusDp = 10.dp
+    Canvas(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 1.dp)
+            .height(20.dp)
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    val compute = { x: Float ->
+                        val tR = thumbRadiusDp.toPx()
+                        val tW = size.width - 2 * tR
+                        ((x - tR) / tW).coerceIn(0f, 1f)
+                    }
+                    onNormalizedChange(compute(down.position.x))
+                    drag(down.id) { change ->
+                        change.consume()
+                        onNormalizedChange(compute(change.position.x))
+                    }
+                    onFinished()
+                }
+            },
+    ) {
+        val thumbR = thumbRadiusDp.toPx()
+        val trackH = 8.dp.toPx()
+        val trackStart = thumbR
+        val trackEnd = size.width - thumbR
+        val trackW = trackEnd - trackStart
+        val centerY = size.height / 2
+
+        drawRoundRect(
+            brush = Brush.horizontalGradient(
+                colorStops = arrayOf(0f to c.rampDanger, 0.45f to c.rampCaution, 1f to c.rampGood),
+                startX = trackStart,
+                endX = trackEnd,
+            ),
+            topLeft = Offset(trackStart, centerY - trackH / 2),
+            size = Size(trackW, trackH),
+            cornerRadius = CornerRadius(4.dp.toPx()),
+        )
+
+        val thumbX = trackStart + normalizedValue * trackW
+        drawCircle(Color(0x55000000), radius = thumbR + 2.dp.toPx(), center = Offset(thumbX, centerY + 1.5.dp.toPx()))
+        drawCircle(Color.White, radius = thumbR, center = Offset(thumbX, centerY))
+        drawCircle(thumbRingColor, radius = thumbR - 1.5.dp.toPx(), center = Offset(thumbX, centerY), style = Stroke(3.dp.toPx()))
+    }
+}
+
+@Composable
+private fun SpeedSlider(
+    normalizedValue: Float,
+    onNormalizedChange: (Float) -> Unit,
+    onFinished: () -> Unit,
+    c: ZWheelColors,
+) {
+    val thumbRadiusDp = 10.dp
+    Canvas(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 1.dp)
+            .height(20.dp)
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    val compute = { x: Float ->
+                        val tR = thumbRadiusDp.toPx()
+                        val tW = size.width - 2 * tR
+                        ((x - tR) / tW).coerceIn(0f, 1f)
+                    }
+                    onNormalizedChange(compute(down.position.x))
+                    drag(down.id) { change ->
+                        change.consume()
+                        onNormalizedChange(compute(change.position.x))
+                    }
+                    onFinished()
+                }
+            },
+    ) {
+        val thumbR = thumbRadiusDp.toPx()
+        val trackH = 8.dp.toPx()
+        val trackStart = thumbR
+        val trackEnd = size.width - thumbR
+        val trackW = trackEnd - trackStart
+        val centerY = size.height / 2
+        val fillW = normalizedValue * trackW
+
+        drawRoundRect(
+            color = c.buttonBorder,
+            topLeft = Offset(trackStart, centerY - trackH / 2),
+            size = Size(trackW, trackH),
+            cornerRadius = CornerRadius(4.dp.toPx()),
+        )
+        if (fillW > 0) {
+            drawRoundRect(
+                color = c.lime,
+                topLeft = Offset(trackStart, centerY - trackH / 2),
+                size = Size(fillW + thumbR, trackH),
+                cornerRadius = CornerRadius(4.dp.toPx()),
             )
         }
 
-        AnimatedVisibility(visible = prefs.audioAlertsEnabled) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                HorizontalDivider(color = c.divider, thickness = 0.5.dp)
+        val thumbX = trackStart + normalizedValue * trackW
+        drawCircle(Color(0x55000000), radius = thumbR + 2.dp.toPx(), center = Offset(thumbX, centerY + 1.5.dp.toPx()))
+        drawCircle(Color.White, radius = thumbR, center = Offset(thumbX, centerY))
+        drawCircle(c.lime, radius = thumbR - 1.5.dp.toPx(), center = Offset(thumbX, centerY), style = Stroke(3.dp.toPx()))
+    }
+}
 
-                Text(
-                    "ALERT TYPE",
-                    style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 9.sp, letterSpacing = 1.5.sp),
-                    color = c.textDimmest,
-                )
-                SegmentedToggle(
-                    options = listOf(
-                        com.zwheel.core.alerts.AlertType.SPEED to "Speed",
-                        com.zwheel.core.alerts.AlertType.HEADROOM to "Headroom",
-                    ),
-                    selected = prefs.audioAlertType,
-                    onSelected = onAlertType,
-                )
+private fun headroomRampColor(pct: Int, c: ZWheelColors): Color = when {
+    pct < 25 -> c.rampDanger
+    pct < 50 -> c.rampCaution
+    else -> c.rampGood
+}
 
-                val thresholdLabel = when (prefs.audioAlertType) {
-                    com.zwheel.core.alerts.AlertType.SPEED -> "THRESHOLD (mph)"
-                    com.zwheel.core.alerts.AlertType.HEADROOM -> "THRESHOLD (headroom <=)"
+@Composable
+private fun <T> IconSegmented(
+    options: List<Triple<T, ImageVector, String>>,
+    selected: T,
+    onSelected: (T) -> Unit,
+) {
+    val c = LocalZWheelColors.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(11.dp))
+            .border(1.dp, c.border, RoundedCornerShape(11.dp))
+            .background(c.screenBg)
+            .padding(3.dp),
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
+        options.forEach { (option, icon, label) ->
+            val isSelected = option == selected
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(if (isSelected) c.lime else Color.Transparent)
+                    .clickable { onSelected(option) }
+                    .padding(vertical = 10.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = if (isSelected) c.screenBg else c.textMuted,
+                        modifier = Modifier.size(17.dp),
+                    )
+                    Text(
+                        text = label,
+                        style = TextStyle(fontFamily = SairaFamily, fontSize = 14.sp, fontWeight = FontWeight.W700),
+                        color = if (isSelected) c.screenBg else c.textMuted,
+                    )
                 }
-                Text(
-                    thresholdLabel,
-                    style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 9.sp, letterSpacing = 1.5.sp),
-                    color = c.textDimmest,
-                )
-
-                when (prefs.audioAlertType) {
-                    com.zwheel.core.alerts.AlertType.SPEED -> {
-                        var sliderMph by remember(prefs.audioAlertThresholdMph) {
-                            mutableStateOf(prefs.audioAlertThresholdMph.toFloat())
-                        }
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            Slider(
-                                value = sliderMph,
-                                onValueChange = { sliderMph = it },
-                                onValueChangeFinished = { onThresholdMph(sliderMph.toInt()) },
-                                valueRange = 5f..40f,
-                                steps = 34,
-                                modifier = Modifier.weight(1f),
-                                colors = SliderDefaults.colors(
-                                    thumbColor = c.lime,
-                                    activeTrackColor = c.lime,
-                                    inactiveTrackColor = c.buttonBorder,
-                                ),
-                            )
-                            Text(
-                                "${sliderMph.toInt()} mph",
-                                style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 12.sp),
-                                color = c.textSecondary,
-                                modifier = Modifier.width(52.dp),
-                            )
-                        }
-                    }
-
-                    com.zwheel.core.alerts.AlertType.HEADROOM -> {
-                        var sliderHeadroom by remember(prefs.audioAlertThresholdHeadroom) {
-                            mutableStateOf(prefs.audioAlertThresholdHeadroom.toFloat())
-                        }
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            Slider(
-                                value = sliderHeadroom,
-                                onValueChange = { sliderHeadroom = it },
-                                onValueChangeFinished = { onThresholdHeadroom(sliderHeadroom.toInt()) },
-                                valueRange = 0f..100f,
-                                steps = 99,
-                                modifier = Modifier.weight(1f),
-                                colors = SliderDefaults.colors(
-                                    thumbColor = c.lime,
-                                    activeTrackColor = c.lime,
-                                    inactiveTrackColor = c.buttonBorder,
-                                ),
-                            )
-                            Text(
-                                "<= ${sliderHeadroom.toInt()}",
-                                style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 12.sp),
-                                color = c.textSecondary,
-                                modifier = Modifier.width(52.dp),
-                            )
-                        }
-                    }
-                }
-
-                Text(
-                    "OUTPUT",
-                    style = TextStyle(fontFamily = JetBrainsMonoFamily, fontSize = 9.sp, letterSpacing = 1.5.sp),
-                    color = c.textDimmest,
-                )
-                SegmentedToggle(
-                    options = listOf(
-                        com.zwheel.core.alerts.AlertOutput.AUTO to "Auto",
-                        com.zwheel.core.alerts.AlertOutput.WATCH to "Watch",
-                        com.zwheel.core.alerts.AlertOutput.PHONE to "Phone",
-                    ),
-                    selected = prefs.audioAlertOutput,
-                    onSelected = onAlertOutput,
-                )
-
-                val outputHint = when (prefs.audioAlertOutput) {
-                    com.zwheel.core.alerts.AlertOutput.AUTO ->
-                        "Plays through the watch speaker if connected, otherwise the phone."
-                    com.zwheel.core.alerts.AlertOutput.WATCH ->
-                        "Plays through the watch speaker. Falls back to phone if unavailable."
-                    com.zwheel.core.alerts.AlertOutput.PHONE ->
-                        "Plays through the phone's current audio route."
-                }
-                Text(
-                    outputHint,
-                    style = TextStyle(
-                        fontFamily = SairaFamily,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.W400,
-                    ),
-                    color = c.textMuted,
-                    lineHeight = 17.sp,
-                )
             }
         }
     }

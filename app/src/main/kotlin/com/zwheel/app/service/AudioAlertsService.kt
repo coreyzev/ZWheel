@@ -62,8 +62,7 @@ internal class AudioAlertsService(
     private fun dispatch(config: AlertConfig) {
         when (config.output) {
             AlertOutput.PHONE -> phonePlayer.play(config.type)
-            AlertOutput.WATCH -> wearDispatcher.fire(config.type)
-            AlertOutput.AUTO -> wearDispatcher.fireAutoWithFallback(config.type, phonePlayer)
+            AlertOutput.WATCH -> wearDispatcher.fireAutoWithFallback(config.type, phonePlayer)
         }
     }
 }

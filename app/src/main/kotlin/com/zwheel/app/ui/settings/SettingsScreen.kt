@@ -37,6 +37,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.zwheel.app.data.settings.UserPreferences
 import com.zwheel.app.service.HaPushResult
+import com.zwheel.core.alerts.AlertOutput
+import com.zwheel.core.alerts.AlertType
 import com.zwheel.app.ui.JetBrainsMonoFamily
 import com.zwheel.app.ui.LocalZWheelColors
 import com.zwheel.app.ui.SairaFamily
@@ -115,10 +117,10 @@ internal fun SettingsContent(
     onUploadDebug: () -> Unit,
     onShareDebug: () -> Unit,
     onAudioAlertsEnabled: (Boolean) -> Unit,
-    onAudioAlertType: (com.zwheel.core.alerts.AlertType) -> Unit,
+    onAudioAlertType: (AlertType) -> Unit,
     onAudioAlertThresholdMph: (Int) -> Unit,
     onAudioAlertThresholdHeadroom: (Int) -> Unit,
-    onAudioAlertOutput: (com.zwheel.core.alerts.AlertOutput) -> Unit,
+    onAudioAlertOutput: (AlertOutput) -> Unit,
 ) {
     val c = LocalZWheelColors.current
     val hasSavedBoard = boardState.identity != null || preferences.lastConnectedDeviceId != null

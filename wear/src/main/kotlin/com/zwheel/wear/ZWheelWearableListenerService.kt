@@ -6,10 +6,9 @@ import com.google.android.gms.wearable.DataMapItem
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.WearableListenerService
 import com.zwheel.core.alerts.AlertType
+import com.zwheel.core.model.ALERT_MESSAGE_PATH
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
-
-private const val ALERT_PATH = "/zwheel/alert"
 
 @AndroidEntryPoint
 class ZWheelWearableListenerService : WearableListenerService() {
@@ -30,7 +29,7 @@ class ZWheelWearableListenerService : WearableListenerService() {
     }
 
     override fun onMessageReceived(event: MessageEvent) {
-        if (event.path != ALERT_PATH) return
+        if (event.path != ALERT_MESSAGE_PATH) return
         runCatching {
             val type = AlertType.valueOf(String(event.data))
             alertPlayer.play(type)

@@ -6,6 +6,7 @@ import com.zwheel.core.alerts.AlertMonitor
 import com.zwheel.core.alerts.AlertOutput
 import com.zwheel.core.alerts.AlertType
 import com.zwheel.core.model.BoardState
+import com.zwheel.core.model.ConnectionState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -26,7 +27,7 @@ internal class AudioAlertsService(
             combine(settingsRepository.preferences, boardStateFlow) { prefs, state ->
                 Pair(prefs, state)
             }.collect { (prefs, state) ->
-                if (!prefs.audioAlertsEnabled) {
+                if (!prefs.audioAlertsEnabled || state.connectionState == ConnectionState.DISCONNECTED) {
                     monitor.reset()
                     return@collect
                 }

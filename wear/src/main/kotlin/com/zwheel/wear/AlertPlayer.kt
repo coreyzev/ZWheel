@@ -11,7 +11,11 @@ import javax.inject.Singleton
 
 @Singleton
 class AlertPlayer @Inject constructor() {
+    @Volatile private var playing = false
+
     fun play(type: AlertType) {
+        if (playing) return
+        playing = true
         val toneType = when (type) {
             AlertType.SPEED -> ToneGenerator.TONE_PROP_BEEP
             AlertType.HEADROOM -> ToneGenerator.TONE_PROP_BEEP2
@@ -19,8 +23,12 @@ class AlertPlayer @Inject constructor() {
         runCatching {
             val gen = ToneGenerator(AudioManager.STREAM_MUSIC, 85)
             gen.startTone(toneType, 500)
-            Handler(Looper.getMainLooper()).postDelayed({ runCatching { gen.release() } }, 600)
+            Handler(Looper.getMainLooper()).postDelayed({
+                runCatching { gen.release() }
+                playing = false
+            }, 600)
         }.onFailure { e ->
+            playing = false
             Log.w("AlertPlayer", "Failed to play tone: ${e.message}")
         }
     }

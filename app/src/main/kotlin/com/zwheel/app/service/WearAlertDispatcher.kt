@@ -4,8 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.google.android.gms.wearable.Wearable
 import com.zwheel.core.alerts.AlertType
-
-internal const val WEAR_ALERT_PATH = "/zwheel/alert"
+import com.zwheel.core.model.ALERT_MESSAGE_PATH
 
 internal class WearAlertDispatcher(private val context: Context) {
     private val messageClient = Wearable.getMessageClient(context)
@@ -15,7 +14,7 @@ internal class WearAlertDispatcher(private val context: Context) {
     fun fire(type: AlertType) {
         nodeClient.connectedNodes.addOnSuccessListener { nodes ->
             nodes.forEach { node ->
-                messageClient.sendMessage(node.id, WEAR_ALERT_PATH, type.name.toByteArray())
+                messageClient.sendMessage(node.id, ALERT_MESSAGE_PATH, type.name.toByteArray())
             }
         }.addOnFailureListener { e ->
             Log.w("WearAlertDispatcher", "Could not query nodes: ${e.message}")
@@ -30,7 +29,7 @@ internal class WearAlertDispatcher(private val context: Context) {
             .addOnSuccessListener { nodes ->
                 if (nodes.isNotEmpty()) {
                     nodes.forEach { node ->
-                        messageClient.sendMessage(node.id, WEAR_ALERT_PATH, type.name.toByteArray())
+                        messageClient.sendMessage(node.id, ALERT_MESSAGE_PATH, type.name.toByteArray())
                     }
                 } else {
                     fallback.play(type)

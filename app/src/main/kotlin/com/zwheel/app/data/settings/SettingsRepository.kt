@@ -212,7 +212,7 @@ class SettingsRepository(
     }
 
     suspend fun setAudioAlertThresholdHeadroom(value: Int) {
-        dataStore.edit { it[AUDIO_ALERT_THRESHOLD_HEADROOM] = value.coerceIn(-10, 20) }
+        dataStore.edit { it[AUDIO_ALERT_THRESHOLD_HEADROOM] = value.coerceIn(0, 100) }
     }
 
     suspend fun setAudioAlertOutput(output: AlertOutput) {

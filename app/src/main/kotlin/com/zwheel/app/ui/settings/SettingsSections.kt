@@ -402,8 +402,8 @@ internal fun AudioAlertsSection(
                                 value = sliderHeadroom,
                                 onValueChange = { sliderHeadroom = it },
                                 onValueChangeFinished = { onThresholdHeadroom(sliderHeadroom.toInt()) },
-                                valueRange = -10f..10f,
-                                steps = 19,
+                                valueRange = 0f..100f,
+                                steps = 99,
                                 modifier = Modifier.weight(1f),
                                 colors = SliderDefaults.colors(
                                     thumbColor = c.lime,

@@ -16,28 +16,30 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check latest CI run on main is green
+      - name: Check latest CI run on this branch is green
         id: ci-run
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          BRANCH="${{ github.ref_name }}"
           read run_id conclusion <<< $(gh run list \
             --repo ${{ github.repository }} \
             --workflow=ci.yml \
-            --branch=main \
+            --branch="$BRANCH" \
             --limit=1 \
             --json databaseId,conclusion \
             --jq '.[0] | "\(.databaseId) \(.conclusion)"')
           if [ -z "$run_id" ] || [ "$run_id" = "null" ]; then
-            echo "No CI run found on main" >&2
+            echo "No CI run found on branch '$BRANCH'" >&2
             exit 1
           fi
           if [ "$conclusion" != "success" ]; then
-            echo "Latest CI run $run_id on main is '$conclusion', not 'success' — refusing to release" >&2
+            echo "Latest CI run $run_id on '$BRANCH' is '$conclusion', not 'success' — refusing to release" >&2
             exit 1
           fi
           echo "run_id=$run_id" >> $GITHUB_OUTPUT
-          echo "Latest CI run $run_id is green — proceeding"
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+          echo "Latest CI run $run_id on '$BRANCH' is green — proceeding"
 
       - name: Download APKs from CI
         env:
@@ -64,7 +66,7 @@ jobs:
         with:
           tag_name: "build-${{ github.run_number }}"
           name: "Debug Build #${{ github.run_number }}"
-          body: "Built from CI run ${{ steps.ci-run.outputs.run_id }} on `main`."
+          body: "Built from CI run ${{ steps.ci-run.outputs.run_id }} on `${{ steps.ci-run.outputs.branch }}`."
           files: |
             zwheel-debug.apk
             zwheel-wear-debug.apk

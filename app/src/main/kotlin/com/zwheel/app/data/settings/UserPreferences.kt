@@ -1,5 +1,7 @@
 package com.zwheel.app.data.settings
 
+import com.zwheel.core.alerts.AlertOutput
+import com.zwheel.core.alerts.AlertType
 import com.zwheel.core.model.BoardType
 import com.zwheel.core.model.SpeedUnit
 import com.zwheel.core.model.TemperatureUnit
@@ -26,4 +28,11 @@ data class UserPreferences(
     val haToken: String = "",
     val customBoardName: String? = null,
     val bleDebugPassword: String = "",
+    val audioAlertsEnabled: Boolean = false,
+    val audioAlertType: AlertType = AlertType.SPEED,
+    /** Speed threshold stored in mph. Convert to m/s when building AlertConfig. */
+    val audioAlertThresholdMph: Int = 16,
+    /** Headroom threshold (raw firmware integer). Alert when safetyHeadroom <= this value. */
+    val audioAlertThresholdHeadroom: Int = 0,
+    val audioAlertOutput: AlertOutput = AlertOutput.AUTO,
 )

@@ -82,6 +82,11 @@ fun SettingsScreen(
         onPairDebug = viewModel::pairDebug,
         onUploadDebug = viewModel::uploadDebug,
         onShareDebug = viewModel::shareDebug,
+        onAudioAlertsEnabled = viewModel::setAudioAlertsEnabled,
+        onAudioAlertType = viewModel::setAudioAlertType,
+        onAudioAlertThresholdMph = viewModel::setAudioAlertThresholdMph,
+        onAudioAlertThresholdHeadroom = viewModel::setAudioAlertThresholdHeadroom,
+        onAudioAlertOutput = viewModel::setAudioAlertOutput,
     )
 }
 
@@ -109,6 +114,11 @@ internal fun SettingsContent(
     onPairDebug: () -> Unit,
     onUploadDebug: () -> Unit,
     onShareDebug: () -> Unit,
+    onAudioAlertsEnabled: (Boolean) -> Unit,
+    onAudioAlertType: (com.zwheel.core.alerts.AlertType) -> Unit,
+    onAudioAlertThresholdMph: (Int) -> Unit,
+    onAudioAlertThresholdHeadroom: (Int) -> Unit,
+    onAudioAlertOutput: (com.zwheel.core.alerts.AlertOutput) -> Unit,
 ) {
     val c = LocalZWheelColors.current
     val hasSavedBoard = boardState.identity != null || preferences.lastConnectedDeviceId != null
@@ -236,6 +246,18 @@ internal fun SettingsContent(
                 onSpeedUnit = onSpeedUnitSelected,
                 onTempUnit = onTemperatureUnitSelected,
                 modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
+            )
+        }
+        item { Spacer(Modifier.height(22.dp)) }
+        item {
+            AudioAlertsSection(
+                prefs = preferences,
+                onAlertsEnabled = onAudioAlertsEnabled,
+                onAlertType = onAudioAlertType,
+                onThresholdMph = onAudioAlertThresholdMph,
+                onThresholdHeadroom = onAudioAlertThresholdHeadroom,
+                onAlertOutput = onAudioAlertOutput,
+                modifier = Modifier.padding(horizontal = 18.dp),
             )
         }
         item { Spacer(Modifier.height(22.dp)) }

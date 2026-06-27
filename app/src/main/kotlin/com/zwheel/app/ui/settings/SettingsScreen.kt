@@ -37,6 +37,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.zwheel.app.data.settings.UserPreferences
 import com.zwheel.app.service.HaPushResult
+import com.zwheel.core.alerts.AlertOutput
+import com.zwheel.core.alerts.AlertTone
+import com.zwheel.core.alerts.AlertType
 import com.zwheel.app.ui.JetBrainsMonoFamily
 import com.zwheel.app.ui.LocalZWheelColors
 import com.zwheel.app.ui.SairaFamily
@@ -82,6 +85,13 @@ fun SettingsScreen(
         onPairDebug = viewModel::pairDebug,
         onUploadDebug = viewModel::uploadDebug,
         onShareDebug = viewModel::shareDebug,
+        onAudioAlertsEnabled = viewModel::setAudioAlertsEnabled,
+        onAudioAlertType = viewModel::setAudioAlertType,
+        onAudioAlertThresholdMph = viewModel::setAudioAlertThresholdMph,
+        onAudioAlertThresholdHeadroom = viewModel::setAudioAlertThresholdHeadroom,
+        onAudioAlertOutput = viewModel::setAudioAlertOutput,
+        onAudioAlertTone = viewModel::setAudioAlertTone,
+        onPreviewAlertTone = viewModel::previewAlertTone,
     )
 }
 
@@ -109,6 +119,13 @@ internal fun SettingsContent(
     onPairDebug: () -> Unit,
     onUploadDebug: () -> Unit,
     onShareDebug: () -> Unit,
+    onAudioAlertsEnabled: (Boolean) -> Unit,
+    onAudioAlertType: (AlertType) -> Unit,
+    onAudioAlertThresholdMph: (Int) -> Unit,
+    onAudioAlertThresholdHeadroom: (Int) -> Unit,
+    onAudioAlertOutput: (AlertOutput) -> Unit,
+    onAudioAlertTone: (AlertTone) -> Unit,
+    onPreviewAlertTone: (AlertTone) -> Unit,
 ) {
     val c = LocalZWheelColors.current
     val hasSavedBoard = boardState.identity != null || preferences.lastConnectedDeviceId != null
@@ -236,6 +253,20 @@ internal fun SettingsContent(
                 onSpeedUnit = onSpeedUnitSelected,
                 onTempUnit = onTemperatureUnitSelected,
                 modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
+            )
+        }
+        item { Spacer(Modifier.height(22.dp)) }
+        item {
+            AudioAlertsSection(
+                prefs = preferences,
+                onAlertsEnabled = onAudioAlertsEnabled,
+                onAlertType = onAudioAlertType,
+                onThresholdMph = onAudioAlertThresholdMph,
+                onThresholdHeadroom = onAudioAlertThresholdHeadroom,
+                onAlertOutput = onAudioAlertOutput,
+                onAlertTone = onAudioAlertTone,
+                onPreviewTone = onPreviewAlertTone,
+                modifier = Modifier.padding(horizontal = 18.dp),
             )
         }
         item { Spacer(Modifier.height(22.dp)) }

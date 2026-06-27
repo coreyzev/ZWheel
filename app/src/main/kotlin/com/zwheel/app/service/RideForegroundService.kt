@@ -72,6 +72,12 @@ class RideForegroundService : LifecycleService() {
         wearDataLayerRepository.startSync(lifecycleScope)
         locationTracker.start()
         HomeAssistantSync(settingsRepository, connectionManager.boardState).start(lifecycleScope)
+        AudioAlertsService(
+            settingsRepository = settingsRepository,
+            boardStateFlow = connectionManager.boardState,
+            wearDispatcher = WearAlertDispatcher(this),
+            phonePlayer = PhoneAudioPlayer(this),
+        ).start(lifecycleScope)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {

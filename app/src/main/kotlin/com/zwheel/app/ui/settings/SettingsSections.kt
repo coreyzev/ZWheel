@@ -69,6 +69,7 @@ import com.zwheel.app.ui.LocalZWheelColors
 import com.zwheel.app.ui.SairaFamily
 import com.zwheel.app.ui.ZWheelColors
 import com.zwheel.core.alerts.AlertOutput
+import com.zwheel.core.alerts.AlertTone
 import com.zwheel.core.alerts.AlertType
 import com.zwheel.core.model.SpeedUnit
 import com.zwheel.core.model.TemperatureUnit
@@ -324,6 +325,8 @@ internal fun AudioAlertsSection(
     onThresholdMph: (Int) -> Unit,
     onThresholdHeadroom: (Int) -> Unit,
     onAlertOutput: (AlertOutput) -> Unit,
+    onAlertTone: (AlertTone) -> Unit,
+    onPreviewTone: (AlertTone) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val c = LocalZWheelColors.current
@@ -350,6 +353,7 @@ internal fun AudioAlertsSection(
                 AlertTypeSection(prefs.audioAlertType, onAlertType)
                 ThresholdSection(prefs, onThresholdMph, onThresholdHeadroom)
                 OutputSection(prefs.audioAlertOutput, onAlertOutput)
+                ToneSection(prefs.audioAlertTone, onAlertTone, onPreviewTone)
             }
         }
     }
@@ -576,6 +580,39 @@ private fun OutputSection(output: AlertOutput, onOutput: (AlertOutput) -> Unit) 
                 lineHeight = 18.sp,
             )
         }
+    }
+}
+
+@Composable
+private fun ToneSection(tone: AlertTone, onTone: (AlertTone) -> Unit, onPreview: (AlertTone) -> Unit) {
+    val c = LocalZWheelColors.current
+    Column(verticalArrangement = Arrangement.spacedBy(11.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                "Alert tone",
+                style = TextStyle(fontFamily = SairaFamily, fontSize = 14.sp, fontWeight = FontWeight.W700),
+                color = c.textPrimary,
+            )
+            TextButton(
+                onClick = { onPreview(tone) },
+                colors = ButtonDefaults.textButtonColors(contentColor = c.lime),
+            ) {
+                Text("Preview", fontFamily = SairaFamily, fontWeight = FontWeight.W600, fontSize = 12.sp)
+            }
+        }
+        SegmentedToggle(
+            options = listOf(
+                AlertTone.SHORT_BEEP to "Short",
+                AlertTone.TRIPLE_BEEP to "Triple",
+                AlertTone.ALARM to "Alarm",
+            ),
+            selected = tone,
+            onSelected = onTone,
+        )
     }
 }
 

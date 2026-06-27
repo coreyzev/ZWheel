@@ -1,6 +1,7 @@
 package com.zwheel.app.data.settings
 
 import com.zwheel.core.alerts.AlertOutput
+import com.zwheel.core.alerts.AlertTone
 import com.zwheel.core.alerts.AlertType
 import com.zwheel.core.model.BoardType
 import com.zwheel.core.model.SpeedUnit
@@ -35,4 +36,5 @@ data class UserPreferences(
     /** Headroom threshold (raw firmware integer). Alert when safetyHeadroom <= this value. */
     val audioAlertThresholdHeadroom: Int = 0,
     val audioAlertOutput: AlertOutput = AlertOutput.WATCH,
+    val audioAlertTone: AlertTone = AlertTone.SHORT_BEEP,
 )

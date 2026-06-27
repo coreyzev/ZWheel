@@ -53,16 +53,16 @@ internal class AudioAlertsService(
                         nowMs,
                     )
                 ) {
-                    dispatch(config)
+                    dispatch(config, prefs.audioAlertTone)
                 }
             }
         }
     }
 
-    private fun dispatch(config: AlertConfig) {
+    private fun dispatch(config: AlertConfig, tone: com.zwheel.core.alerts.AlertTone) {
         when (config.output) {
-            AlertOutput.PHONE -> phonePlayer.play(config.type)
-            AlertOutput.WATCH -> wearDispatcher.fireAutoWithFallback(config.type, phonePlayer)
+            AlertOutput.PHONE -> phonePlayer.play(tone)
+            AlertOutput.WATCH -> wearDispatcher.fireAutoWithFallback(config.type, phonePlayer, tone)
         }
     }
 }

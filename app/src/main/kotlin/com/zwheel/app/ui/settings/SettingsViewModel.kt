@@ -1,6 +1,10 @@
 package com.zwheel.app.ui.settings
 
 import android.content.Context
+import android.media.AudioManager
+import android.media.ToneGenerator
+import android.os.Handler
+import android.os.Looper
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zwheel.app.ble.ConnectionManager
@@ -137,6 +141,23 @@ class SettingsViewModel @Inject constructor(
 
     fun setAudioAlertOutput(output: com.zwheel.core.alerts.AlertOutput) {
         viewModelScope.launch { repo.setAudioAlertOutput(output) }
+    }
+
+    fun setAudioAlertTone(tone: com.zwheel.core.alerts.AlertTone) {
+        viewModelScope.launch { repo.setAudioAlertTone(tone) }
+    }
+
+    fun previewAlertTone(tone: com.zwheel.core.alerts.AlertTone) {
+        val (toneType, durationMs) = when (tone) {
+            com.zwheel.core.alerts.AlertTone.SHORT_BEEP -> ToneGenerator.TONE_CDMA_HIGH_SS to 500
+            com.zwheel.core.alerts.AlertTone.TRIPLE_BEEP -> ToneGenerator.TONE_CDMA_ABBR_ALERT to 1000
+            com.zwheel.core.alerts.AlertTone.ALARM -> ToneGenerator.TONE_CDMA_EMERGENCY_RINGBACK to 1500
+        }
+        runCatching {
+            val gen = ToneGenerator(AudioManager.STREAM_ALARM, 100)
+            gen.startTone(toneType, durationMs)
+            Handler(Looper.getMainLooper()).postDelayed({ runCatching { gen.release() } }, durationMs + 100L)
+        }
     }
 
     fun setTireDiameter(value: Double) {

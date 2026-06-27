@@ -12,6 +12,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
 import com.zwheel.core.alerts.AlertOutput
+import com.zwheel.core.alerts.AlertTone
 import com.zwheel.core.alerts.AlertType
 import com.zwheel.core.model.BoardType
 import com.zwheel.core.model.SpeedUnit
@@ -76,6 +77,7 @@ class SettingsRepository(
             audioAlertThresholdMph = prefs[AUDIO_ALERT_THRESHOLD_MPH] ?: 16,
             audioAlertThresholdHeadroom = prefs[AUDIO_ALERT_THRESHOLD_HEADROOM] ?: 0,
             audioAlertOutput = prefs[AUDIO_ALERT_OUTPUT].toEnumOrDefault(AlertOutput.WATCH),
+            audioAlertTone = prefs[AUDIO_ALERT_TONE].toEnumOrDefault(AlertTone.SHORT_BEEP),
         )
     }
 
@@ -219,6 +221,10 @@ class SettingsRepository(
         dataStore.edit { it[AUDIO_ALERT_OUTPUT] = output.name }
     }
 
+    suspend fun setAudioAlertTone(tone: AlertTone) {
+        dataStore.edit { it[AUDIO_ALERT_TONE] = tone.name }
+    }
+
     private inline fun <reified T : Enum<T>> String?.toEnumOrDefault(default: T): T =
         enumValues<T>().firstOrNull { it.name == this } ?: default
 
@@ -249,6 +255,7 @@ class SettingsRepository(
         val AUDIO_ALERT_THRESHOLD_MPH = intPreferencesKey("audio_alert_threshold_mph")
         val AUDIO_ALERT_THRESHOLD_HEADROOM = intPreferencesKey("audio_alert_threshold_headroom")
         val AUDIO_ALERT_OUTPUT = stringPreferencesKey("audio_alert_output")
+        val AUDIO_ALERT_TONE = stringPreferencesKey("audio_alert_tone")
         const val KEY_HA_TOKEN_SECURE = "ha_token_secure"
         val TIRE_DIAMETER_RANGE = 8.0..16.0
         const val DEFAULT_TIRE_DIAMETER = 11.5

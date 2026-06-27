@@ -38,6 +38,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.zwheel.app.data.settings.UserPreferences
 import com.zwheel.app.service.HaPushResult
 import com.zwheel.core.alerts.AlertOutput
+import com.zwheel.core.alerts.AlertTone
 import com.zwheel.core.alerts.AlertType
 import com.zwheel.app.ui.JetBrainsMonoFamily
 import com.zwheel.app.ui.LocalZWheelColors
@@ -89,6 +90,8 @@ fun SettingsScreen(
         onAudioAlertThresholdMph = viewModel::setAudioAlertThresholdMph,
         onAudioAlertThresholdHeadroom = viewModel::setAudioAlertThresholdHeadroom,
         onAudioAlertOutput = viewModel::setAudioAlertOutput,
+        onAudioAlertTone = viewModel::setAudioAlertTone,
+        onPreviewAlertTone = viewModel::previewAlertTone,
     )
 }
 
@@ -121,6 +124,8 @@ internal fun SettingsContent(
     onAudioAlertThresholdMph: (Int) -> Unit,
     onAudioAlertThresholdHeadroom: (Int) -> Unit,
     onAudioAlertOutput: (AlertOutput) -> Unit,
+    onAudioAlertTone: (AlertTone) -> Unit,
+    onPreviewAlertTone: (AlertTone) -> Unit,
 ) {
     val c = LocalZWheelColors.current
     val hasSavedBoard = boardState.identity != null || preferences.lastConnectedDeviceId != null
@@ -259,6 +264,8 @@ internal fun SettingsContent(
                 onThresholdMph = onAudioAlertThresholdMph,
                 onThresholdHeadroom = onAudioAlertThresholdHeadroom,
                 onAlertOutput = onAudioAlertOutput,
+                onAlertTone = onAudioAlertTone,
+                onPreviewTone = onPreviewAlertTone,
                 modifier = Modifier.padding(horizontal = 18.dp),
             )
         }

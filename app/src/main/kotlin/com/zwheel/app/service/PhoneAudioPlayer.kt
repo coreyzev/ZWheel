@@ -14,16 +14,16 @@ internal class PhoneAudioPlayer(private val context: Context) {
         if (playing) return
         playing = true
         val toneType = when (type) {
-            AlertType.SPEED -> ToneGenerator.TONE_PROP_BEEP
-            AlertType.HEADROOM -> ToneGenerator.TONE_PROP_BEEP2
+            AlertType.SPEED -> ToneGenerator.TONE_CDMA_HIGH_SS
+            AlertType.HEADROOM -> ToneGenerator.TONE_CDMA_EMERGENCY_RINGBACK
         }
         runCatching {
-            val gen = ToneGenerator(AudioManager.STREAM_MUSIC, 85)
-            gen.startTone(toneType, 500)
+            val gen = ToneGenerator(AudioManager.STREAM_ALARM, 100)
+            gen.startTone(toneType, 800)
             Handler(Looper.getMainLooper()).postDelayed({
                 runCatching { gen.release() }
                 playing = false
-            }, 600)
+            }, 900)
         }.onFailure { e ->
             playing = false
             android.util.Log.w("PhoneAudioPlayer", "Failed to play alert tone: ${e.message}")
